@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:icon="@drawable/icon_storage_location" android:id="@id/menu_item_storage" android:title="@string/storage_setting" />
+    <item android:icon="@drawable/icon_filetype" android:id="@id/menu_item_filetype" android:title="@string/format_setting" />
+    <item android:icon="@drawable/btn_list" android:id="@id/list" android:title="@string/list" android:showAsAction="always" />
+</menu>

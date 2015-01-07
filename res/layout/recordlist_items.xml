@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout android:background="?android:activatedBackgroundIndicator" android:descendantFocusability="blocksDescendants" android:layout_width="fill_parent" android:layout_height="wrap_content"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <ImageButton android:id="@id/play" android:background="@drawable/play_button_selector" android:focusable="false" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_margin="2.0dip" android:layout_alignParentLeft="true" android:layout_centerVertical="true" />
+    <ImageButton android:id="@id/pause" android:background="@drawable/playpause_button_selector" android:focusable="false" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_margin="2.0dip" android:layout_alignParentLeft="true" android:layout_centerVertical="true" />
+    <ImageButton android:id="@id/list_item_menu" android:background="@android:color/transparent" android:focusable="false" android:layout_width="wrap_content" android:layout_height="fill_parent" android:layout_marginRight="0.0dip" android:src="@drawable/btn_context_menu" android:layout_alignParentRight="true" android:layout_centerVertical="true" />
+    <TextView android:textSize="18.0sp" android:ellipsize="marquee" android:id="@id/title" android:paddingLeft="8.0dip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:singleLine="true" android:layout_toLeftOf="@id/list_item_menu" android:layout_toRightOf="@id/play" android:layout_alignParentTop="true" />
+    <RelativeLayout android:id="@id/progresslayout" android:paddingLeft="8.0dip" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_toLeftOf="@id/list_item_menu" android:layout_toRightOf="@id/play" android:layout_alignParentBottom="true">
+        <TextView android:textSize="12.0sp" android:textColor="@android:color/secondary_text_dark" android:id="@id/duration" android:paddingLeft="0.0dip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_alignParentLeft="true" android:layout_centerVertical="true" />
+        <TextView android:textSize="12.0sp" android:textColor="@android:color/secondary_text_dark" android:id="@id/size" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_centerInParent="true" android:layout_centerVertical="true" />
+        <ImageView android:id="@id/play_indicator" android:layout_width="wrap_content" android:layout_height="wrap_content" android:src="@drawable/item_playing" android:layout_alignParentRight="true" android:layout_centerVertical="true" />
+    </RelativeLayout>
+</RelativeLayout>

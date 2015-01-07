@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 
+    <style name="ThemeHoloLight" parent="@android:style/Widget.WebTextView">
+        <item name="android:selectionDividerHeight">@drawable/titlebar_selector</item>
+    </style>
+    <style name="WidgetHoloLightActionBar" parent="@android:style/Widget.Holo.Light.ActionBar">
+        <item name="android:titleTextStyle">?android:textAppearanceMediumInverse</item>
+    </style>
+     -->
+    <style name="AlertDialogCustom" parent="@android:style/Theme.Dialog">
+        <item name="android:textColor">#ffffffff</item>
+    </style>
+    <!-- 
+    <style name="customviewstringstyle" parent="@android:style/Widget.EditText.NumberPickerInputText" />
+     -->
+    <style name="HiseneseListSeparatorTextViewStyle">
+        <item name="android:textAppearance">?android:textAppearanceSmall</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">#ffffffff</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:background">@drawable/list_section_divider_holo_dark</item>
+        <item name="android:paddingLeft">8.0dip</item>
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:singleLine">true</item>
+        <!-- 
+        <item name="android:borderTop">true</item>
+         -->
+    </style>
+</resources>

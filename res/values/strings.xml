@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Recorder</string>
+    <string name="record_your_message">Record your message</string>
+    <string name="message_recorded">Message recorded</string>
+    <string name="review_message">Review message</string>
+    <string name="recording">Record</string>
+    <string name="recording_stopped">Stop</string>
+    <string name="recording_paused">Pause</string>
+    <string name="storage_is_full">Storage is full</string>
+    <string name="max_length_reached">Maximum length reached</string>
+    <string name="insert_sd_card">Please insert SD card firstly or change memory location to phone.</string>
+    <string name="min_available">%d min available</string>
+    <string name="sec_available">%ds available</string>
+    <string name="min_sec_available">%ds available</string>
+    <string name="accept">Save</string>
+    <string name="discard">Cancel</string>
+    <string name="button_ok">OK</string>
+    <string name="timer_format" formatted="false">%02d:%02d</string>
+    <string name="press_record">Ready</string>
+    <string name="audio_db_title_format">yyyyMMddHHmmss</string>
+    <string name="audio_db_artist_name">Your recordings</string>
+    <string name="audio_db_album_name">Audio recordings</string>
+    <string name="audio_db_playlist_name">My recordings</string>
+    <string name="error_sdcard_access">Unable to save</string>
+    <string name="error_app_internal">Internal application error</string>
+    <string name="error_mediadb_new_record">Unable to save recorded audio</string>
+    <string name="record">Record</string>
+    <string name="pause">Pause</string>
+    <string name="stop">Stop</string>
+    <string name="play">Play</string>
+    <string name="save">Save</string>
+    <string name="cancle">Cancle</string>
+    <string name="ask_to_save">Save this record?</string>
+    <string name="files_browse">Browse the recording files</string>
+    <string name="sdcard_toast">Please insert SD card firstly</string>
+    <string name="settings">Settings</string>
+    <string name="to_file_manager">Browse recordings</string>
+    <string name="recoring_inCall">Phone is busy,Please wait</string>
+    <string name="information">Details</string>
+    <string name="rename_item">Rename</string>
+    <string name="record_list_title">Record list</string>
+    <string name="delete_song_desc">The record will be deleted.</string>
+    <string name="delete_item">Delete</string>
+    <string name="no_records_title">No records</string>
+    <string name="path">Path:</string>
+    <string name="size">File size:</string>
+    <string name="type">MIME Type:</string>
+    <string name="duration">Duration:</string>
+    <string name="menu_search">Search</string>
+    <string name="select_all">Select all</string>
+    <string name="unselect_all">Unselect all</string>
+    <string name="unknown">Unknown</string>
+    <string name="records_title">Records</string>
+    <string name="zero_time">0:00</string>
+    <string name="record_rename">Please input new record name:</string>
+    <string name="storage_setting">Memory location</string>
+    <string name="storage_setting_sdcard_item">SD card</string>
+    <string name="storage_setting_Local_item">Phone</string>
+    <string name="format_setting">File type</string>
+    <string name="format_setting_AMR_item">AMR</string>
+    <string name="format_setting_3GPP_item">3GPP</string>
+    <string name="record_saved">Record saved</string>
+    <string name="record_name_cannot_empty">New record name can not be empty</string>
+    <string name="FileRename_ERR_NAMEINV">"File name include invalid character "</string>
+    <string name="durationformatshort" formatted="false">%2$d:%5$02d</string>
+    <string name="durationformatlong" formatted="false">%1$d:%3$02d:%5$02d</string>
+    <string name="no_phonestorage">Phonestorage unmounted</string>
+    <string name="file_exists">The same name exists</string>
+    <string name="list_changed">The list is changed, Please reload.</string>
+    <string name="list">Record list</string>
+</resources>
