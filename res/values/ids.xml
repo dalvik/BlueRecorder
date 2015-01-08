@@ -31,6 +31,7 @@
     <item type="id" name="play">false</item>
     <item type="id" name="pause">false</item>
     <item type="id" name="list_item_menu">false</item>
+    <item type="id" name="progress">false</item>
     <item type="id" name="progresslayout">false</item>
     <item type="id" name="play_indicator">false</item>
     <item type="id" name="custom_title_root">false</item>

@@ -51,7 +51,7 @@
             android:textSize="14.0sp"
             android:textStyle="bold" />
 
-        <com.android.soundrecorder.ParticleSeekBar
+        <com.android.audiorecorder.myview.ParticleSeekBar
             android:id="@android:id/progress"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="fill_parent"

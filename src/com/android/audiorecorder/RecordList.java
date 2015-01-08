@@ -1,58 +1,51 @@
 package com.android.audiorecorder;
 
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
-import android.app.ActionBar;
-import android.app.AlertDialog;
-import android.app.ListActivity;
-import android.content.AsyncQueryHandler;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
-import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
 import android.os.PowerManager;
 import android.provider.MediaStore;
-import android.text.Editable;
-import android.text.Selection;
-import android.text.TextUtils;
 import android.text.format.Formatter;
 import android.util.Log;
-import android.view.ActionMode;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
-public class RecordList extends ListActivity implements
+import com.actionbarsherlock.app.ActionBar;
+import com.actionbarsherlock.app.SherlockListActivity;
+import com.actionbarsherlock.view.Menu;
+
+public class RecordList extends SherlockListActivity implements
         View.OnCreateContextMenuListener {
+    /*
+     *
+     arrayOfString1[0] = "_id";
+        arrayOfString1[1] = "title";
+        arrayOfString1[2] = "_data";
+        arrayOfString1[3] = "album";
+        arrayOfString1[4] = "artist";
+        arrayOfString1[5] = "artist_id";
+        arrayOfString1[6] = "mime_type";
+        arrayOfString1[7] = "duration";
+        arrayOfString1[8] = "play_order";
+        arrayOfString1[9] = "audio_id";
+        arrayOfString1[10] = "_size";
+     
+     */
     private static final int ALBUM_ART_DECODED = 4;
     public static final int CURSOR_COLUMN_INDEX_ALBUM = 3;
     public static final int CURSOR_COLUMN_INDEX_ARTIST = 4;
@@ -84,8 +77,8 @@ public class RecordList extends ListActivity implements
     protected int[] NameCheckList;
     protected String NameCheckList_Str;
     private String TAG = "RecordList";
-    private boolean isStop = true;
-    //private RecordListAdapter mAdapter;
+    private RecordListAdapter mAdapter;
+    private List<RecorderFile> mFileList;
     private AudioManager.OnAudioFocusChangeListener mAudioFocusListener;
     private AudioManager mAudioManager;
     public Handler mCounterhandler;
@@ -143,6 +136,76 @@ public class RecordList extends ListActivity implements
   this.mHandler = local5;*/
 }
 
+    public void onCreate(Bundle paramBundle) {
+        //ModeCallback localModeCallback1 = null;
+        boolean bool = false;
+        super.onCreate(paramBundle);
+        setVolumeControlStream(3);
+        setContentView(R.layout.recordlist_view);
+        this.mTrackList = getListView();
+        this.mTrackList.setChoiceMode(3);
+        //ModeCallback localModeCallback2 = new ModeCallback(localModeCallback1);
+        //localListView2.setMultiChoiceModeListener(localModeCallback2);
+        setTitle(R.string.list);
+        registerForContextMenu(this.mTrackList);
+        this.mIndicator = (TextView) findViewById(R.id.indicator);
+        this.mProgress = (ProgressBar) findViewById(R.id.progress);
+        this.mProgressLayout = (LinearLayout) findViewById(R.id.progresslayout);
+        this.mCurrentTime = (TextView) findViewById(R.id.currenttime);
+        this.mTotalTime = (TextView) findViewById(R.id.totaltime);
+        //int i = getThemeColor(this);
+        //localLinearLayout2.setBackgroundColor(i);
+        this.mProgressLayout.setVisibility(View.GONE);
+        PowerManager localPowerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        this.mWakeLock = localPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "RecorderPlayer");;
+        this.mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        if ((this.mProgress instanceof SeekBar)) {
+            Log.d(this.TAG, "setOnSeekBarChangeListener");
+            SeekBar localSeekBar = (SeekBar) this.mProgress;
+            SeekBar.OnSeekBarChangeListener localOnSeekBarChangeListener = this.mSeekListener;
+            localSeekBar.setOnSeekBarChangeListener(localOnSeekBarChangeListener);
+        }
+        //this.mProgress.setMax(1000);
+        ActionBar localActionBar = getSupportActionBar();
+        if (localActionBar != null) {
+            Drawable localDrawable = getResources().getDrawable(R.drawable.title_background);
+            localActionBar.setBackgroundDrawable(localDrawable);
+            localActionBar.setCustomView(R.layout.recordlist_customview);
+            localActionBar.setDisplayOptions(18);
+        }
+        init();
+    }
+
+    public boolean onCreateOptionsMenu(Menu paramMenu) {
+        getSupportMenuInflater().inflate(R.menu.recordlist_menu, paramMenu);
+        return super.onCreateOptionsMenu(paramMenu);
+    }
+    
+    public void init() {
+        mFileList = new ArrayList<RecorderFile>();
+        RecorderFile file = new RecorderFile();
+        file.setDuration(100);
+        file.setName("test");
+        file.setPath("a.mp3");
+        file.setSize(1000);
+        mFileList.add(file);
+        mFileList.add(file);
+        mFileList.add(file);
+        mFileList.add(file);
+        updateCounter();
+        this.mAdapter = new RecordListAdapter(this, mFileList);
+        setListAdapter(this.mAdapter);
+    }
+    
+    private void updateCounter() {
+      if ((mFileList.size() == 0)) {
+          this.mIndicator.setVisibility(View.GONE);
+      } else {
+          this.mIndicator.setVisibility(View.VISIBLE);
+          this.mIndicator.setText("12345 shou luyin");
+      }
+    }
+    
     private void MakeCursor() {
         if (mCursor != null) {
             mCursor.close();
@@ -153,17 +216,7 @@ public class RecordList extends ListActivity implements
         //TrackQueryHandler localTrackQueryHandler1 = new TrackQueryHandler(localContentResolver);
         //this.mQueryHandler = localTrackQueryHandler1;
         String[] arrayOfString1 = new String[11];
-        arrayOfString1[0] = "_id";
-        arrayOfString1[1] = "title";
-        arrayOfString1[2] = "_data";
-        arrayOfString1[3] = "album";
-        arrayOfString1[4] = "artist";
-        arrayOfString1[5] = "artist_id";
-        arrayOfString1[6] = "mime_type";
-        arrayOfString1[7] = "duration";
-        arrayOfString1[8] = "play_order";
-        arrayOfString1[9] = "audio_id";
-        arrayOfString1[10] = "_size";
+        
         this.mPlaylistMemberCols = arrayOfString1;
         Resources localResources = getResources();
         Uri localUri1 = MediaStore.Audio.Playlists.getContentUri("external");
@@ -207,44 +260,7 @@ public class RecordList extends ListActivity implements
         }*/
     }
 
-    /*private void UpdateCounter(boolean paramBoolean) {
-        int i = 1;
-        int j = 0;
-        if ((mCursor == null) || (mCursor.getCount() == 0)) {
-            this.mIndicator.setVisibility(8);
-            return;
-        }
-        if ((this.mFormatBuilder == null) || (this.mFormatter == null)) {
-            StringBuilder localStringBuilder1 = new StringBuilder();
-            this.mFormatBuilder = localStringBuilder1;
-            StringBuilder localStringBuilder2 = this.mFormatBuilder;
-            Locale localLocale = Locale.getDefault();
-            Formatter localFormatter = new Formatter(localStringBuilder2,
-                    localLocale);
-            this.mFormatter = localFormatter;
-        }
-        int k = this.mTrackList.getCheckedItemCount();
-        int m = mCursor.getCount();
-        Resources localResources = getResources();
-        String str = null;
-        Object[] arrayOfObject1;
-        if ((k > 0) && (!paramBoolean)) {
-            arrayOfObject1 = new Object[i];
-            Integer localInteger1 = Integer.valueOf(k);
-            arrayOfObject1[j] = localInteger1;
-        }
-        Object[] arrayOfObject2;
-        for (str = localResources.getQuantityString(2131165185, k,
-                arrayOfObject1);; str = localResources.getQuantityString(
-                2131165184, m, arrayOfObject2)) {
-            this.mIndicator.setVisibility(j);
-            this.mIndicator.setText(str);
-            break;
-            arrayOfObject2 = new Object[i];
-            Integer localInteger2 = Integer.valueOf(m);
-            arrayOfObject2[j] = localInteger2;
-        }
-    }
+    /*
 
     private void doPauseResume() {
         if (this.mIsSupposedToBePlaying) {
@@ -598,58 +614,6 @@ public class RecordList extends ListActivity implements
   }
 }
 
-    int getThemeColor(Context paramContext) {
-        int i = 1;
-        int j = 0;
-        Resources localResources = paramContext.getResources();
-        Class localClass = Invoke.getClass("android.content.res.Resources");
-        Class[] arrayOfClass = new Class[i];
-        arrayOfClass[j] = String.class;
-        Method localMethod = Invoke.getMethod(localClass, "getThemeColor",
-                arrayOfClass);
-        int k = null;
-        if (localMethod != null) {
-            Long localLong = Long.valueOf(0L);
-            Object[] arrayOfObject = new Object[i];
-            arrayOfObject[j] = "sound_plg";
-            k = ((Integer) Invoke.invoke(localResources, localLong,
-                    localMethod, arrayOfObject)).intValue();
-        }
-        return k;
-    }
-
-    public void init(Cursor paramCursor)
-{
-  int i = 0;
-  if (paramCursor == null)
-  {
-    MakeCursor();
-    UpdateCounter(i);
-    if ((mCursor != null) && (mCursor.getCount() > 0))
-    {
-      if (this.mAdapter != null)
-        break label106;
-      Cursor localCursor1 = mCursor;
-      RecordListAdapter localRecordListAdapter1 = new RecordListAdapter(this, 2130968581, localCursor1, i);
-      this.mAdapter = localRecordListAdapter1;
-      this.mAdapter.setActivity(this);
-      RecordListAdapter localRecordListAdapter2 = this.mAdapter;
-      setListAdapter(localRecordListAdapter2);
-    }
-  }
-  while (true)
-  {
-    return;
-    if (mCursor != null)
-      mCursor.close();
-    mCursor = paramCursor;
-    break;
-    label106: RecordListAdapter localRecordListAdapter3 = this.mAdapter;
-    Cursor localCursor2 = mCursor;
-    localRecordListAdapter3.changeCursor(localCursor2);
-  }
-}
-
     protected void onActivityResult(int paramInt1, int paramInt2,
             Intent paramIntent) {
         if ((paramIntent == null) || (paramInt2 != -1))
@@ -730,77 +694,6 @@ public class RecordList extends ListActivity implements
     showRenameDlg();
   }
 }
-
-    public void onCreate(Bundle paramBundle) {
-        ModeCallback localModeCallback1 = null;
-        boolean bool = null;
-        super.onCreate(paramBundle);
-        setVolumeControlStream(3);
-        setContentView(2130968583);
-        ListView localListView1 = getListView();
-        this.mTrackList = localListView1;
-        this.mTrackList.setChoiceMode(3);
-        ListView localListView2 = this.mTrackList;
-        ModeCallback localModeCallback2 = new ModeCallback(localModeCallback1);
-        localListView2.setMultiChoiceModeListener(localModeCallback2);
-        setTitle(2131099687);
-        ListView localListView3 = getListView();
-        registerForContextMenu(localListView3);
-        TextView localTextView1 = (TextView) findViewById(2131427364);
-        this.mIndicator = localTextView1;
-        ProgressBar localProgressBar = (ProgressBar) findViewById(16908301);
-        this.mProgress = localProgressBar;
-        LinearLayout localLinearLayout1 = (LinearLayout) findViewById(2131427359);
-        this.mProgressLayout = localLinearLayout1;
-        TextView localTextView2 = (TextView) findViewById(2131427365);
-        this.mCurrentTime = localTextView2;
-        TextView localTextView3 = (TextView) findViewById(2131427366);
-        this.mTotalTime = localTextView3;
-        LinearLayout localLinearLayout2 = this.mProgressLayout;
-        int i = getThemeColor(this);
-        localLinearLayout2.setBackgroundColor(i);
-        this.mProgressLayout.setVisibility(8);
-        PowerManager localPowerManager = (PowerManager) getSystemService("power");
-        String str1 = getClass().getName();
-        PowerManager.WakeLock localWakeLock = localPowerManager.newWakeLock(1,
-                str1);
-        this.mWakeLock = localWakeLock;
-        this.mWakeLock.setReferenceCounted(bool);
-        AudioManager localAudioManager = (AudioManager) getSystemService("audio");
-        this.mAudioManager = localAudioManager;
-        MultiPlayer localMultiPlayer1 = new MultiPlayer();
-        this.mPlayer = localMultiPlayer1;
-        MultiPlayer localMultiPlayer2 = this.mPlayer;
-        Handler localHandler = this.mMediaplayerHandler;
-        localMultiPlayer2.setHandler(localHandler);
-        registerExternalStorageListener();
-        if ((this.mProgress instanceof SeekBar)) {
-            Log.d(this.TAG, "setOnSeekBarChangeListener");
-            SeekBar localSeekBar = (SeekBar) this.mProgress;
-            SeekBar.OnSeekBarChangeListener localOnSeekBarChangeListener = this.mSeekListener;
-            localSeekBar
-                    .setOnSeekBarChangeListener(localOnSeekBarChangeListener);
-        }
-        this.mProgress.setMax(1000);
-        this.isStop = bool;
-        init(localModeCallback1);
-        ActionBar localActionBar = getActionBar();
-        if (localActionBar != null) {
-            Drawable localDrawable = getResources().getDrawable(2130837560);
-            localActionBar.setBackgroundDrawable(localDrawable);
-            localActionBar.setCustomView(2130968580);
-            localActionBar.setDisplayOptions(18);
-        }
-        String str2 = this.TAG;
-        String str3 = "actionbar" + localActionBar;
-        Log.v(str2, str3);
-        initNameCheckList_Str();
-    }
-
-    public boolean onCreateOptionsMenu(Menu paramMenu) {
-        getMenuInflater().inflate(2131361793, paramMenu);
-        return super.onCreateOptionsMenu(paramMenu);
-    }
 
     public void onDestroy() {
         int i = 0;

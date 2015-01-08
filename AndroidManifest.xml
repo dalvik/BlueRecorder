@@ -40,6 +40,8 @@
             </intent-filter>
         </activity>
         
+        <activity android:name="com.android.audiorecorder.RecordList"/>
+        
         <service android:name="com.android.audiorecorder.engine.AudioService" >
             <intent-filter>
                 <action android:name="com.audio.Action_BluetoothRecord" />
