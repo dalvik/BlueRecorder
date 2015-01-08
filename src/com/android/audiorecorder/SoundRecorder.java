@@ -1,15 +1,16 @@
 package com.android.audiorecorder;
 
 import java.io.File;
+import java.util.List;
 
 import android.app.AlertDialog;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
@@ -20,26 +21,33 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.PowerManager;
 import android.os.RemoteException;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.ContextThemeWrapper;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.actionbarsherlock.app.ActionBar;
 import com.actionbarsherlock.app.SherlockActivity;
+import com.actionbarsherlock.view.Menu;
+import com.actionbarsherlock.view.MenuItem;
 import com.android.audiorecorder.engine.AudioService;
 import com.android.audiorecorder.engine.IRecordListener;
 import com.android.audiorecorder.engine.IStateListener;
 
 public class SoundRecorder extends SherlockActivity implements View.OnClickListener {
+    
+    public final static int MSG_RECORDER_UPDATE_UI = 10;
+    public final static int MSG_RECORDER_CALLBACK = 20;
+    
     static final String ANY_ANY = "*/*";
     static final String AUDIO_3GPP = "audio/aac";
     static final String AUDIO_AMR = "audio/amr";
@@ -80,7 +88,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     AnimationDrawable mAnimation;
     String mErrorUiMessage = null;
     private int mFileType = 1;
-    final Handler mHandler = null;
     ImageClock mImageClock;
     ImageButton mListButton;
     long mMaxFileSize = 65535L;
@@ -92,7 +99,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     Recorder mRecorder;
     //RemainingTimeCalculator mRemainingTimeCalculator;
     String mRequestedType = "audio/*";
-    private BroadcastReceiver mSDCardMountEventReceiver;
+    //private BroadcastReceiver mSDCardMountEventReceiver;
     boolean mSampleInterrupted;
     TextView mStateMessage1;
     ProgressBar mStateProgressBar;
@@ -101,10 +108,22 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     String mTimerFormat;
     TextView mTimerView;
     com.android.audiorecorder.myview.VUMeter mVUMeter;
-    PowerManager.WakeLock mWakeLock;
-    
+    private AlertDialog localAlertDialog;
     private IRecordListener iRecordListener;
 
+    private Handler mHandler = new Handler(){
+       public void handleMessage(android.os.Message msg) {
+           switch(msg.what){
+               case MSG_RECORDER_UPDATE_UI:
+                   updateUi();
+                   break;
+               case MSG_RECORDER_CALLBACK:
+                   break;
+               default:
+                   break;
+           }
+       };  
+    };
     /*static {
         String str1 = String.valueOf(Environment.getExternalStorageDirectory()
                 .toString());
@@ -219,11 +238,10 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
 
     public void onCreate(Bundle paramBundle) {
         super.onCreate(paramBundle);
-        Intent intent = new Intent(AudioService.Action_RecordListen);
-        if(bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)){
+        if(bindService(new Intent(AudioService.Action_RecordListen), serviceConnection, Context.BIND_AUTO_CREATE)){
+            startService(new Intent(this, AudioService.class));
             this.mPreferences = getSharedPreferences("SoundRecorder", Context.MODE_PRIVATE);
             setContentView(R.layout.main1);
-            this.mRecorder = new Recorder();
             reloadQueue();
             Intent localIntent = getIntent();
             String type = "";
@@ -239,22 +257,38 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
             if (!"audio/*".equals(str3)) {
                 this.mRequestedType = "audio/aac";
             }
-            this.mWakeLock = ((PowerManager)getSystemService(POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SoundRecorder");
             registerExternalStorageListener();
             com.actionbarsherlock.app.ActionBar localActionBar = getSupportActionBar();
             if (localActionBar != null) {
                 Drawable localDrawable = getResources().getDrawable(R.drawable.title_background);
                 localActionBar.setBackgroundDrawable(localDrawable);
                 localActionBar.setCustomView(R.layout.actionbar_customview);
-                localActionBar.setDisplayOptions(16);
+                localActionBar.setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM);
+                //localActionBar.setDisplayOptions(0, ActionBar.DISPLAY_HOME_AS_UP | ActionBar.DISPLAY_SHOW_TITLE | ActionBar.DISPLAY_SHOW_CUSTOM);
+                localActionBar.setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM);
+                localActionBar.setHomeButtonEnabled(false);
             }
-            updateUi();
         }else {
             Toast.makeText(this, getText(R.string.audio_bind_error), Toast.LENGTH_LONG).show();
             SoundRecorder.this.finish();
         }
-        
-      }
+    }
+    
+    public void onResume() {
+        super.onResume();
+        if(iRecordListener != null) {
+            try {
+                iRecordListener.regStateListener(iStateListener);
+                mHandler.postDelayed(mUpdateTimer, 1000);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            } 
+        }
+        if (this.DEBUG)
+            Log.v("SoundRecorder", "onResume");
+        /*this.mRecorder.resetState();
+        stopFmPlayback();*/
+    }
     
     private void initResourceRefs() {
         this.mRecordButton = (ImageButton) findViewById(R.id.recordButton);
@@ -291,14 +325,14 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                     if(start) {
                         mHandler.removeCallbacks(mUpdateTimer);
                         mHandler.post(mUpdateTimer);
-                        //myHandler.sendEmptyMessage(MSG_UPDATE_UI);
                     }
+                    mHandler.sendEmptyMessage(MSG_RECORDER_UPDATE_UI);
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }
             }else {
                 if(DebugConfig.DEBUG) {
-                    Log.d(TAG, "===> onServiceConnected error iRecordListener = " + iRecordListener);
+                    Log.e(TAG, "===> onServiceConnected error iRecordListener = " + iRecordListener);
                 }
             }
         }
@@ -317,8 +351,8 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         
         @Override
         public void onStateChanged(int state) throws RemoteException {
-            Log.d(TAG, "===> onStateChanged  state = " + state );
-            //myHandler.sendEmptyMessage(state);
+            Log.d(TAG, "===> onStateChanged  state = " + state);
+            mHandler.sendEmptyMessage(MSG_RECORDER_UPDATE_UI);
         }
         
     };
@@ -404,53 +438,40 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     }
 
 
-    private void openOptionDialog(int paramInt)
-{
-  int i = 1;
-  ContextThemeWrapper localContextThemeWrapper = new ContextThemeWrapper(this, 16973939);
-  Resources localResources = localContextThemeWrapper.getResources();
-  LayoutInflater localLayoutInflater = (LayoutInflater)localContextThemeWrapper.getSystemService("layout_inflater");
-  if (this.DEBUG)
-  {
-    String str = "openOptionDialog with optionType = " + paramInt;
-    Log.i("SoundRecorder", str);
-  }
-  /*SoundRecorder.4 local4 = new SoundRecorder.4(this, this, 17367055, localLayoutInflater);
-  SoundRecorder.5 local5;
-  AlertDialog localAlertDialog;
-  if (paramInt == 0)
-  {
-    Integer localInteger1 = Integer.valueOf(2131099704);
-    local4.add(localInteger1);
-    Integer localInteger2 = Integer.valueOf(2131099703);
-    local4.add(localInteger2);
-    local5 = new SoundRecorder.5(this, local4);
-    localAlertDialog = null;
-    if (paramInt != 0)
-      break label223;
-    AlertDialog.Builder localBuilder1 = new AlertDialog.Builder(this).setTitle(2131099702);
-    int j = this.mStoragePath;
-    localAlertDialog = localBuilder1.setSingleChoiceItems(local4, j, local5).create();
-  }*/
-  /*while (true)
-  {
-    localAlertDialog.setCanceledOnTouchOutside(i);
-    localAlertDialog.show();
-    return;
-    if (paramInt != i)
-      break;
-    Integer localInteger3 = Integer.valueOf(2131099706);
-    local4.add(localInteger3);
-    Integer localInteger4 = Integer.valueOf(2131099707);
-    local4.add(localInteger4);
-    break;
-    label223: if (paramInt != i)
-      continue;
-    AlertDialog.Builder localBuilder2 = new AlertDialog.Builder(this).setTitle(2131099705);
-    int k = this.mFileType;
-    localAlertDialog = localBuilder2.setSingleChoiceItems(local4, k, local5).create();
-  }*/
-}
+    private void openOptionDialog(int type) {
+        ContextThemeWrapper localContextThemeWrapper = new ContextThemeWrapper(this, R.style.AlertDialogCustom);
+        LayoutInflater localLayoutInflater = (LayoutInflater)localContextThemeWrapper.getSystemService(LAYOUT_INFLATER_SERVICE);
+        SettingAdapter adpater = new SettingAdapter(this, R.layout.setting_list_item, localLayoutInflater);
+        if(type == 0){
+            adpater.add(R.string.storage_setting_sdcard_item);
+            adpater.add(R.string.storage_setting_Local_item);
+            AlertDialog.Builder localBuilder1 = new AlertDialog.Builder(this).setTitle(R.string.storage_setting);
+            localAlertDialog = localBuilder1.setSingleChoiceItems(adpater, mPreferences.getInt(PREFERENCE_TAG_STORAGE_LOCATION, 0), new OnClickListener() {
+                
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    mPreferences.edit().putInt(PREFERENCE_TAG_STORAGE_LOCATION, which).commit();
+                    localAlertDialog.dismiss();
+                }
+            }).create();
+            localAlertDialog.setCanceledOnTouchOutside(true);
+            localAlertDialog.show();
+        } else if(type == 1){
+            adpater.add(R.string.format_setting_AMR_item);
+            adpater.add(R.string.format_setting_3GPP_item);
+            AlertDialog.Builder localBuilder1 = new AlertDialog.Builder(this).setTitle(R.string.format_setting);
+            localAlertDialog = localBuilder1.setSingleChoiceItems(adpater, mPreferences.getInt(PREFERENCE_TAG_FILE_TYPE, 0), new OnClickListener() {
+                
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    mPreferences.edit().putInt(PREFERENCE_TAG_FILE_TYPE, which).commit();
+                    localAlertDialog.dismiss();
+                }
+            }).create();
+            localAlertDialog.setCanceledOnTouchOutside(true);
+            localAlertDialog.show();
+        }
+    }
 
     private void popToast(String paramString) {
         Toast localToast = Toast.makeText(this, paramString, 0);
@@ -498,10 +519,10 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
 
     private void registerExternalStorageListener()
 {
-  if (this.mSDCardMountEventReceiver == null)
+  /*if (this.mSDCardMountEventReceiver == null)
   {
-    /*SoundRecorder.3 local3 = new SoundRecorder.3(this);
-    this.mSDCardMountEventReceiver = local3;*/
+    SoundRecorder.3 local3 = new SoundRecorder.3(this);
+    this.mSDCardMountEventReceiver = local3;
     IntentFilter localIntentFilter = new IntentFilter();
     localIntentFilter.addAction("android.intent.action.MEDIA_EJECT");
     localIntentFilter.addAction("android.intent.action.MEDIA_MOUNTED");
@@ -509,7 +530,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     localIntentFilter.addDataScheme("file");
     BroadcastReceiver localBroadcastReceiver = this.mSDCardMountEventReceiver;
     registerReceiver(localBroadcastReceiver, localIntentFilter);
-  }
+  }*/
 }
 
     private void reloadQueue() {
@@ -614,6 +635,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                     this.mStopButton.setVisibility(View.GONE);
                     this.mStopButton.setEnabled(false);
                     this.mStopButton.setFocusable(false);
+                    this.mAnimation.stop();
                 }else {
                     this.mRecordButton.setEnabled(false);
                     this.mRecordButton.setFocusable(false);
@@ -621,6 +643,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                     this.mStopButton.setVisibility(View.VISIBLE);
                     this.mStopButton.setEnabled(true);
                     this.mStopButton.setFocusable(true);
+                    this.mAnimation.start();
                 }
             } catch (RemoteException e) {
                 e.printStackTrace();
@@ -652,135 +675,68 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
             e.printStackTrace();
         }
     }
-    ///public boolean onCreateOptionsMenu(Menu paramMenu) {
-      //  getMenuInflater().inflate(2131361792, paramMenu);
-      //  return super.onCreateOptionsMenu(paramMenu);
-    //}
+    
+    public boolean onCreateOptionsMenu(Menu paramMenu) {
+        getSupportMenuInflater().inflate(R.menu.main_menu, paramMenu);
+        return super.onCreateOptionsMenu(paramMenu);
+    }
 
     public void onDestroy() {
         super.onDestroy();
-        if (this.DEBUG)
-            Log.v("SoundRecorder", "onDestroy");
-        if (this.mSDCardMountEventReceiver != null) {
+        Log.v("SoundRecorder", "onDestroy");
+        /*if (this.mSDCardMountEventReceiver != null) {
             BroadcastReceiver localBroadcastReceiver = this.mSDCardMountEventReceiver;
             unregisterReceiver(localBroadcastReceiver);
             this.mSDCardMountEventReceiver = null;
+        }*/
+        mHandler.removeCallbacks(mUpdateTimer);
+        if(iRecordListener != null) {
+            try {
+                iRecordListener.unregStateListener(iStateListener);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    public boolean onKeyDown(int paramInt, KeyEvent paramKeyEvent) {
-        /*int i = 4;
-        if (paramInt == i) {
-            String str = getString(2131099679);
-            i = this.mRecorder.state();
-            switch (i) {
-                case 2:
+    public boolean onOptionsItemSelected(MenuItem paramMenuItem) {
+        switch (paramMenuItem.getItemId()) {
+            case R.id.menu_item_storage:
+                openOptionDialog(0);
+                break;
+            case R.id.menu_item_filetype:
+                openOptionDialog(1);
+                break;
+            case R.id.list:
+                Intent localIntent = new Intent();
+                localIntent.setClass(this, RecordList.class);
+                startActivity(localIntent);
+                break;
                 default:
-                    i = 1;
-                case 0:
-                case 1:
-                case 3:
-            }
+                    break;
         }
-        while (true) {
-            return i;
-            saveSample();
-            finish();
-            break;
-            Object localObject = this.mRecorder;
-            ((Recorder) localObject).stop();
-            saveSample();
-            finish();
-            break;
-            localObject = super.onKeyDown(paramInt, paramKeyEvent);
-        }*/
         return true;
     }
 
-    //public boolean onOptionsItemSelected(MenuItem paramMenuItem) {
-        /*switch (paramMenuItem.getItemId()) {
-            default:
-            case 2131427370:
-            case 2131427371:
-            case 2131427372:
-        }
-        while (true) {
-            return super.onOptionsItemSelected(paramMenuItem);
-            if (this.mRecorder.state() != 0)
-                continue;
-            openOptionDialog(0);
-            continue;
-            if (this.mRecorder.state() != 0)
-                continue;
-            openOptionDialog(1);
-            continue;
-            if (this.DEBUG)
-                Log.v("SoundRecorder", "onClick listButton-----------   ");
-            Intent localIntent = new Intent();
-            localIntent.setClass(this, RecordList.class);
-            startActivity(localIntent);
-        }*/
-        //return true;
-   // }
-
-    //public boolean onPrepareOptionsMenu(Menu paramMenu) {
-        /*boolean bool = false;
-        int i = 1;
-        super.onPrepareOptionsMenu(paramMenu);
-        MenuItem localMenuItem = paramMenu.findItem(2131427370);
-        int j = this.mRecorder.state();
-        if (j == 0)
-            j = i;
-        while (true) {
-            localMenuItem.setEnabled(j);
-            Object localObject = paramMenu.findItem(2131427371);
-            if (this.mRecorder.state() == 0)
-                bool = i;
-            ((MenuItem) localObject).setEnabled(bool);
-            return i;
-            localObject = bool;
-        }*/
-       // return true;
-   // }
-
-    public void onResume() {
-        super.onResume();
+    public boolean onPrepareOptionsMenu(Menu paramMenu) {
         if(iRecordListener != null) {
             try {
-                iRecordListener.regStateListener(iStateListener);
-                mHandler.postDelayed(mUpdateTimer, 1000);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            } 
+                boolean start = iRecordListener.isRecorderStart();
+                MenuItem localMenuItem = paramMenu.findItem(R.id.menu_item_storage);
+                localMenuItem.setEnabled(!start);
+                MenuItem typeMenuItem = paramMenu.findItem(R.id.menu_item_filetype);
+                typeMenuItem.setEnabled(!start);
+            } catch(RemoteException e){
+                
+            }
         }
-        if (this.DEBUG)
-            Log.v("SoundRecorder", "onResume");
-        /*this.mRecorder.resetState();
-        stopFmPlayback();*/
-    }
-
-    protected void onSaveInstanceState(Bundle paramBundle) {
-        super.onSaveInstanceState(paramBundle);
-        /*if (this.mRecorder.sampleLength() == 0)
-            ;
-        while (true) {
-            return;
-            Bundle localBundle = new Bundle();
-            this.mRecorder.saveState(localBundle);
-            boolean bool = this.mSampleInterrupted;
-            localBundle.putBoolean("sample_interrupted", bool);
-            long l = this.mMaxFileSize;
-            localBundle.putLong("max_file_size", l);
-            paramBundle.putBundle("recorder_state", localBundle);
-            saveQueue();
-        }*/
+        return true;
     }
 
     public void onStateChanged(int paramInt) {
         if ((paramInt == 2) || (paramInt == 1)) {
             this.mSampleInterrupted = false;
             this.mErrorUiMessage = null;
-            this.mWakeLock.acquire();
         }
         /*while (true) {
             updateUi();
@@ -802,6 +758,27 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         sendBroadcast(localIntent);
     }
     
+    private class SettingAdapter extends ArrayAdapter<Integer>{
+
+        private LayoutInflater mLayoutInflater;
+        private int mResource;
+        
+        public SettingAdapter(Context context, int resource, LayoutInflater layoutInflater) {
+            super(context, resource);
+            this.mLayoutInflater = layoutInflater;
+            this.mResource = resource;
+        }
+        
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            if(convertView == null){
+                convertView = mLayoutInflater.inflate(mResource, null);
+                ((TextView)convertView).setText((Integer)getItem(position));
+            }
+            return convertView;
+        }
+        
+    }
     public class Recorder {
         
         public Recorder() {
@@ -809,7 +786,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         }
         
         public int getMaxAmplitude() {
-            /*if (iRecordListener == null) {
+            if (iRecordListener == null) {
                 Log.d(TAG, "===> audio record state stop");
                 return 0;
             }
@@ -818,29 +795,29 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
             } catch (RemoteException e) {
                 Log.d(TAG, "===> getMaxAmplitude error " + e.getMessage());
                 e.printStackTrace();
-            }*/
+            }
             return 0;
         }
         
         public int progress() {
-            /*if (iRecordListener != null) {
+            if (iRecordListener != null) {
                 try {
                     return iRecordListener.getRecorderTime();
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }
-            }*/
+            }
             return 0;
         }
         
         public boolean state() {
-            /*if(iStateListener != null) {
+            if(iStateListener != null) {
                 try {
                     return iRecordListener.isRecorderStart();
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }
-            }*/
+            }
             return false;
         }
     }

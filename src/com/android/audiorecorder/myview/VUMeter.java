@@ -23,6 +23,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 
 import com.android.audiorecorder.R;
@@ -81,7 +82,6 @@ public class VUMeter extends View {
         if (mRecorder != null) {
             angle += (float)(maxAngle - minAngle)*mRecorder.getMaxAmplitude()/32768;
         }
-
         if (angle > mCurrentAngle)
             mCurrentAngle = angle;
         else
@@ -98,8 +98,8 @@ public class VUMeter extends View {
         float x0 = pivotX - l*cos;
         float y0 = pivotY - l*sin;
         if (mRecorder == null || !mRecorder.state()) {
-            x0 = 21.0f;
-            y0 = 70.0f;
+            x0 = 20.0f;
+            y0 = 100.0f;
         }
         canvas.drawLine(x0 + SHADOW_OFFSET, y0 + SHADOW_OFFSET, pivotX + SHADOW_OFFSET, pivotY + SHADOW_OFFSET, mShadow);
         canvas.drawCircle(pivotX + SHADOW_OFFSET, pivotY + SHADOW_OFFSET, PIVOT_RADIUS, mShadow);

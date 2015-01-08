@@ -128,8 +128,7 @@ public class VUMeter extends View {
       int i10 = i7 / 2 + i5;
       localDrawable1.setBounds(i9, i7, i10, i6);
       Drawable localDrawable2 = this.mNiddle;
-      Canvas localCanvas = paramCanvas;
-      localDrawable2.draw(localCanvas);
+      localDrawable2.draw(paramCanvas);
       //if ((this.mRecorder != null) && (this.mRecorder.state() == 1))
         postInvalidateDelayed(40L);
       //return;

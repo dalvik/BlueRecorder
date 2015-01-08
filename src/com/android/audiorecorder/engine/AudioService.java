@@ -14,7 +14,6 @@ import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
-import android.media.MediaPlayer.OnPreparedListener;
 import android.media.MediaRecorder;
 import android.media.MediaRecorder.OnErrorListener;
 import android.os.Environment;
@@ -30,10 +29,8 @@ import com.android.audiorecorder.DateUtil;
 
 public class AudioService extends Service {
 
-    private boolean mIsAudioVisable;
-    private boolean mIsTalkVisable;
 
-    public static final String Action_RecordListen = "com.audio.Action_RecordListen";
+    public static final String Action_RecordListen = "com.audio.Action_BluetoothRecord";
 
     /* action */
     public static final String Action_Record = "com.dahuatech.audio.Action_Record";
@@ -61,15 +58,7 @@ public class AudioService extends Service {
 
     public static final int MSG_STOP_RECORD = 0xE2;
 
-    public static final int MSG_START_TALK = 0xE3;
-
-    public static final int MSG_STOP_TALK = 0xE4;
-
-    private static final int MSG_OPEN_TALK = 0xE5;
-
     public static final int STATE_PREPARE = 0x01;
-
-    public static final int STATE_PREPARE_OK = 0x02;
 
     public static final int MSG_ATDP_CONNECTED = 0x10;
     public static final int MSG_ATDP_DISCONNECTED = 0x11;
@@ -108,18 +97,6 @@ public class AudioService extends Service {
                     break;
                 case MSG_STOP_RECORD:
                     stopRecord();
-                    break;
-                case MSG_START_TALK:
-                    starTalk();
-                    mHandler.sendEmptyMessage(MSG_OPEN_TALK);
-                    break;
-                case MSG_STOP_TALK:
-                    stopTalk();
-                    break;
-                case MSG_OPEN_TALK:
-                    break;
-                case STATE_PREPARE_OK:
-                    notifyUpdate(MSG_START_RECORD);
                     break;
                 case MSG_ATDP_CONNECTED:
                      mAudioManager.setStreamMute(AudioManager.STREAM_VOICE_CALL, true);
@@ -176,8 +153,6 @@ public class AudioService extends Service {
             };
             registerReceiver(mStateChnageReceiver, filter);
         }
-        mIsAudioVisable = false;
-        mIsTalkVisable = false;
         Log.d(TAG, "===> onCreate.");
     }
 
@@ -209,11 +184,6 @@ public class AudioService extends Service {
                     Action_Record_Extral_Channel, 0);
             mAudioTalkStream = intent.getIntExtra(Action_Record_Extral_Stream,
                     1);
-            if (mAudioTalkStart) {
-                mHandler.sendEmptyMessage(MSG_START_TALK);
-            } else {
-                mHandler.sendEmptyMessage(MSG_STOP_TALK);
-            }
             Log.d(TAG, "===> mAudioTalkStart = " + mAudioTalkStart);
         }
         return super.onStartCommand(intent, flags, startId);
@@ -233,29 +203,15 @@ public class AudioService extends Service {
 
         @Override
         public void startRecord() throws RemoteException {
-           /* try {
-                audioStartId = mDvrSystemManager.startAudio();
-            } catch (NotPreparedException e) {
-                Log.e(TAG,
-                        "===> startRecord NotPreparedException "
-                                + e.getMessage());
-                e.printStackTrace();
-            }*/
-            Log.d(TAG, "===>Call startAudio");
+            Log.i(TAG, "===>Call startRecorder");
+            mHandler.removeMessages(MSG_START_RECORD);
             mHandler.sendEmptyMessage(MSG_START_RECORD);
         }
 
         @Override
         public void stopRecord() throws RemoteException {
-            /*try {
-                audioStopId = mDvrSystemManager.stopAudio();
-            } catch (NotPreparedException e) {
-                Log.e(TAG,
-                        "===> stopRecord NotPreparedException "
-                                + e.getMessage());
-                e.printStackTrace();
-            }*/
-            Log.d(TAG, "===> stopRecord");
+            Log.d(TAG, "===> stopRecorder");
+            mHandler.removeMessages(MSG_STOP_RECORD);
             mHandler.sendEmptyMessage(MSG_STOP_RECORD);
         }
 
@@ -323,13 +279,6 @@ public class AudioService extends Service {
         }
     }
 
-    private void setTalkStatus(boolean start) {
-        mTalkStart = start;
-        if (start) {
-            mTalkTime = SystemClock.uptimeMillis();
-        }
-    }
-
     private void startRecorder() {
         if (mMediaRecorder == null) {
             mMediaRecorder = new MediaRecorder();
@@ -361,8 +310,7 @@ public class AudioService extends Service {
             mMediaRecorder.setOutputFile(path + DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis())+".mp3");
             mMediaRecorder.setOnErrorListener(mRecorderErrorListener);
             mMediaRecorder.prepare();
-            IntentFilter filter = new IntentFilter(
-                    BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED);
+            IntentFilter filter = new IntentFilter(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED);
             if (receiver == null) {
                 receiver = new BroadcastReceiver() {
                     public void onReceive(Context context, Intent intent) {
@@ -410,14 +358,13 @@ public class AudioService extends Service {
                             }
                         }
                     };
-                    registerReceiver(bluetoothStateReceiver, new IntentFilter(
-                            AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED));
+                    registerReceiver(bluetoothStateReceiver, new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED));
                 }
             }
             mMediaRecorder.start();
             mWakeLock.acquire();
-            mHandler.sendEmptyMessageDelayed(STATE_PREPARE_OK, 200);
             setRecordStatus(true);
+            notifyUpdate(MSG_START_RECORD);
         } catch (IOException e) {
             e.printStackTrace();
             Log.e(TAG, "===> startRecorder error --- " + e.getMessage());
@@ -457,65 +404,6 @@ public class AudioService extends Service {
         notifyUpdate(MSG_STOP_RECORD);
     }
 
-    private void starTalk() throws IllegalArgumentException {
-        mCurAudoMode = mAudioManager.getMode();
-        mIsSpeekPhoneOn = mAudioManager.isSpeakerphoneOn();
-        mAudioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-        if (mAudioManager.isWiredHeadsetOn()) {
-            mAudioManager.setSpeakerphoneOn(false);
-        } else {
-            mAudioManager.setSpeakerphoneOn(true);
-        }
-        Intent i = new Intent("com.android.music.musicservicecommand");
-        i.putExtra("command", "pause");
-        sendBroadcast(i);
-        // we shouldn't clear the target state, because somebody might have
-        // called start() previously
-        release(false);
-        try {
-            if (mMediaPlayer == null) {
-                mMediaPlayer = new MediaPlayer();
-                mMediaPlayer.setOnCompletionListener(mCompletionListener);
-                mMediaPlayer.setOnErrorListener(mErrorListener);
-               // mMediaPlayer.setDataSource(mDvrTalkChannel);
-                mMediaPlayer.prepareAsync();
-                mMediaPlayer.setOnPreparedListener(new OnPreparedListener() {
-
-                    @Override
-                    public void onPrepared(MediaPlayer mp) {
-                        Log.d(TAG, "===> MediaPlayer prepared complete.");
-                        mMediaPlayer.start();
-                    }
-                });
-            }
-        } catch (IllegalArgumentException ex) {
-            Log.e(TAG,
-                    "===> starTalk IllegalArgumentException "
-                            + ex.getLocalizedMessage());
-            mErrorListener.onError(mMediaPlayer,
-                    MediaPlayer.MEDIA_ERROR_UNKNOWN, 0);
-        }
-    }
-
-    private void stopTalk() {
-        // mAudioManager.setSpeakerphoneOn(mIsSpeekPhoneOn);
-        mAudioManager.setMode(mCurAudoMode);
-        if (mMediaPlayer != null) {
-            mMediaPlayer.stop();
-            mMediaPlayer.release();
-            mMediaPlayer = null;
-            Log.d(TAG, "===> stopTalk.");
-        }
-    }
-
-    private void release(boolean cleartargetstate) {
-        if (mMediaPlayer != null) {
-            mMediaPlayer.reset();
-            mMediaPlayer.release();
-            mMediaPlayer = null;
-        }
-    }
-
     // recorder
     private MediaRecorder.OnErrorListener mRecorderErrorListener = new OnErrorListener() {
 
@@ -524,7 +412,6 @@ public class AudioService extends Service {
             Log.e(TAG, "  MediaRecorder Error: " + arg1 + "," + arg1);
             mAudioRecordStart = false;
             mHandler.sendEmptyMessage(MSG_STOP_RECORD);
-            mHandler.sendEmptyMessage(MSG_STOP_TALK);
         }
     };
 
@@ -533,7 +420,6 @@ public class AudioService extends Service {
         public void onCompletion(MediaPlayer mp) {
             mAudioTalkStart = false;
             mHandler.sendEmptyMessage(MSG_STOP_RECORD);
-            mHandler.sendEmptyMessage(MSG_STOP_TALK);
             if (mOnCompletionListener != null) {
                 mOnCompletionListener.onCompletion(mMediaPlayer);
             }
@@ -546,7 +432,6 @@ public class AudioService extends Service {
             Log.e(TAG, "  MediaPlayer Error: " + framework_err + "," + impl_err);
             mAudioTalkStart = false;
             mHandler.sendEmptyMessage(MSG_STOP_RECORD);
-            mHandler.sendEmptyMessage(MSG_STOP_TALK);
             return true;
         }
     };

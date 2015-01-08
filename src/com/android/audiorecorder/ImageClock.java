@@ -5,6 +5,7 @@ import java.util.Calendar;
 import android.content.Context;
 import android.graphics.Typeface;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
@@ -68,23 +69,23 @@ public class ImageClock extends LinearLayout {
         int i = this.mNumberImageID_List[0];
         this.mHour_10.setImageResource(i);
         
-        int j = this.mNumberImageID_List[1];
+        int j = this.mNumberImageID_List[0];
         this.mHour_1.setImageResource(j);
         
         this.mColon.setImageResource(R.drawable.new_image_clock_colon);
         
-        int k = this.mNumberImageID_List[2];
+        int k = this.mNumberImageID_List[0];
         this.mMinute_10.setImageResource(k);
         
-        int m = this.mNumberImageID_List[3];
+        int m = this.mNumberImageID_List[0];
         this.mMinute_1.setImageResource(m);
         
         this.mColon1.setImageResource(R.drawable.new_image_clock_colon);
         
-        int n = this.mNumberImageID_List[4];
+        int n = this.mNumberImageID_List[0];
         this.mSecond_10.setImageResource(n);
         
-        int i1 = this.mNumberImageID_List[5];
+        int i1 = this.mNumberImageID_List[0];
         this.mSecond_1.setImageResource(i1);
     }
 
