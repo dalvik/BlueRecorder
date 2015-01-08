@@ -1,7 +1,6 @@
 package com.android.audiorecorder;
 
 import java.io.File;
-import java.util.List;
 
 import android.app.AlertDialog;
 import android.content.ComponentName;
@@ -15,13 +14,16 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.database.Cursor;
+import android.graphics.YuvImage;
 import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.os.StatFs;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.ContextThemeWrapper;
@@ -45,8 +47,8 @@ import com.android.audiorecorder.engine.IStateListener;
 
 public class SoundRecorder extends SherlockActivity implements View.OnClickListener {
     
+    public final static int MIX_STORAGE_CAPACITY = 500;//MB
     public final static int MSG_RECORDER_UPDATE_UI = 10;
-    public final static int MSG_RECORDER_CALLBACK = 20;
     
     static final String ANY_ANY = "*/*";
     static final String AUDIO_3GPP = "audio/aac";
@@ -54,13 +56,13 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     static final String AUDIO_ANY = "audio/*";
     static final int BITRATE_3GPP = 65536;
     static final int BITRATE_AMR = 12841;
-    static final int FILE_TYPE_3GPP = 1;
-    static final int FILE_TYPE_AMR = 0;
-    static final int FILE_TYPE_DEFAULT = 1;
+    public static final int FILE_TYPE_3GPP = 1;
+    public static final int FILE_TYPE_AMR = 0;
+    public static final int FILE_TYPE_DEFAULT = 1;
     static final String MAX_FILE_SIZE_KEY = "max_file_size";
     public static float PIXEL_DENSITY = 0.0F;
-    static final String PREFERENCE_TAG_FILE_TYPE = "filetype";
-    static final String PREFERENCE_TAG_STORAGE_LOCATION = "storagepath";
+    public static final String PREFERENCE_TAG_FILE_TYPE = "filetype";
+    public static final String PREFERENCE_TAG_STORAGE_LOCATION = "storagepath";
     private static final int Phone_Storage = 1;
     private static final int Position_Setting = 0;
     private static final int QUIT = 2;
@@ -70,9 +72,9 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     static final int SETTING_TYPE_FILE_TYPE = 1;
     static final int SETTING_TYPE_STORAGE_LOCATION = 0;
     static final String STATE_FILE_NAME = "soundrecorder.state";
-    static final int STORAGE_LOCATION_DEFAULT = 0;
-    static final int STORAGE_LOCATION_LOCAL_PHONE = 0;
-    static final int STORAGE_LOCATION_SD_CARD = 1;
+    public static final int STORAGE_LOCATION_DEFAULT = 0;
+    public static final int STORAGE_LOCATION_LOCAL_PHONE = 0;
+    public static final int STORAGE_LOCATION_SD_CARD = 1;
     static final String STORAGE_PATH_LOCAL_PHONE = null;
     static final String STORAGE_PATH_SD_CARD = null;
     static final String TAG = "SoundRecorder";
@@ -115,9 +117,12 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
        public void handleMessage(android.os.Message msg) {
            switch(msg.what){
                case MSG_RECORDER_UPDATE_UI:
+               case AudioService.MSG_START_RECORD:
+               case AudioService.MSG_STOP_RECORD:
                    updateUi();
                    break;
-               case MSG_RECORDER_CALLBACK:
+               case AudioService.MSG_UPDATE_TIMER:
+                   updateTimerView();
                    break;
                default:
                    break;
@@ -279,7 +284,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         if(iRecordListener != null) {
             try {
                 iRecordListener.regStateListener(iStateListener);
-                mHandler.postDelayed(mUpdateTimer, 1000);
             } catch (RemoteException e) {
                 e.printStackTrace();
             } 
@@ -307,10 +311,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         this.mTimerFormat = str;
     }
     
-    Runnable mUpdateTimer = new Runnable() {
-        public void run() { updateTimerView(); }
-    };
-    
     private ServiceConnection serviceConnection = new ServiceConnection() {
 
         @Override
@@ -322,10 +322,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                     mRecorder = new Recorder();
                     initResourceRefs();
                     boolean start = iRecordListener.isRecorderStart();
-                    if(start) {
-                        mHandler.removeCallbacks(mUpdateTimer);
-                        mHandler.post(mUpdateTimer);
-                    }
                     mHandler.sendEmptyMessage(MSG_RECORDER_UPDATE_UI);
                 } catch (RemoteException e) {
                     e.printStackTrace();
@@ -352,7 +348,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         @Override
         public void onStateChanged(int state) throws RemoteException {
             Log.d(TAG, "===> onStateChanged  state = " + state);
-            mHandler.sendEmptyMessage(MSG_RECORDER_UPDATE_UI);
+            mHandler.sendEmptyMessage(state);
         }
         
     };
@@ -442,11 +438,12 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         ContextThemeWrapper localContextThemeWrapper = new ContextThemeWrapper(this, R.style.AlertDialogCustom);
         LayoutInflater localLayoutInflater = (LayoutInflater)localContextThemeWrapper.getSystemService(LAYOUT_INFLATER_SERVICE);
         SettingAdapter adpater = new SettingAdapter(this, R.layout.setting_list_item, localLayoutInflater);
+        adpater.clear();
         if(type == 0){
-            adpater.add(R.string.storage_setting_sdcard_item);
             adpater.add(R.string.storage_setting_Local_item);
+            adpater.add(R.string.storage_setting_sdcard_item);
             AlertDialog.Builder localBuilder1 = new AlertDialog.Builder(this).setTitle(R.string.storage_setting);
-            localAlertDialog = localBuilder1.setSingleChoiceItems(adpater, mPreferences.getInt(PREFERENCE_TAG_STORAGE_LOCATION, 0), new OnClickListener() {
+            localAlertDialog = localBuilder1.setSingleChoiceItems(adpater, mPreferences.getInt(PREFERENCE_TAG_STORAGE_LOCATION, STORAGE_LOCATION_DEFAULT), new OnClickListener() {
                 
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
@@ -460,7 +457,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
             adpater.add(R.string.format_setting_AMR_item);
             adpater.add(R.string.format_setting_3GPP_item);
             AlertDialog.Builder localBuilder1 = new AlertDialog.Builder(this).setTitle(R.string.format_setting);
-            localAlertDialog = localBuilder1.setSingleChoiceItems(adpater, mPreferences.getInt(PREFERENCE_TAG_FILE_TYPE, 0), new OnClickListener() {
+            localAlertDialog = localBuilder1.setSingleChoiceItems(adpater, mPreferences.getInt(PREFERENCE_TAG_FILE_TYPE, FILE_TYPE_DEFAULT), new OnClickListener() {
                 
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
@@ -613,8 +610,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         }
         int time = start ? mRecorder.progress() : 0;
         mImageClock.setText(time);
-        if (start)
-            mHandler.postDelayed(mUpdateTimer, 1000);
         return 0;
     }
 
@@ -654,6 +649,26 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     public void onClick(View paramView) {
         switch(paramView.getId()){
             case R.id.recordButton:
+                int storage = mPreferences.getInt(PREFERENCE_TAG_STORAGE_LOCATION, STORAGE_LOCATION_DEFAULT);
+                if(storage == STORAGE_LOCATION_LOCAL_PHONE){
+                    int availSize = FileUtils.getAvailableSize(Environment.getDataDirectory().getPath());
+                    if(availSize<MIX_STORAGE_CAPACITY){
+                        popToast(getString(R.string.storage_is_full));
+                        return;
+                    }
+                } else if(storage == STORAGE_LOCATION_SD_CARD){
+                    if(!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
+                        popToast(getString(R.string.insert_sd_card));
+                        return;
+                    }
+                    int availSize = FileUtils.getAvailableSize(Environment.getExternalStorageDirectory().getPath());
+                    if(availSize<MIX_STORAGE_CAPACITY){
+                        popToast(getString(R.string.storage_is_full));
+                        return;
+                    }
+                }
+                recordOperation();
+                break;
             case R.id.pauseButton:
             case R.id.stopButton:
                 recordOperation();
@@ -689,7 +704,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
             unregisterReceiver(localBroadcastReceiver);
             this.mSDCardMountEventReceiver = null;
         }*/
-        mHandler.removeCallbacks(mUpdateTimer);
         if(iRecordListener != null) {
             try {
                 iRecordListener.unregStateListener(iStateListener);

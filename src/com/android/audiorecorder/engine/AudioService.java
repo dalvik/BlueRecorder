@@ -5,17 +5,22 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothA2dp;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaRecorder;
 import android.media.MediaRecorder.OnErrorListener;
+import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
@@ -24,12 +29,18 @@ import android.os.PowerManager.WakeLock;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.util.Log;
+import android.widget.RemoteViews;
 
 import com.android.audiorecorder.DateUtil;
+import com.android.audiorecorder.R;
+import com.android.audiorecorder.SoundRecorder;
 
 public class AudioService extends Service {
 
 
+    private String STORAGE_PATH_LOCAL_PHONE;
+    private String STORAGE_PATH_SD_CARD;
+    
     public static final String Action_RecordListen = "com.audio.Action_BluetoothRecord";
 
     /* action */
@@ -62,6 +73,8 @@ public class AudioService extends Service {
 
     public static final int MSG_ATDP_CONNECTED = 0x10;
     public static final int MSG_ATDP_DISCONNECTED = 0x11;
+    
+    public final static int MSG_UPDATE_TIMER = 20;
 
     private WakeLock mWakeLock;
     private MediaRecorder mMediaRecorder = null;
@@ -89,6 +102,12 @@ public class AudioService extends Service {
     private BroadcastReceiver receiver = null;
     private BroadcastReceiver mStateChnageReceiver = null;
     private BroadcastReceiver bluetoothStateReceiver = null;
+    
+    private SharedPreferences mPreferences;
+    private NotificationManager mNotificationManager;
+    private int CUSTOM_VIEW_ID = R.layout.recorder_notification;
+    private StringBuffer timerInfo = new StringBuffer();
+    
     private Handler mHandler = new Handler() {
         public void handleMessage(android.os.Message msg) {
             switch (msg.what) {
@@ -112,6 +131,10 @@ public class AudioService extends Service {
                         mAudioManager.setSpeakerphoneOn(true);
                     }
                     break;
+                case MSG_UPDATE_TIMER:
+                    notifyUpdate(MSG_UPDATE_TIMER);
+                    updateNotifiaction();
+                    break;
                 default:
                     break;
             }
@@ -130,11 +153,17 @@ public class AudioService extends Service {
     public void onCreate() {
         super.onCreate();
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        this.mPreferences = getSharedPreferences("SoundRecorder", Context.MODE_PRIVATE);
         mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
                 "DHSoundRecorderService");
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_HEADSET_PLUG);
+        String str1 = String.valueOf(Environment.getExternalStorageDirectory().toString());
+        STORAGE_PATH_SD_CARD = str1 + "/Audio/Record/";
+        //String str2 = String.valueOf(phoneStrorage().toString());
+        //STORAGE_PATH_LOCAL_PHONE = str2 + "/Audio/Record";
         if (mStateChnageReceiver == null) {
             mStateChnageReceiver = new BroadcastReceiver() {
                 @Override
@@ -206,6 +235,8 @@ public class AudioService extends Service {
             Log.i(TAG, "===>Call startRecorder");
             mHandler.removeMessages(MSG_START_RECORD);
             mHandler.sendEmptyMessage(MSG_START_RECORD);
+            mHandler.removeCallbacks(mUpdateTimer);
+            mHandler.post(mUpdateTimer);
         }
 
         @Override
@@ -213,6 +244,8 @@ public class AudioService extends Service {
             Log.d(TAG, "===> stopRecorder");
             mHandler.removeMessages(MSG_STOP_RECORD);
             mHandler.sendEmptyMessage(MSG_STOP_RECORD);
+            mHandler.removeCallbacks(mUpdateTimer);
+            mNotificationManager.cancel(CUSTOM_VIEW_ID);
         }
 
         @Override
@@ -275,7 +308,6 @@ public class AudioService extends Service {
         mRecorderStart = start;
         if (start) {
             mRecorderTime = SystemClock.uptimeMillis();
-            ;
         }
     }
 
@@ -294,7 +326,11 @@ public class AudioService extends Service {
         }
         try {
             mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_NB);
+            if(mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_FILE_TYPE, SoundRecorder.FILE_TYPE_DEFAULT) == SoundRecorder.FILE_TYPE_3GPP){
+                mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+            }else{
+                mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_NB);
+            }
             mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
             mMediaRecorder.setAudioSamplingRate(8000);
             String path = Environment.getExternalStorageDirectory().getAbsolutePath()+"/audio/";
@@ -445,5 +481,38 @@ public class AudioService extends Service {
             }
         }
     }
+    
+    private Runnable mUpdateTimer = new Runnable() {
+        public void run() {
+            mHandler.postDelayed(mUpdateTimer, 1000);
+            mHandler.sendEmptyMessage(MSG_UPDATE_TIMER);
+        }
+    };
 
+    private void updateNotifiaction(){
+        int icon = R.drawable.ic_launcher_soundrecorder;
+        Notification notification = new Notification();
+        RemoteViews contentView = new RemoteViews(getPackageName(), R.layout.recorder_notification);
+        contentView.setImageViewResource(R.id.image, R.drawable.ic_launcher_soundrecorder);
+        notification.contentView = contentView;
+        notification.icon = icon;
+        notification.contentIntent = PendingIntent.getActivity(this, 0, new Intent(this, SoundRecorder.class), 0);
+        contentView.setTextViewText(R.id.title, getString(R.string.recording));
+        if (mRecorderStart) {
+            contentView.setTextViewText(R.id.text, getTimerString((int) ((SystemClock.uptimeMillis() - mRecorderTime) / 1000)));
+        } else {
+            contentView.setTextViewText(R.id.text, getTimerString(0));
+        }
+        mNotificationManager.notify(CUSTOM_VIEW_ID, notification);
+    }
+    
+    
+    private String getTimerString(int duration){
+        int hour = duration/60/60;
+        int minute = duration/60%60;
+        int second = duration%60;
+        timerInfo.delete(0, timerInfo.length());
+        timerInfo.append(hour/10+ "" + hour%10  + ":" + minute/10 + "" + minute%10 +":" + second/10 + "" + second%10);
+        return timerInfo.toString();
+    }
 }
