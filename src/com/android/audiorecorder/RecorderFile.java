@@ -7,6 +7,10 @@ public class RecorderFile {
     private String name;
     private int size;
     private int duration;
+    private String mimeType;
+    private int type;
+    private long time;
+    private long progress;
     
     public RecorderFile() {
         super();
@@ -51,5 +55,38 @@ public class RecorderFile {
     public void setDuration(int duration) {
         this.duration = duration;
     }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public void setMimeType(String mimeType) {
+        this.mimeType = mimeType;
+    }
+
+    public int getType() {
+        return type;
+    }
+
+    public void setType(int type) {
+        this.type = type;
+    }
+
+    public long getTime() {
+        return time;
+    }
+
+    public void setTime(long time) {
+        this.time = time;
+    }
+
+    public long getProgress() {
+        return progress;
+    }
+
+    public void setProgress(long progress) {
+        this.progress = progress;
+    }
+    
     
 }

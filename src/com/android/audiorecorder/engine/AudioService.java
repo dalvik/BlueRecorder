@@ -36,8 +36,11 @@ import com.android.audiorecorder.R;
 import com.android.audiorecorder.SoundRecorder;
 
 public class AudioService extends Service {
-
-
+    
+    public static final int TYPE_MANLY = 0;
+    public static final int TYPE_TEL = 1;
+    public static final int TYPE_AUTO = 2;
+    
     private String STORAGE_PATH_LOCAL_PHONE;
     private String STORAGE_PATH_SD_CARD;
     
