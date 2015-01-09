@@ -73,7 +73,7 @@ public class ParticleSeekBar extends SeekBar {
         return null;
     }
 
-    protected void onDraw(Canvas paramCanvas) {
+    /*protected void onDraw(Canvas paramCanvas) {
         try {
             if (this.mParticleDrawable == null)
                 ;
@@ -87,7 +87,7 @@ public class ParticleSeekBar extends SeekBar {
             }
         } finally {
         }
-    }
+    }*/
 
     public boolean onKeyDown(int paramInt, KeyEvent paramKeyEvent) {
         boolean bool = super.onKeyDown(paramInt, paramKeyEvent);

@@ -2,11 +2,9 @@ package com.android.audiorecorder;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
-import android.content.Context;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.drawable.Drawable;
@@ -19,6 +17,8 @@ import android.provider.MediaStore;
 import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -28,9 +28,20 @@ import android.widget.TextView;
 import com.actionbarsherlock.app.ActionBar;
 import com.actionbarsherlock.app.SherlockListActivity;
 import com.actionbarsherlock.view.Menu;
+import com.android.audiorecorder.RecordListAdapter.ITaskClickListener;
 
 public class RecordList extends SherlockListActivity implements
-        View.OnCreateContextMenuListener {
+        View.OnCreateContextMenuListener, OnItemClickListener, ITaskClickListener{
+    
+    public final static int IDLE = 0;
+    public final static int PLAY = 1;
+    public final static int PAUSE = 2;
+    
+    public final static int MSG_REFRESH_LIST = 1;
+    
+    private int mCurState = IDLE;
+    private int mCurPlayIndex;
+    
     /*
      *
      arrayOfString1[0] = "_id";
@@ -113,6 +124,17 @@ public class RecordList extends SherlockListActivity implements
     private PowerManager.WakeLock mWakeLock;
     private String mWhereClause;
 
+    private Handler mHandler = new Handler(){
+        public void handleMessage(android.os.Message msg) {
+            switch(msg.what){
+                case MSG_REFRESH_LIST:
+                    mAdapter.notifyDataSetChanged();
+                    break;
+                    default:
+                        break;
+            }
+        };
+    };
     public RecordList()
 {
   int[] arrayOfInt = { 47, 42, 63, 92, 60, 62, 124, 58, 34 };
@@ -143,7 +165,8 @@ public class RecordList extends SherlockListActivity implements
         setVolumeControlStream(3);
         setContentView(R.layout.recordlist_view);
         this.mTrackList = getListView();
-        this.mTrackList.setChoiceMode(3);
+        this.mTrackList.setOnItemClickListener(this);
+        //this.mTrackList.setChoiceMode(3);
         //ModeCallback localModeCallback2 = new ModeCallback(localModeCallback1);
         //localListView2.setMultiChoiceModeListener(localModeCallback2);
         setTitle(R.string.list);
@@ -193,8 +216,10 @@ public class RecordList extends SherlockListActivity implements
         mFileList.add(file);
         mFileList.add(file);
         updateCounter();
+        mCurPlayIndex = -1;
         this.mAdapter = new RecordListAdapter(this, mFileList);
         setListAdapter(this.mAdapter);
+        mAdapter.setPlayId(-1, mCurState);
     }
     
     private void updateCounter() {
@@ -204,6 +229,33 @@ public class RecordList extends SherlockListActivity implements
           this.mIndicator.setVisibility(View.VISIBLE);
           this.mIndicator.setText("12345 shou luyin");
       }
+    }
+    
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position,
+            long id) {
+        System.out.println("mCurPlayIndex = " + mCurPlayIndex + " position = " + position);
+        if(mCurPlayIndex == position){
+            if(mCurState == PLAY){
+                mCurState = PAUSE;
+            } else {
+                mCurState = PLAY;
+            }
+        }else{
+            mCurState = PAUSE;
+        }
+        mAdapter.setPlayId(position, mCurState);
+        this.mProgressLayout.setVisibility(View.VISIBLE);
+        mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
+        mCurPlayIndex = position;
+    }
+    
+    @Override
+    public void onTaskClick(int index, int action) {
+        mCurPlayIndex = index;
+        mCurState = action;
+        mAdapter.setPlayId(index, mCurState);
+        mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
     }
     
     private void MakeCursor() {

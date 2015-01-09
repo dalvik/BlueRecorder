@@ -26,9 +26,11 @@ public class RecordListAdapter extends BaseAdapter {
     private List<RecorderFile> mFileList;
     
     private int mPlayId;
-
-    private View mView;
     
+    private int mState;
+    
+    private ITaskClickListener mTaskClickListener;
+
     public RecordListAdapter(Context context, List<RecorderFile> fileList){
         this.mContext = context;
         mInflater = LayoutInflater.from(mContext);
@@ -62,19 +64,29 @@ public class RecordListAdapter extends BaseAdapter {
             viewHolder.duration = (TextView)convertView.findViewById(R.id.duration);
             viewHolder.size = (TextView)convertView.findViewById(R.id.size);
             viewHolder.play = (ImageButton)convertView.findViewById(R.id.play);
+            viewHolder.play.setTag(position);
             viewHolder.play.setOnClickListener(new OnClickListener() {
                 
                 @Override
                 public void onClick(View v) {
-                    
+                    viewHolder.play.setVisibility(View.INVISIBLE);
+                    viewHolder.pause.setVisibility(View.VISIBLE);
+                    if(mTaskClickListener != null){
+                        mTaskClickListener.onTaskClick(StringUtil.toInt(viewHolder.play.getTag()), RecordList.PLAY);
+                    }
                 }
             });
             viewHolder.pause = (ImageButton)convertView.findViewById(R.id.pause);
+            viewHolder.pause.setTag(position);
             viewHolder.pause.setOnClickListener(new OnClickListener() {
                 
                 @Override
                 public void onClick(View v) {
-                    
+                    viewHolder.play.setVisibility(View.VISIBLE);
+                    viewHolder.pause.setVisibility(View.INVISIBLE);
+                    if(mTaskClickListener != null){
+                        mTaskClickListener.onTaskClick(StringUtil.toInt(viewHolder.pause.getTag()), RecordList.PAUSE);
+                    }
                 }
             });
             viewHolder.play_indicator = (ImageView)convertView.findViewById(R.id.play_indicator);
@@ -103,14 +115,21 @@ public class RecordListAdapter extends BaseAdapter {
         } else {
             viewHolder =  (ViewHolder) convertView.getTag();
         }
-        viewHolder.id = file.getId();
+        viewHolder.id = position;
+        //viewHolder.id = file.getId();
+        System.out.println(viewHolder.id + "------" + mPlayId);
         if(viewHolder.id == mPlayId){
-            viewHolder.play_indicator.setVisibility(View.INVISIBLE);
-            viewHolder.play.setVisibility(View.VISIBLE);
-            viewHolder.pause.setVisibility(View.INVISIBLE);
+            if(mState != RecordList.PAUSE){
+                viewHolder.play.setVisibility(View.VISIBLE);
+                viewHolder.pause.setVisibility(View.INVISIBLE);
+            }else{
+                viewHolder.play.setVisibility(View.INVISIBLE);
+                viewHolder.pause.setVisibility(View.VISIBLE);
+            }
+            viewHolder.play_indicator.setVisibility(View.VISIBLE);
         } else {
             viewHolder.play_indicator.setVisibility(View.INVISIBLE);
-            viewHolder.play.setVisibility(View.INVISIBLE);
+            viewHolder.play.setVisibility(View.VISIBLE);
             viewHolder.pause.setVisibility(View.INVISIBLE);
         }
         viewHolder.title.setText(file.getName());
@@ -119,12 +138,21 @@ public class RecordListAdapter extends BaseAdapter {
         return convertView;
     }
     
-    private void popupWindow(View view){
-        
+    public void setPlayId(int id, int state){
+        this.mPlayId = id;
+        this.mState = state;
     }
     
-    public void setPlayId(int id){
-        this.mPlayId = id;
+    public void setTaskClickListener(ITaskClickListener listener){
+        this.mTaskClickListener = listener;
+    }
+    
+    public interface ITaskClickListener{
+        
+        //public final static int ACTION_PLAY = 1;
+        //public final static int ACTION_PAUSE = 2;
+        
+        void onTaskClick(int index, int action);
     }
     
     class ViewHolder {
