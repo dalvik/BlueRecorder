@@ -69,4 +69,21 @@
     <string name="file_exists">The same name exists</string>
     <string name="list_changed">The list is changed, Please reload.</string>
     <string name="list">Record list</string>
+    
+    <string name="audio_bind_error">Service bind failed</string>
+    <string name="service_open_error_msg" msgid="7061754255330276478">"Failed to open file"</string>
+    
+    <string-array name="external_sd_path">
+        <item>/storage/extSdCard</item>
+        <item>/storage/sdcard1</item>
+        <item>/mnt/sdcard2</item>
+        <item>/mnt/sdcard-ext</item>
+        <item>/mnt/ext_sdcard</item>
+        <item>/mnt/sdcard/SD_CARD</item>
+        <item>/mnt/sdcard/extra_sd</item>
+        <item>/mnt/extrasd_bind</item>
+        <item>/mnt/sdcard/ext_sd</item>
+        <item>/mnt/sdcard/external_SD</item>
+    </string-array>
+    
 </resources>

@@ -32,8 +32,14 @@ import android.util.Log;
 import android.widget.RemoteViews;
 
 import com.android.audiorecorder.DateUtil;
+import com.android.audiorecorder.FileUtils;
 import com.android.audiorecorder.R;
+import com.android.audiorecorder.RecorderFile;
 import com.android.audiorecorder.SoundRecorder;
+import com.android.audiorecorder.Utils;
+import com.android.audiorecorder.dao.FileManagerFactory;
+import com.android.audiorecorder.dao.FileManagerImp;
+import com.android.audiorecorder.dao.IFileManager;
 
 public class AudioService extends Service {
     
@@ -111,6 +117,12 @@ public class AudioService extends Service {
     private int CUSTOM_VIEW_ID = R.layout.recorder_notification;
     private StringBuffer timerInfo = new StringBuffer();
     
+    private IFileManager fileManager;
+    private String mRecoderPath;
+    private long startTime;
+    private int mMimeType;
+    private int mType;
+    
     private Handler mHandler = new Handler() {
         public void handleMessage(android.os.Message msg) {
             switch (msg.what) {
@@ -185,6 +197,7 @@ public class AudioService extends Service {
             };
             registerReceiver(mStateChnageReceiver, filter);
         }
+        fileManager = FileManagerFactory.getSmsManagerInstance(this);
         Log.d(TAG, "===> onCreate.");
     }
 
@@ -329,24 +342,17 @@ public class AudioService extends Service {
         }
         try {
             mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            if(mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_FILE_TYPE, SoundRecorder.FILE_TYPE_DEFAULT) == SoundRecorder.FILE_TYPE_3GPP){
-                mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+            /*if(mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_FILE_TYPE, SoundRecorder.FILE_TYPE_DEFAULT) == SoundRecorder.FILE_TYPE_3GPP){
+                mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_NB);
             }else{
                 mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_NB);
-            }
+            }*/
+            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_NB);
             mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
             mMediaRecorder.setAudioSamplingRate(8000);
-            String path = Environment.getExternalStorageDirectory().getAbsolutePath()+"/audio/";
-            File file = new File(path);
-            if(!file.exists()){
-                file.mkdirs();
-            }
-            File newFile = new File(path + DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis())+".mp3");
-            if(newFile.exists()){
-                newFile.delete();
-            }
-            newFile.createNewFile();
-            mMediaRecorder.setOutputFile(path + DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis())+".mp3");
+            createDir();
+            mMediaRecorder.setOutputFile(mRecoderPath);
+            startTime = System.currentTimeMillis();
             mMediaRecorder.setOnErrorListener(mRecorderErrorListener);
             mMediaRecorder.prepare();
             IntentFilter filter = new IntentFilter(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED);
@@ -427,22 +433,71 @@ public class AudioService extends Service {
                         + " isBluetoothScoOn  = "
                         + mAudioManager.isBluetoothScoOn());
         if (mMediaRecorder != null) {
+            RecorderFile file = new RecorderFile();
             try {
+                file.setDuration((int)(System.currentTimeMillis() - startTime)/1000);
                 mMediaRecorder.stop();
             } catch (IllegalStateException e) {
                 Log.e(TAG, "===> IllegalStateException.");
             }
-            mMediaRecorder.reset();
             mMediaRecorder.release();
             mMediaRecorder = null;
             if (mWakeLock.isHeld()) {
                 mWakeLock.release();
             }
+            file.setPath(mRecoderPath);
+            file.setTime(startTime);
+            file.setType(mType);
+            File f = new File(mRecoderPath);
+            if(f.exists()){
+                file.setSize(f.length());
+            }
+            if(mMimeType == SoundRecorder.FILE_TYPE_AMR) {
+                file.setMimeType("amr");
+            } else {
+                file.setMimeType("3gpp");
+            }
+            fileManager.insertRecorderFile(file);
         }
         setRecordStatus(false);
         notifyUpdate(MSG_STOP_RECORD);
     }
 
+    private void createDir(){
+        int storage = mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_STORAGE_LOCATION, SoundRecorder.STORAGE_LOCATION_DEFAULT);
+        String storagePath = FileUtils.getExternalStoragePath(this);
+        Log.i(TAG, "---> external storage path = " + storagePath);
+        if(storagePath.length() == 0){
+            storagePath = Environment.getExternalStorageDirectory().getPath();
+            Log.i(TAG, "---> default path = " + storagePath);    
+        }
+        if(storage == SoundRecorder.STORAGE_LOCATION_DEFAULT){
+            
+        } else {
+            
+        }
+        String parent = "/BlueRecorder/";
+        String child = "Audio";
+        mRecoderPath = storagePath + parent;
+        if(!fileManager.isExists(mRecoderPath)){
+            fileManager.createDiretory(mRecoderPath);
+            fileManager.createFile(mRecoderPath+".nomedia");
+        }
+        mRecoderPath += child;
+        if(!fileManager.isExists(mRecoderPath)){
+            fileManager.createDiretory(mRecoderPath);
+            for(int i=1;i<10;i++){
+                fileManager.createDiretory(mRecoderPath+i);
+            }
+        }
+        if(mMimeType == SoundRecorder.FILE_TYPE_AMR){
+            mRecoderPath += File.separator + DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis())+".mp3";
+        } else {
+            mRecoderPath += File.separator +DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis())+".mp3";
+        }
+        fileManager.createFile(mRecoderPath);
+    }
+    
     // recorder
     private MediaRecorder.OnErrorListener mRecorderErrorListener = new OnErrorListener() {
 

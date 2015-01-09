@@ -25,6 +25,12 @@ public class FileManagerImp implements IFileManager {
     }
     
     @Override
+    public boolean isExists(String path) {
+        File file = new File(path);
+        return file.exists();
+    }
+    
+    @Override
     public boolean createFile(String path) {
         File file = new File(path);
         if(!file.exists()){
@@ -48,6 +54,11 @@ public class FileManagerImp implements IFileManager {
     @Override
     public void delete(long id) {
         dbHelper.delete(id);
+    }
+    
+    @Override
+    public void insertRecorderFile(RecorderFile file) {
+        dbHelper.insertRecorderFile(file);
     }
     
     @Override

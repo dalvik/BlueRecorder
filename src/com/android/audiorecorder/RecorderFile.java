@@ -5,7 +5,7 @@ public class RecorderFile {
     private int id;
     private String path;
     private String name;
-    private int size;
+    private long size;
     private int duration;
     private String mimeType;
     private int type;
@@ -40,11 +40,11 @@ public class RecorderFile {
         this.name = name;
     }
 
-    public int getSize() {
+    public long getSize() {
         return size;
     }
 
-    public void setSize(int size) {
+    public void setSize(long size) {
         this.size = size;
     }
 

@@ -64,4 +64,5 @@
     <string name="list">录音列表</string>
     
     <string name="audio_bind_error">服务绑定失败</string>
+    <string name="service_open_error_msg" msgid="7061754255330276478">"文件打开失败"</string>
 </resources>

@@ -347,7 +347,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         
         @Override
         public void onStateChanged(int state) throws RemoteException {
-            Log.d(TAG, "===> onStateChanged  state = " + state);
             mHandler.sendEmptyMessage(state);
         }
         

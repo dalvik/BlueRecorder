@@ -1,10 +1,14 @@
 package com.android.audiorecorder;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.ContentResolver;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.drawable.Drawable;
@@ -12,32 +16,45 @@ import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
 import android.os.PowerManager;
+import android.os.RemoteException;
 import android.provider.MediaStore;
 import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.actionbarsherlock.app.ActionBar;
 import com.actionbarsherlock.app.SherlockListActivity;
 import com.actionbarsherlock.view.Menu;
 import com.android.audiorecorder.RecordListAdapter.ITaskClickListener;
+import com.android.audiorecorder.audio.IMediaPlaybackService;
+import com.android.audiorecorder.audio.MediaPlaybackService;
+import com.android.audiorecorder.audio.MusicUtils;
+import com.android.audiorecorder.audio.MusicUtils.ServiceToken;
+import com.android.audiorecorder.dao.FileManagerFactory;
+import com.android.audiorecorder.dao.IFileManager;
 
 public class RecordList extends SherlockListActivity implements
         View.OnCreateContextMenuListener, OnItemClickListener, ITaskClickListener{
+    
+    public final static int PAGE_NUMBER = 100;
     
     public final static int IDLE = 0;
     public final static int PLAY = 1;
     public final static int PAUSE = 2;
     
-    public final static int MSG_REFRESH_LIST = 1;
+    public final static int MSG_REFRESH_LIST = 10;
     
     private int mCurState = IDLE;
     private int mCurPlayIndex;
@@ -109,7 +126,7 @@ public class RecordList extends SherlockListActivity implements
     public long mPlayingId = 0L;
     private String[] mPlaylistMemberCols;
     private long mPosOverride = 65535L;
-    private ProgressBar mProgress = null;
+    private ProgressBar mProgress;
     private LinearLayout mProgressLayout;
     //private TrackQueryHandler mQueryHandler;
 
@@ -124,11 +141,34 @@ public class RecordList extends SherlockListActivity implements
     private PowerManager.WakeLock mWakeLock;
     private String mWhereClause;
 
+    //start audio play
+    private IMediaPlaybackService mService;
+    private ImageView mPauseButton;
+    private ImageView mLastButton;
+    private ImageView mNextButton;
+    
+    private ServiceToken mToken;
+    
+    private boolean paused;
+
+    private static final int FININSHED = 3;
+    
+    private int mPlayIndex;
+    //end audo play
+    
+    private IFileManager mFileManager;
+    
     private Handler mHandler = new Handler(){
         public void handleMessage(android.os.Message msg) {
             switch(msg.what){
                 case MSG_REFRESH_LIST:
                     mAdapter.notifyDataSetChanged();
+                    break;
+                case REFRESH:
+                    if(!mFromTouch){
+                        long next = refreshNow();
+                        queueNextRefresh(next);
+                    }
                     break;
                     default:
                         break;
@@ -189,6 +229,7 @@ public class RecordList extends SherlockListActivity implements
             localSeekBar.setOnSeekBarChangeListener(localOnSeekBarChangeListener);
         }
         //this.mProgress.setMax(1000);
+        mFileManager = FileManagerFactory.getSmsManagerInstance(this);
         ActionBar localActionBar = getSupportActionBar();
         if (localActionBar != null) {
             Drawable localDrawable = getResources().getDrawable(R.drawable.title_background);
@@ -205,16 +246,7 @@ public class RecordList extends SherlockListActivity implements
     }
     
     public void init() {
-        mFileList = new ArrayList<RecorderFile>();
-        RecorderFile file = new RecorderFile();
-        file.setDuration(100);
-        file.setName("test");
-        file.setPath("a.mp3");
-        file.setSize(1000);
-        mFileList.add(file);
-        mFileList.add(file);
-        mFileList.add(file);
-        mFileList.add(file);
+        mFileList = mFileManager.queryPublicFileList(0, PAGE_NUMBER);
         updateCounter();
         mCurPlayIndex = -1;
         this.mAdapter = new RecordListAdapter(this, mFileList);
@@ -227,8 +259,20 @@ public class RecordList extends SherlockListActivity implements
           this.mIndicator.setVisibility(View.GONE);
       } else {
           this.mIndicator.setVisibility(View.VISIBLE);
-          this.mIndicator.setText("12345 shou luyin");
+          int count = mFileList.size();
+          this.mIndicator.setText(getResources().getQuantityString(R.plurals.NNNtrackscount, count, count));
       }
+    }
+    
+    @Override
+    public void onStart() {
+        super.onStart();
+        paused = false;
+
+        mToken = MusicUtils.bindToService(this, osc);
+        if (mToken == null) {
+            mHandler.sendEmptyMessage(QUIT);
+        }
     }
     
     @Override
@@ -248,6 +292,17 @@ public class RecordList extends SherlockListActivity implements
         this.mProgressLayout.setVisibility(View.VISIBLE);
         mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
         mCurPlayIndex = position;
+        try {
+            // Assume something is playing when the service says it is,
+            // but also if the audio ID is valid but the service is paused.
+            if (mService.getAudioId() >= 0 || mService.isPlaying() ||
+                    mService.getPath() != null) {
+                // something is playing now, we're done
+                return;
+            }
+        } catch (RemoteException ex) {
+        }
+        startPlayback(position);
     }
     
     @Override
@@ -258,59 +313,122 @@ public class RecordList extends SherlockListActivity implements
         mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
     }
     
-    private void MakeCursor() {
-        if (mCursor != null) {
-            mCursor.close();
-            mCursor = null;
+    private ServiceConnection osc = new ServiceConnection() {
+        public void onServiceConnected(ComponentName classname, IBinder obj) {
+            mService = IMediaPlaybackService.Stub.asInterface(obj);
+            Log.i(TAG, "---> AudioMediaService bind success.");
         }
-        ContentResolver localContentResolver = getContentResolver();
-        RecordList localRecordList = this;
-        //TrackQueryHandler localTrackQueryHandler1 = new TrackQueryHandler(localContentResolver);
-        //this.mQueryHandler = localTrackQueryHandler1;
-        String[] arrayOfString1 = new String[11];
-        
-        this.mPlaylistMemberCols = arrayOfString1;
-        Resources localResources = getResources();
-        Uri localUri1 = MediaStore.Audio.Playlists.getContentUri("external");
-        String[] arrayOfString2 = new String[1];
-        arrayOfString2[0] = "_id";
-        String[] arrayOfString3 = new String[1];
-        String str1 = localResources.getString(2131099669);
-        arrayOfString3[0] = str1;
-        /*Cursor localCursor = query(localUri1, arrayOfString2, "name=?",
-                arrayOfString3, null);
-        if (localCursor == null)
-            Log.v(this.TAG, "query returns null");
-        while (true) {
+        public void onServiceDisconnected(ComponentName classname) {
+            mService = null;
+        }
+    };
+    
+    private void startPlayback(int position) {
+        if(mService == null){
             return;
-            localCursor.moveToFirst();
-            if (!localCursor.isAfterLast()) {
-                int i = localCursor.getInt(0);
-                localCursor.close();
-                String str2 = this.TAG;
-                String str3 = "Playlist ID = " + i;
-                Log.v(str2, str3);
-                StringBuilder localStringBuilder = new StringBuilder();
-                localStringBuilder.append("title != ''");
-                long l = i;
-                Uri localUri2 = MediaStore.Audio.Playlists.Members
-                        .getContentUri("external", l);
-                String str4 = this.TAG;
-                String str5 = "mQueryHandler.doQuery uri =  " + localUri2;
-                Log.v(str4, str5);
-                this.mSortOrder = "play_order desc";
-                TrackQueryHandler localTrackQueryHandler2 = this.mQueryHandler;
-                String[] arrayOfString4 = this.mPlaylistMemberCols;
-                String str6 = localStringBuilder.toString();
-                String str7 = this.mSortOrder;
-                Uri localUri3 = localUri2;
-                mCursor = localTrackQueryHandler2.doQuery(localUri3,
-                        arrayOfString4, str6, null, str7, true);
-                continue;
+        }
+        String filename = mFileList.get(position).getPath();
+        if (filename != null && filename.length() > 0) {
+            if(position == mCurPlayIndex){
+                try {
+                    if(mService.isPlaying()){
+                        mService.stop();
+                    }else {
+                        mService.play();
+                    }
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }else {
+                if(DebugConfig.DEBUG) {
+                    Log.d(TAG, "===> open audio filename = " + filename);
+                }
+                try {
+                    mService.stop();
+                    mService.openFile(filename);
+                    mService.play();
+                } catch (Exception ex) {
+                    Log.d("MediaPlaybackActivity", "couldn't start playback: " + ex);
+                }
             }
-            localCursor.close();
-        }*/
+        }
+        updateTrackInfo();
+        long next = refreshNow();
+        queueNextRefresh(next);
     }
+    
+    private void updateTrackInfo() {
+        if (mService == null) {
+            return;
+        }
+        try {
+            String path = mService.getPath();
+            if (path == null) {
+                Toast.makeText(this, R.string.service_open_error_msg, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            mDuration = mService.duration();
+            long remain =  mDuration % 1000;
+            long totalSeconds = (remain == 0) ? mDuration / 1000 : (mDuration / 1000) +1;
+            mTotalTime.setText(MusicUtils.makeTimeString(this, totalSeconds));
+        } catch (RemoteException ex) {
+        }
+    }
+    
+    private long refreshNow() {
+        if(mService == null)
+            return 500;
+        try {
+            long pos = mPosOverride < 0 ? mService.position() : mPosOverride;
+            if ((pos >= 0) && (mDuration > 0)) {
+                mCurrentTime.setText(MusicUtils.makeTimeString(this, pos / 1000));
+                int progress = (int) (1000 * pos / mDuration);
+                mProgress.setProgress(progress);
+                
+                if (mService.isPlaying()) {
+                    mCurrentTime.setVisibility(View.VISIBLE);
+                } else {
+                    // blink the counter
+                    int vis = mCurrentTime.getVisibility();
+                    mCurrentTime.setVisibility(vis == View.INVISIBLE ? View.VISIBLE : View.INVISIBLE);
+                    return 500;
+                }
+            } else {
+                mCurrentTime.setText("0:00");
+                mProgress.setProgress(1000);
+            }
+            // calculate the number of milliseconds until the next full second, so
+            // the counter can be updated at just the right time
+            long remaining = 1000 - (pos % 1000);
+            // approximate how often we would need to refresh the slider to
+            // move it smoothly
+            int width = mProgress.getWidth();
+            if (width == 0) width = 320;
+            long smoothrefreshtime = mDuration / width;
+            if(mService.getPlayState() == MediaPlaybackService.PLAY_STATE_COMPLETE && mService.getSeekState() != MediaPlaybackService._STATE_SEEKING) {
+                mHandler.sendEmptyMessageDelayed(FININSHED, 100);
+                return 500;
+            }
+            if (smoothrefreshtime > remaining){
+                return remaining;
+            }
+            if (smoothrefreshtime <= 20) {
+                return 20;
+            }
+            return smoothrefreshtime;
+        } catch (RemoteException ex) {
+        }
+        return 500;
+    }
+    
+    private void queueNextRefresh(long delay) {
+        if (!paused) {
+            Message msg = mHandler.obtainMessage(REFRESH);
+            mHandler.removeMessages(REFRESH);
+            mHandler.sendMessageDelayed(msg, delay);
+        }
+    }
+    
 
     /*
 
@@ -373,23 +491,6 @@ public class RecordList extends SherlockListActivity implements
         }
     }
 
-    private void initNameCheckList_Str() {
-        StringBuffer localStringBuffer = new StringBuffer();
-        int[] arrayOfInt = this.NameCheckList;
-        int i = arrayOfInt.length;
-        Object localObject = null;
-        while (true) {
-            if (localObject >= i) {
-                String str = localStringBuffer.toString();
-                this.NameCheckList_Str = str;
-                return;
-            }
-            char c = (char) arrayOfInt[localObject];
-            localStringBuffer.append(c);
-            localObject++;
-        }
-    }
-
     private void queueNextRefresh(long paramLong) {
         int i = 1;
         if (!this.isStop) {
@@ -399,61 +500,6 @@ public class RecordList extends SherlockListActivity implements
         }
     }
 
-    private long refreshNow()
-{
-  long l1 = 1000L;
-  int i = 4;
-  long l2 = 0L;
-  int j = 0;
-  long l3 = this.mPosOverride < l2;
-  int k;
-  long l5;
-  if (k < 0)
-  {
-    long l4 = position();
-    l5 = 900L;
-    Object localObject;
-    l3 = localObject < l2;
-    if (k < 0)
-      break label199;
-    l3 = this.mDuration < l2;
-    if (k <= 0)
-      break label199;
-    TextView localTextView1 = this.mCurrentTime;
-    long l7 = localObject / l1;
-    String str1 = Utils.makeTimeString(this, l7);
-    localTextView1.setText(str1);
-    boolean bool = this.mIsSupposedToBePlaying;
-    if (!bool)
-      break label157;
-    this.mCurrentTime.setVisibility(j);
-    ProgressBar localProgressBar = this.mProgress;
-    long l8 = l1 * localObject;
-    long l9 = this.mDuration;
-    int m = (int)(l8 / l9);
-    localProgressBar.setProgress(m);
-  }
-  while (true)
-  {
-    return l5;
-    long l6 = this.mPosOverride;
-    break;
-    label157: int n = this.mCurrentTime.getVisibility();
-    TextView localTextView2 = this.mCurrentTime;
-    if (n == i);
-    while (true)
-    {
-      localTextView2.setVisibility(j);
-      l5 = 500L;
-      break;
-      j = i;
-    }
-    label199: TextView localTextView3 = this.mCurrentTime;
-    String str2 = getString(2131099700);
-    localTextView3.setText(str2);
-    this.mProgress.setProgress(j);
-  }
-}
 
     private void showInfomationDlg() {
         LayoutInflater localLayoutInflater = (LayoutInflater) getSystemService("layout_inflater");
@@ -503,155 +549,6 @@ public class RecordList extends SherlockListActivity implements
         localBuilder.show();
     }
 
-    private void showRenameDlg()
-{
-  LayoutInflater localLayoutInflater = (LayoutInflater)getSystemService("layout_inflater");
-  ListView localListView = this.mTrackList;
-  int i = (int)this.mSelectedId;
-  View localView1 = localListView.findViewById(i);
-  View localView2 = localLayoutInflater.inflate(2130968584, null);
-  String str1 = this.TAG;
-  StringBuilder localStringBuilder = new StringBuilder("select position= ");
-  int j = this.mSelectedPosition;
-  String str2 = j;
-  Log.d(str1, str2);
-  RecordListAdapter.ViewHolder localViewHolder = (RecordListAdapter.ViewHolder)localView1.getTag();
-  AlertDialog.Builder localBuilder = new AlertDialog.Builder(this);
-  localBuilder.setTitle(2131099686);
-  localBuilder.setIcon(17301566);
-  RecordList.8 local8 = new RecordList.8(this, localView2);
-  localBuilder.setPositiveButton(17039370, local8);
-  RecordList.9 local9 = new RecordList.9(this);
-  localBuilder.setNegativeButton(17039360, local9);
-  localBuilder.setView(localView2);
-  AlertDialog localAlertDialog = localBuilder.create();
-  localAlertDialog.show();
-  Button localButton = localAlertDialog.getButton(-1);
-  if (localView2 != null)
-  {
-    EditText localEditText = (EditText)localView2.findViewById(2131427367);
-    String str3 = mCursor.getString(2);
-    String str4 = SoundRecorder.getFileNameNoEx(new File(str3).getName());
-    localEditText.setText(str4);
-    Editable localEditable = localEditText.getText();
-    int k = localEditable.length();
-    Selection.setSelection(localEditable, k);
-    RecordList.10 local10 = new RecordList.10(this, localButton);
-    localEditText.addTextChangedListener(local10);
-  }
-}
-
-    private void startPlayback(String paramString) {
-        this.mProgressLayout.setVisibility(0);
-        stop();
-        this.mPlayer.setDataSource(paramString);
-        play();
-        long l1 = duration();
-        Object localObject1;
-        this.mDuration = localObject1;
-        TextView localTextView = this.mTotalTime;
-        long l2 = this.mDuration / 1000L;
-        String str = Utils.makeTimeString(this, l2);
-        localTextView.setText(str);
-        long l3 = refreshNow();
-        Object localObject2;
-        queueNextRefresh(localObject2);
-    }
-
-    public void deleteTracks(Context paramContext, long[] paramArrayOfLong)
-{
-  if ((paramArrayOfLong == null) || (paramArrayOfLong.length < 1))
-    return;
-  String[] arrayOfString = new String[2];
-  arrayOfString[0] = "_id";
-  arrayOfString[1] = "_data";
-  StringBuilder localStringBuilder1 = new StringBuilder();
-  localStringBuilder1.append("_id IN (");
-  int i = 0;
-  label47: int j = paramArrayOfLong.length;
-  Cursor localCursor;
-  if (i >= j)
-  {
-    localStringBuilder1.append(")");
-    String str1 = this.TAG;
-    String str2 = "deleteTracks where =  " + localStringBuilder1;
-    Log.i(str1, str2);
-    Uri localUri1 = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-    String str3 = localStringBuilder1.toString();
-    localCursor = query(localUri1, arrayOfString, str3, null, null);
-    if (localCursor != null)
-      break label395;
-    Log.i(this.TAG, "deleteTracks query cursor == null ");
-    label142: if (localCursor != null)
-    {
-      localCursor.moveToFirst();
-      label155: if (!localCursor.isAfterLast())
-        break label445;
-      ContentResolver localContentResolver1 = paramContext.getContentResolver();
-      Uri localUri2 = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-      String str4 = localStringBuilder1.toString();
-      localContentResolver1.delete(localUri2, str4, null);
-      localCursor.moveToFirst();
-    }
-  }
-  while (true)
-  {
-    if (localCursor.isAfterLast())
-    {
-      localCursor.close();
-      Resources localResources = paramContext.getResources();
-      int k = paramArrayOfLong.length;
-      Object[] arrayOfObject = new Object[1];
-      Integer localInteger = Integer.valueOf(paramArrayOfLong.length);
-      arrayOfObject[0] = localInteger;
-      String str5 = localResources.getQuantityString(2131165186, k, arrayOfObject);
-      Toast.makeText(paramContext, str5, 0).show();
-      ContentResolver localContentResolver2 = paramContext.getContentResolver();
-      Uri localUri3 = Uri.parse("content://media");
-      localContentResolver2.notifyChange(localUri3, null);
-      break;
-      String str6 = this.TAG;
-      StringBuilder localStringBuilder2 = new StringBuilder("deleteTracks list[").append(i).append("]=");
-      long l1 = paramArrayOfLong[i];
-      String str7 = l1;
-      Log.i(str6, str7);
-      long l2 = paramArrayOfLong[i];
-      localStringBuilder1.append(l2);
-      int m = paramArrayOfLong.length;
-      int n;
-      n--;
-      if (i < m)
-        localStringBuilder1.append(",");
-      i++;
-      break label47;
-      label395: String str8 = this.TAG;
-      StringBuilder localStringBuilder3 = new StringBuilder("deleteTracks query cursor count = ");
-      int i1 = localCursor.getCount();
-      String str9 = i1;
-      Log.i(str8, str9);
-      break label142;
-      label445: long l3 = localCursor.getLong(0);
-      localCursor.moveToNext();
-      break label155;
-    }
-    String str10 = localCursor.getString(1);
-    File localFile = new File(str10);
-    try
-    {
-      if (!localFile.delete())
-      {
-        String str11 = this.TAG;
-        String str12 = "Failed to delete file " + str10;
-        Log.e(str11, str12);
-      }
-      localCursor.moveToNext();
-    }
-    catch (SecurityException localSecurityException)
-    {
-      localCursor.moveToNext();
-    }
-  }
-}
 
     public long duration()
 {
@@ -953,22 +850,6 @@ public class RecordList extends SherlockListActivity implements
     return;
   }
   RecordListAdapter.ViewHolder localViewHolder2 = (RecordListAdapter.ViewHolder)localView2.getTag();
-  if (???)
-  {
-    long l1 = this.mPlayingId;
-    if (paramLong != l1)
-    {
-      String str5 = localViewHolder2.path;
-      startPlayback(str5);
-      if (localViewHolder1 != 0)
-      {
-        localViewHolder1.pause.setVisibility(paramBoolean);
-        localViewHolder1.play.setVisibility(i);
-        localViewHolder1.play_indicator.setVisibility(paramBoolean);
-      }
-      label229: localViewHolder2.pause.setVisibility(i);
-      localViewHolder2.play.setVisibility(paramBoolean);
-    }
   }
   while (true)
   {
@@ -981,20 +862,6 @@ public class RecordList extends SherlockListActivity implements
     doPauseResume();
     break label229;
     long l2 = this.mPlayingId;
-    if (paramLong != l2)
-    {
-      String str6 = localViewHolder2.path;
-      startPlayback(str6);
-      if (localViewHolder1 != 0)
-      {
-        localViewHolder1.pause.setVisibility(paramBoolean);
-        localViewHolder1.play.setVisibility(i);
-        localViewHolder1.play_indicator.setVisibility(paramBoolean);
-      }
-      localViewHolder2.pause.setVisibility(i);
-      localViewHolder2.play.setVisibility(paramBoolean);
-      continue;
-    }
     doPauseResume();
     if (this.mIsSupposedToBePlaying)
     {

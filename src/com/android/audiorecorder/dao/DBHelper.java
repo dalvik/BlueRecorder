@@ -36,7 +36,7 @@ public class DBHelper implements BaseColumns{
     }
     
     
-    public long insertSms(RecorderFile file) {
+    public long insertRecorderFile(RecorderFile file) {
         ContentValues contentValues = new ContentValues();
         contentValues.put(DBHelper.FILE_COLUMN_PATH, file.getPath());
         contentValues.put(DBHelper.FILE_COLUMN_LENGTH, file.getSize());
@@ -136,13 +136,13 @@ public class DBHelper implements BaseColumns{
                 + "("
                 + "'" + BASE_COLUMN_ID + "' integer primary key autoincrement,"
                 + " '"+FILE_COLUMN_PATH +"' text, '"
-                + FILE_COLUMN_LENGTH +"' text, '"
-                + FILE_COLUMN_DURATION + "' text , '" 
+                + FILE_COLUMN_LENGTH +"' long, '"
+                + FILE_COLUMN_DURATION + "' int , '" 
                 + FILE_COLUMN_MIME_TYPE +"' text, '"
-                + FILE_COLUMN_TYPE +"' text, '"
-                + FILE_COLUMN_TIME +"' int, '"
+                + FILE_COLUMN_TYPE +"' int, '"
+                + FILE_COLUMN_TIME +"' long, '"
                 + FILE_COLUMN_PROGRESS +"' long, '" 
-                +FILE_COLUMN_BACKUP + "' byte '"
+                +FILE_COLUMN_BACKUP + "' byte "
                 + ");";// sync 0 unsync 1 synced, back 0 unbackup 1 backuped, show 0 unshow 1 show
         
         private String TAG = "SqliteHelper";

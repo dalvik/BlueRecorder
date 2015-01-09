@@ -51,6 +51,19 @@
             android:textSize="14.0sp"
             android:textStyle="bold" />
 
+         <SeekBar
+            android:id="@id/progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1.0"
+            android:progressDrawable="@drawable/seekbar_media"
+            android:thumb="@drawable/seekbar_thumb" />
+         
+        <!-- 
         <com.android.audiorecorder.myview.ParticleSeekBar
             android:id="@android:id/progress"
             style="?android:attr/progressBarStyleHorizontal"
@@ -62,6 +75,7 @@
             android:layout_weight="1.0"
             android:progressDrawable="@drawable/seekbar_media"
             android:thumb="@drawable/seekbar_thumb" />
+         -->
 
         <TextView
             android:id="@id/totaltime"

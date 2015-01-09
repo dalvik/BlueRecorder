@@ -57,6 +57,8 @@
             </intent-filter>
         </service>
         
+        <service android:name="com.android.audiorecorder.audio.MediaPlaybackService" android:exported="false" />
+        
     </application>
 
 </manifest>
