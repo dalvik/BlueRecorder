@@ -23,7 +23,7 @@
     </style>
      -->
     <style name="AlertDialogCustom" parent="@android:style/Theme.Dialog">
-        <item name="android:textColor">#ffffffff</item>
+        <item name="android:textColor">#ff000000</item>
     </style>
     <!-- 
     <style name="customviewstringstyle" parent="@android:style/Widget.EditText.NumberPickerInputText" />

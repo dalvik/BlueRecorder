@@ -1,28 +1,27 @@
 package com.android.audiorecorder;
 
-import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 
+import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
-import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.PowerManager;
 import android.os.RemoteException;
-import android.provider.MediaStore;
+import android.os.SystemClock;
 import android.text.format.Formatter;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
@@ -31,12 +30,14 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.actionbarsherlock.app.ActionBar;
 import com.actionbarsherlock.app.SherlockListActivity;
 import com.actionbarsherlock.view.Menu;
+import com.actionbarsherlock.view.MenuItem;
 import com.android.audiorecorder.RecordListAdapter.ITaskClickListener;
 import com.android.audiorecorder.audio.IMediaPlaybackService;
 import com.android.audiorecorder.audio.MediaPlaybackService;
@@ -54,10 +55,19 @@ public class RecordList extends SherlockListActivity implements
     public final static int PLAY = 1;
     public final static int PAUSE = 2;
     
+    private int mCurState = IDLE;
+    
+    public final static int MSG_TOGGLE_UI = 5;
     public final static int MSG_REFRESH_LIST = 10;
     
-    private int mCurState = IDLE;
+    public static final int ITEM_OPERATION_PLAY = 1;
+    public static final int ITEM_OPERATION_RENAME = 2;
+    public static final int ITEM_OPERATION_DETAILS = 3;
+    public static final int ITEM_OPERATION_DELETE = 4;
+    
     private int mCurPlayIndex;
+    
+    private BroadcastReceiver mPlayCompleteReciBroadcastReceiver;
     
     /*
      *
@@ -91,10 +101,7 @@ public class RecordList extends SherlockListActivity implements
     private static final int FADEUP = 6;
     private static final int FOCUSCHANGE = 4;
     private static final int GET_ALBUM_ART = 3;
-    public static final int ITEM_OPERATION_DELETE = 0;
-    public static final int ITEM_OPERATION_DETAILS = 3;
-    public static final int ITEM_OPERATION_PLAY = 1;
-    public static final int ITEM_OPERATION_RENAME = 2;
+
     private static final int MAX_HISTORY_SIZE = 100;
     private static final int QUIT = 2;
     private static final int REFRESH = 1;
@@ -107,7 +114,6 @@ public class RecordList extends SherlockListActivity implements
     private String TAG = "RecordList";
     private RecordListAdapter mAdapter;
     private List<RecorderFile> mFileList;
-    private AudioManager.OnAudioFocusChangeListener mAudioFocusListener;
     private AudioManager mAudioManager;
     public Handler mCounterhandler;
     private TextView mCurrentTime;
@@ -121,39 +127,24 @@ public class RecordList extends SherlockListActivity implements
     public boolean mIsSupposedToBePlaying;
     private long mLastSeekEventTime;
     long[] mListToDelete;
-    private Handler mMediaplayerHandler;
     //private MultiPlayer mPlayer;
     public long mPlayingId = 0L;
-    private String[] mPlaylistMemberCols;
-    private long mPosOverride = 65535L;
+    private long mPosOverride = -1;
     private ProgressBar mProgress;
     private LinearLayout mProgressLayout;
     //private TrackQueryHandler mQueryHandler;
 
-    private ArrayList mRecordList;
-    private SeekBar.OnSeekBarChangeListener mSeekListener;
     public long mSelectedId;
     public int mSelectedPosition;
-    private String mSortOrder;
     private TextView mTotalTime;
     private ListView mTrackList;
-    private BroadcastReceiver mUnmountReceiver = null;
     private PowerManager.WakeLock mWakeLock;
-    private String mWhereClause;
 
     //start audio play
     private IMediaPlaybackService mService;
-    private ImageView mPauseButton;
-    private ImageView mLastButton;
-    private ImageView mNextButton;
-    
     private ServiceToken mToken;
-    
     private boolean paused;
 
-    private static final int FININSHED = 3;
-    
-    private int mPlayIndex;
     //end audo play
     
     private IFileManager mFileManager;
@@ -170,37 +161,22 @@ public class RecordList extends SherlockListActivity implements
                         queueNextRefresh(next);
                     }
                     break;
+                case MSG_TOGGLE_UI:
+                    int position = msg.arg1;
+                    mAdapter.setPlayId(position, mCurState);
+                    mProgressLayout.setVisibility(View.VISIBLE);
+                    mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
+                    startPlayback(position);
+                    mCurPlayIndex = position;
+                    break;
                     default:
                         break;
             }
         };
     };
-    public RecordList()
-{
-  int[] arrayOfInt = { 47, 42, 63, 92, 60, 62, 124, 58, 34 };
-  this.NameCheckList = arrayOfInt;
-  this.NameCheckList_Str = null;
-  this.mListToDelete = null;
-  /*this.mAdapter = null;
-  this.mIndicator = null;
-  this.mFormatBuilder = null;
-  this.mFormatter = null;
-  this.mProgressLayout = null;
-  RecordList.1 local1 = new RecordList.1(this);
-  this.mCounterhandler = local1;
-  RecordList.2 local2 = new RecordList.2(this);
-  this.mMediaplayerHandler = local2;
-  RecordList.3 local3 = new RecordList.3(this);
-  this.mSeekListener = local3;
-  RecordList.4 local4 = new RecordList.4(this);
-  this.mAudioFocusListener = local4;
-  RecordList.5 local5 = new RecordList.5(this);
-  this.mHandler = local5;*/
-}
 
     public void onCreate(Bundle paramBundle) {
         //ModeCallback localModeCallback1 = null;
-        boolean bool = false;
         super.onCreate(paramBundle);
         setVolumeControlStream(3);
         setContentView(R.layout.recordlist_view);
@@ -220,31 +196,67 @@ public class RecordList extends SherlockListActivity implements
         //localLinearLayout2.setBackgroundColor(i);
         this.mProgressLayout.setVisibility(View.GONE);
         PowerManager localPowerManager = (PowerManager) getSystemService(POWER_SERVICE);
-        this.mWakeLock = localPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "RecorderPlayer");;
+        this.mWakeLock = localPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "RecorderPlayer");
         this.mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         if ((this.mProgress instanceof SeekBar)) {
             Log.d(this.TAG, "setOnSeekBarChangeListener");
-            SeekBar localSeekBar = (SeekBar) this.mProgress;
-            SeekBar.OnSeekBarChangeListener localOnSeekBarChangeListener = this.mSeekListener;
-            localSeekBar.setOnSeekBarChangeListener(localOnSeekBarChangeListener);
+            SeekBar seeker = (SeekBar) this.mProgress;
+            seeker.setOnSeekBarChangeListener(mSeekListener);
         }
-        //this.mProgress.setMax(1000);
+        this.mProgress.setMax(1000);
         mFileManager = FileManagerFactory.getSmsManagerInstance(this);
-        ActionBar localActionBar = getSupportActionBar();
-        if (localActionBar != null) {
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
             Drawable localDrawable = getResources().getDrawable(R.drawable.title_background);
-            localActionBar.setBackgroundDrawable(localDrawable);
-            localActionBar.setCustomView(R.layout.recordlist_customview);
-            localActionBar.setDisplayOptions(18);
+            actionBar.setBackgroundDrawable(localDrawable);
+            actionBar.setCustomView(R.layout.recordlist_customview);
+            actionBar.setDisplayOptions(18);
+        }
+        if(mPlayCompleteReciBroadcastReceiver == null){
+            mPlayCompleteReciBroadcastReceiver = new BroadcastReceiver(){
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if(MediaPlaybackService.PLAY_COMPLETE_ACTION.equals(intent.getAction())){
+                        mProgress.setProgress(1000);
+                        Message msg = mHandler.obtainMessage(MSG_TOGGLE_UI);
+                        msg.arg1 = mCurPlayIndex;
+                        mCurState = PLAY;
+                        mHandler.sendMessage(msg);
+                    }
+                }
+            };
+            registerReceiver(mPlayCompleteReciBroadcastReceiver, new IntentFilter(MediaPlaybackService.PLAY_COMPLETE_ACTION));
         }
         init();
     }
 
     public boolean onCreateOptionsMenu(Menu paramMenu) {
-        getSupportMenuInflater().inflate(R.menu.recordlist_menu, paramMenu);
+        //getSupportMenuInflater().inflate(R.menu.recordlist_menu, paramMenu);
         return super.onCreateOptionsMenu(paramMenu);
     }
     
+    public boolean onPrepareOptionsMenu(Menu paramMenu) {
+        /*if(mFileList.size() == 0){
+            paramMenu.findItem(R.id.menu_item_delete).setEnabled(false);
+        }*/
+        return true;
+    }
+    
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch(item.getItemId()){
+            case R.id.menu_item_delete:
+                if(mCurPlayIndex == -1 && mCurPlayIndex>=mFileList.size()){
+                    Toast.makeText(this, getString(R.string.select_delete_file), Toast.LENGTH_SHORT).show();
+                    return true;
+                }
+                deleteItem(mCurPlayIndex);
+                break;
+                default:
+                    break;
+        }
+        return true;
+    }
     public void init() {
         mFileList = mFileManager.queryPublicFileList(0, PAGE_NUMBER);
         updateCounter();
@@ -252,6 +264,7 @@ public class RecordList extends SherlockListActivity implements
         this.mAdapter = new RecordListAdapter(this, mFileList);
         setListAdapter(this.mAdapter);
         mAdapter.setPlayId(-1, mCurState);
+        mAdapter.setTaskClickListener(this);
     }
     
     private void updateCounter() {
@@ -276,9 +289,58 @@ public class RecordList extends SherlockListActivity implements
     }
     
     @Override
+    public void onStop() {
+        super.onStop();
+        Log.d(TAG, "===> onStop.");
+        paused = true;
+        mHandler.removeMessages(REFRESH);
+        if(mService != null) {
+            try {
+                mService.stop();
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+        if (mWakeLock.isHeld()) {
+            mWakeLock.release();
+        }
+        MusicUtils.unbindFromService(mToken);
+        mService = null;
+    }
+    
+    @Override
+    public void onDestroy()
+    {
+        Log.d(TAG, "===> onDestroy.");
+        super.onDestroy();
+    }
+    
+    @Override
     public void onItemClick(AdapterView<?> parent, View view, int position,
             long id) {
-        System.out.println("mCurPlayIndex = " + mCurPlayIndex + " position = " + position);
+        toggleAudio(position);
+    }
+    
+    @Override
+    public void onTaskClick(int index, int action) {
+        switch(action){
+            case ITEM_OPERATION_PLAY:
+                toggleAudio(index);
+                break;
+            case ITEM_OPERATION_DETAILS:
+                mCurPlayIndex = index;
+                showInfomationDlg(index);
+                break;
+            case ITEM_OPERATION_DELETE:
+                deleteItem(index);
+                mCurPlayIndex = -1;
+                break;
+                default:
+                    break;
+        }
+    }
+    
+    private void toggleAudio(int position){
         if(mCurPlayIndex == position){
             if(mCurState == PLAY){
                 mCurState = PAUSE;
@@ -288,29 +350,28 @@ public class RecordList extends SherlockListActivity implements
         }else{
             mCurState = PAUSE;
         }
-        mAdapter.setPlayId(position, mCurState);
-        this.mProgressLayout.setVisibility(View.VISIBLE);
-        mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
-        mCurPlayIndex = position;
-        try {
-            // Assume something is playing when the service says it is,
-            // but also if the audio ID is valid but the service is paused.
-            if (mService.getAudioId() >= 0 || mService.isPlaying() ||
-                    mService.getPath() != null) {
-                // something is playing now, we're done
-                return;
-            }
-        } catch (RemoteException ex) {
-        }
-        startPlayback(position);
+        Message msg = mHandler.obtainMessage(MSG_TOGGLE_UI);
+        msg.arg1 = position;
+        mHandler.sendMessage(msg);
     }
     
-    @Override
-    public void onTaskClick(int index, int action) {
-        mCurPlayIndex = index;
-        mCurState = action;
-        mAdapter.setPlayId(index, mCurState);
+    private void deleteItem(int position){
+        if(mCurPlayIndex == position){
+            try {
+                if(mService != null && mService.isPlaying()){
+                    mService.stop();
+                    toggleAudio(position);
+                }
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+        RecorderFile file = mFileList.get(position);
+        mFileManager.removeFile(file.getPath());
+        mFileManager.delete(file.getId());
+        mFileList.remove(position);
         mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
+        Toast.makeText(this, getResources().getQuantityString(R.plurals.NNNtracksdeleted, 1, 1), Toast.LENGTH_SHORT).show();
     }
     
     private ServiceConnection osc = new ServiceConnection() {
@@ -324,7 +385,7 @@ public class RecordList extends SherlockListActivity implements
     };
     
     private void startPlayback(int position) {
-        if(mService == null){
+        if(mService == null || mFileList.size()<=position){
             return;
         }
         String filename = mFileList.get(position).getPath();
@@ -332,7 +393,7 @@ public class RecordList extends SherlockListActivity implements
             if(position == mCurPlayIndex){
                 try {
                     if(mService.isPlaying()){
-                        mService.stop();
+                        mService.pause();
                     }else {
                         mService.play();
                     }
@@ -369,7 +430,7 @@ public class RecordList extends SherlockListActivity implements
             }
             mDuration = mService.duration();
             long remain =  mDuration % 1000;
-            long totalSeconds = (remain == 0) ? mDuration / 1000 : (mDuration / 1000) +1;
+            long totalSeconds = (remain == 0) ? mDuration / 1000 : (mDuration / 1000);
             mTotalTime.setText(MusicUtils.makeTimeString(this, totalSeconds));
         } catch (RemoteException ex) {
         }
@@ -406,7 +467,6 @@ public class RecordList extends SherlockListActivity implements
             if (width == 0) width = 320;
             long smoothrefreshtime = mDuration / width;
             if(mService.getPlayState() == MediaPlaybackService.PLAY_STATE_COMPLETE && mService.getSeekState() != MediaPlaybackService._STATE_SEEKING) {
-                mHandler.sendEmptyMessageDelayed(FININSHED, 100);
                 return 500;
             }
             if (smoothrefreshtime > remaining){
@@ -429,21 +489,77 @@ public class RecordList extends SherlockListActivity implements
         }
     }
     
-
-    /*
-
-    private void doPauseResume() {
-        if (this.mIsSupposedToBePlaying) {
-            Log.d(this.TAG, "doPauseResume()-> to pause()");
-            pause();
+    
+    private OnSeekBarChangeListener mSeekListener = new OnSeekBarChangeListener() {
+        public void onStartTrackingTouch(SeekBar bar) {
+            if (mService == null) return;
+            mLastSeekEventTime = 0;
+            mFromTouch = true;
         }
-        while (true) {
-            refreshNow();
-            return;
-            Log.d(this.TAG, "doPauseResume()-> to play()");
-            play();
+        public void onProgressChanged(SeekBar bar, int progress, boolean fromuser) {
+            if (!fromuser || (mService == null)) return;
+            long now = SystemClock.elapsedRealtime();
+            if ((now - mLastSeekEventTime) > 250) {
+                mLastSeekEventTime = now;
+                mPosOverride = mDuration * progress / 1000;
+                try {
+                    if(mPosOverride<=mDuration){
+                        mCurrentTime.setText(MusicUtils.makeTimeString(RecordList.this, mPosOverride / 1000));
+                        mService.seek(mPosOverride);
+                    }
+                } catch (RemoteException ex) {
+                }
+
+                if (!mFromTouch) {
+                    refreshNow();
+                    mPosOverride = -1;
+                }
+            }
         }
+        
+        public void onStopTrackingTouch(SeekBar bar) {
+            if (mService == null) return;
+            long seekTo = mDuration * bar.getProgress() / 1000;
+            try {
+                if(seekTo<=mDuration){
+                    mCurrentTime.setText(MusicUtils.makeTimeString(RecordList.this, mPosOverride / 1000));
+                    mService.seek(seekTo);
+                }
+            } catch (RemoteException ex) {
+            }
+            mPosOverride = -1;
+            mFromTouch = false;
+            queueNextRefresh(refreshNow());
+        }
+    };
+
+    private void showInfomationDlg(int index) {
+        LayoutInflater layoutInflater = (LayoutInflater) getSystemService("layout_inflater");
+        int i = (int) this.mSelectedId;
+        AlertDialog.Builder localBuilder = new AlertDialog.Builder(this);
+        localBuilder.setTitle(R.string.information);
+        localBuilder.setIcon(android.R.drawable.ic_menu_info_details);
+        localBuilder.setPositiveButton(R.string.button_ok, null);
+        RecorderFile file = mFileList.get(index);
+        View localView2 = layoutInflater.inflate(R.layout.information_dlg, null);
+        TextView title = (TextView) localView2.findViewById(R.id.title);
+        title.setText(file.getName());
+        ImageView thumb = (ImageView) localView2.findViewById(R.id.thumb);
+        Drawable localDrawable = getResources().getDrawable(R.drawable.ic_default_thumb);
+        thumb.setImageDrawable(localDrawable);
+        TextView duration = (TextView) localView2.findViewById(R.id.duration);
+        duration.setText(MusicUtils.makeTimeString(this, file.getDuration()));
+        TextView size = (TextView) localView2.findViewById(R.id.size);
+        size.setText(FileUtils.formetFileSize(file.getSize()));
+        TextView type = (TextView) localView2.findViewById(R.id.type);
+        type.setText(file.getMimeType());
+        TextView pathTextView = (TextView) localView2.findViewById(R.id.path);
+        pathTextView.setText(file.getPath());
+        localBuilder.setView(localView2);
+        localBuilder.show();
     }
+    
+    /*
 
     private void exitMultiSelectView() {
         Log.d(this.TAG, "_____exitMultiSelectedView_____");
@@ -500,69 +616,6 @@ public class RecordList extends SherlockListActivity implements
         }
     }
 
-
-    private void showInfomationDlg() {
-        LayoutInflater localLayoutInflater = (LayoutInflater) getSystemService("layout_inflater");
-        ListView localListView = this.mTrackList;
-        int i = (int) this.mSelectedId;
-        View localView1 = localListView.findViewById(i);
-        String str1 = this.TAG;
-        StringBuilder localStringBuilder = new StringBuilder(
-                "select position= ");
-        int j = this.mSelectedPosition;
-        String str2 = j;
-        Log.d(str1, str2);
-        RecordListAdapter.ViewHolder localViewHolder = (RecordListAdapter.ViewHolder) localView1
-                .getTag();
-        AlertDialog.Builder localBuilder = new AlertDialog.Builder(this);
-        localBuilder.setTitle(2131099685);
-        localBuilder.setIcon(17301659);
-        localBuilder.setPositiveButton(17039370, null);
-        View localView2 = localLayoutInflater.inflate(2130968578, null);
-        if (localView2 != null) {
-            TextView localTextView1 = (TextView) localView2
-                    .findViewById(2131427341);
-            String str3 = mCursor.getString(1);
-            localTextView1.setText(str3);
-            ImageView localImageView = (ImageView) localView2
-                    .findViewById(2131427340);
-            Drawable localDrawable = getResources().getDrawable(2130837525);
-            localImageView.setImageDrawable(localDrawable);
-            TextView localTextView2 = (TextView) localView2
-                    .findViewById(2131427343);
-            CharSequence localCharSequence = localViewHolder.duration.getText();
-            localTextView2.setText(localCharSequence);
-            TextView localTextView3 = (TextView) localView2
-                    .findViewById(2131427342);
-            String str4 = Utils.formatFileSizeString(mCursor.getInt(10));
-            localTextView3.setText(str4);
-            TextView localTextView4 = (TextView) localView2
-                    .findViewById(2131427345);
-            String str5 = mCursor.getString(2);
-            localTextView4.setText(str5);
-            TextView localTextView5 = (TextView) localView2
-                    .findViewById(2131427344);
-            String str6 = mCursor.getString(6);
-            localTextView5.setText(str6);
-        }
-        localBuilder.setView(localView2);
-        localBuilder.show();
-    }
-
-
-    public long duration()
-{
-  boolean bool = this.mPlayer.isInitialized();
-  if (bool)
-    long l1 = this.mPlayer.duration();
-  while (true)
-  {
-    Object localObject;
-    return localObject;
-    long l2 = 65535L;
-  }
-}
-
     protected void onActivityResult(int paramInt1, int paramInt2,
             Intent paramIntent) {
         if ((paramIntent == null) || (paramInt2 != -1))
@@ -584,9 +637,6 @@ public class RecordList extends SherlockListActivity implements
         }
     }
 
-    public void onConfigurationChanged(Configuration paramConfiguration) {
-        super.onConfigurationChanged(paramConfiguration);
-    }
 
     public boolean onContextItemSelected(MenuItem paramMenuItem)
 {
@@ -643,53 +693,6 @@ public class RecordList extends SherlockListActivity implements
     showRenameDlg();
   }
 }
-
-    public void onDestroy() {
-        int i = 0;
-        AudioManager localAudioManager = this.mAudioManager;
-        AudioManager.OnAudioFocusChangeListener localOnAudioFocusChangeListener = this.mAudioFocusListener;
-        localAudioManager.abandonAudioFocus(localOnAudioFocusChangeListener);
-        this.mMediaplayerHandler.removeCallbacksAndMessages(i);
-        if (this.mUnmountReceiver != null) {
-            BroadcastReceiver localBroadcastReceiver = this.mUnmountReceiver;
-            unregisterReceiver(localBroadcastReceiver);
-            this.mUnmountReceiver = i;
-        }
-        super.onDestroy();
-        this.mPlayer.release();
-        this.mPlayer = i;
-        this.mWakeLock.release();
-        if (mCursor != null) {
-            mCursor.close();
-            mCursor = i;
-        }
-    }
-
-    protected void onListItemClick(ListView paramListView, View paramView,
-            int paramInt, long paramLong) {
-        int i = paramView.getId();
-        String str1 = this.TAG;
-        String str2 = "onListItemClick position= " + paramInt + " id= "
-                + paramLong + " v.id=" + i;
-        Log.i(str1, str2);
-        if ((mCursor == null) || (mCursor.getCount() <= 0))
-            setTitle(2131099690);
-        while (true) {
-            return;
-            mCursor.moveToPosition(paramInt);
-            Cursor localCursor = mCursor;
-            int j = mCursor.getColumnIndexOrThrow("_data");
-            String str3 = localCursor.getString(j);
-            long l1 = i;
-            playByItemId(l1, null);
-            String str4 = this.TAG;
-            StringBuilder localStringBuilder = new StringBuilder(
-                    "onListItemClick mSelectedId= ");
-            long l2 = this.mPlayingId;
-            String str5 = l2;
-            Log.i(str4, str5);
-        }
-    }
 
     public boolean onOptionsItemSelected(MenuItem paramMenuItem) {
         switch (paramMenuItem.getItemId()) {
@@ -950,178 +953,6 @@ public class RecordList extends SherlockListActivity implements
   }
 }
 
-    public Boolean renameByItemId(long paramLong, String paramString) {
-        // Byte code:
-        // 0: getstatic 736
-        // android/provider/MediaStore$Audio$Media:EXTERNAL_CONTENT_URI
-        // Landroid/net/Uri;
-        // 3: astore_3
-        // 4: new 1190 android/content/ContentValues
-        // 7: dup
-        // 8: invokespecial 1191 android/content/ContentValues:<init> ()V
-        // 11: astore 4
-        // 13: aload_0
-        // 14: invokevirtual 207
-        // com/android/soundrecorder/RecordList:getContentResolver
-        // ()Landroid/content/ContentResolver;
-        // 17: astore 5
-        // 19: aload_2
-        // 20: astore 6
-        // 22: aload 4
-        // 24: ldc 218
-        // 26: aload 6
-        // 28: invokevirtual 1195 android/content/ContentValues:put
-        // (Ljava/lang/String;Ljava/lang/String;)V
-        // 31: lload_1
-        // 32: lstore 7
-        // 34: aload_3
-        // 35: lload 7
-        // 37: invokestatic 1201 android/content/ContentUris:withAppendedId
-        // (Landroid/net/Uri;J)Landroid/net/Uri;
-        // 40: astore 9
-        // 42: aload 5
-        // 44: aload 9
-        // 46: aconst_null
-        // 47: aconst_null
-        // 48: aconst_null
-        // 49: aconst_null
-        // 50: invokevirtual 1164 android/content/ContentResolver:query
-        // (Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;
-        // 53: astore 10
-        // 55: aload 10
-        // 57: invokeinterface 275 1 0
-        // 62: pop
-        // 63: aload 10
-        // 65: ldc 220
-        // 67: invokeinterface 1204 2 0
-        // 72: astore 9
-        // 74: aload 10
-        // 76: iload 9
-        // 78: invokeinterface 602 2 0
-        // 83: astore 11
-        // 85: aload 11
-        // 87: invokevirtual 1205 java/lang/String:length ()I
-        // 90: astore 9
-        // 92: iinc 9 252
-        // 95: aload 11
-        // 97: invokevirtual 1205 java/lang/String:length ()I
-        // 100: astore 12
-        // 102: aload 11
-        // 104: iload 9
-        // 106: iload 12
-        // 108: invokevirtual 1209 java/lang/String:substring
-        // (II)Ljava/lang/String;
-        // 111: astore 13
-        // 113: aload_2
-        // 114: invokestatic 1212 java/lang/String:valueOf
-        // (Ljava/lang/Object;)Ljava/lang/String;
-        // 117: astore 14
-        // 119: new 284 java/lang/StringBuilder
-        // 122: dup
-        // 123: aload 14
-        // 125: invokespecial 289 java/lang/StringBuilder:<init>
-        // (Ljava/lang/String;)V
-        // 128: aload 13
-        // 130: invokevirtual 303 java/lang/StringBuilder:append
-        // (Ljava/lang/String;)Ljava/lang/StringBuilder;
-        // 133: invokevirtual 297 java/lang/StringBuilder:toString
-        // ()Ljava/lang/String;
-        // 136: astore_2
-        // 137: new 667 java/io/File
-        // 140: dup
-        // 141: aload 11
-        // 143: invokespecial 668 java/io/File:<init> (Ljava/lang/String;)V
-        // 146: astore 15
-        // 148: aload 15
-        // 150: invokevirtual 1215 java/io/File:getParent ()Ljava/lang/String;
-        // 153: astore 9
-        // 155: aload_2
-        // 156: astore 16
-        // 158: new 667 java/io/File
-        // 161: dup
-        // 162: aload 9
-        // 164: aload 16
-        // 166: invokespecial 1217 java/io/File:<init>
-        // (Ljava/lang/String;Ljava/lang/String;)V
-        // 169: astore 17
-        // 171: aload 17
-        // 173: invokevirtual 1220 java/io/File:exists ()Z
-        // 176: astore 9
-        // 178: iload 9
-        // 180: ifeq +12 -> 192
-        // 183: aconst_null
-        // 184: invokestatic 495 java/lang/Boolean:valueOf
-        // (Z)Ljava/lang/Boolean;
-        // 187: astore 9
-        // 189: aload 9
-        // 191: areturn
-        // 192: aload 15
-        // 194: aload 17
-        // 196: invokevirtual 1224 java/io/File:renameTo (Ljava/io/File;)Z
-        // 199: pop
-        // 200: aload 15
-        // 202: invokevirtual 1215 java/io/File:getParent ()Ljava/lang/String;
-        // 205: invokestatic 1212 java/lang/String:valueOf
-        // (Ljava/lang/Object;)Ljava/lang/String;
-        // 208: astore 18
-        // 210: new 284 java/lang/StringBuilder
-        // 213: dup
-        // 214: aload 18
-        // 216: invokespecial 289 java/lang/StringBuilder:<init>
-        // (Ljava/lang/String;)V
-        // 219: ldc_w 1226
-        // 222: invokevirtual 303 java/lang/StringBuilder:append
-        // (Ljava/lang/String;)Ljava/lang/StringBuilder;
-        // 225: astore 19
-        // 227: aload_2
-        // 228: astore 20
-        // 230: aload 19
-        // 232: aload 20
-        // 234: invokevirtual 303 java/lang/StringBuilder:append
-        // (Ljava/lang/String;)Ljava/lang/StringBuilder;
-        // 237: invokevirtual 297 java/lang/StringBuilder:toString
-        // ()Ljava/lang/String;
-        // 240: astore 21
-        // 242: aload 4
-        // 244: ldc 220
-        // 246: aload 21
-        // 248: invokevirtual 1195 android/content/ContentValues:put
-        // (Ljava/lang/String;Ljava/lang/String;)V
-        // 251: lload_1
-        // 252: lstore 22
-        // 254: aload_3
-        // 255: lload 22
-        // 257: invokestatic 1201 android/content/ContentUris:withAppendedId
-        // (Landroid/net/Uri;J)Landroid/net/Uri;
-        // 260: astore 9
-        // 262: aload 5
-        // 264: aload 9
-        // 266: aload 4
-        // 268: aconst_null
-        // 269: aconst_null
-        // 270: invokevirtual 1230 android/content/ContentResolver:update
-        // (Landroid/net/Uri;Landroid/content/ContentValues;Ljava/lang/String;[Ljava/lang/String;)I
-        // 273: astore 24
-        // 275: aload_0
-        // 276: invokevirtual 207
-        // com/android/soundrecorder/RecordList:getContentResolver
-        // ()Landroid/content/ContentResolver;
-        // 279: astore 9
-        // 281: ldc_w 758
-        // 284: invokestatic 763 android/net/Uri:parse
-        // (Ljava/lang/String;)Landroid/net/Uri;
-        // 287: astore 25
-        // 289: aload 9
-        // 291: aload 25
-        // 293: aconst_null
-        // 294: invokevirtual 767 android/content/ContentResolver:notifyChange
-        // (Landroid/net/Uri;Landroid/database/ContentObserver;)V
-        // 297: iconst_1
-        // 298: invokestatic 495 java/lang/Boolean:valueOf
-        // (Z)Ljava/lang/Boolean;
-        // 301: astore 9
-        // 303: goto -114 -> 189
-    }
 
     public long seek(long paramLong) {
         boolean bool = this.mPlayer.isInitialized();
@@ -1354,90 +1185,6 @@ public class RecordList extends SherlockListActivity implements
     this.mMediaPlayer.setWakeMode(RecordList.this, 1);
   }
 
-        public long duration() {
-            return this.mMediaPlayer.getDuration();
-        }
-
-        public int getAudioSessionId() {
-            return this.mMediaPlayer.getAudioSessionId();
-        }
-
-        public boolean isInitialized() {
-            return this.mIsInitialized;
-        }
-
-        public void pause() {
-            Log.d(RecordList.this.TAG, "->>to pause ");
-            this.mMediaPlayer.pause();
-        }
-
-        public long position() {
-            return this.mMediaPlayer.getCurrentPosition();
-        }
-
-        public void release() {
-            Log.d(RecordList.this.TAG, "->>to release ");
-            stop();
-            this.mMediaPlayer.release();
-        }
-
-        public long seek(long paramLong) {
-            MediaPlayer localMediaPlayer = this.mMediaPlayer;
-            int i = (int) paramLong;
-            localMediaPlayer.seekTo(i);
-            return paramLong;
-        }
-
-        public void setAudioSessionId(int paramInt) {
-            this.mMediaPlayer.setAudioSessionId(paramInt);
-        }
-
-        public void setDataSource(String paramString) {
-            Object localObject = null;
-            try {
-                this.mMediaPlayer.reset();
-                this.mMediaPlayer.setOnPreparedListener(null);
-                if (paramString.startsWith("content://")) {
-                    MediaPlayer localMediaPlayer1 = this.mMediaPlayer;
-                    RecordList localRecordList = RecordList.this;
-                    Uri localUri = Uri.parse(paramString);
-                    localMediaPlayer1.setDataSource(localRecordList, localUri);
-                }
-                while (true) {
-                    this.mMediaPlayer.setAudioStreamType(3);
-                    this.mMediaPlayer.prepare();
-                    MediaPlayer localMediaPlayer2 = this.mMediaPlayer;
-                    MediaPlayer.OnCompletionListener localOnCompletionListener = this.listener;
-                    localMediaPlayer2
-                            .setOnCompletionListener(localOnCompletionListener);
-                    MediaPlayer localMediaPlayer3 = this.mMediaPlayer;
-                    MediaPlayer.OnErrorListener localOnErrorListener = this.errorListener;
-                    localMediaPlayer3.setOnErrorListener(localOnErrorListener);
-                    Intent localIntent = new Intent(
-                            "android.media.action.OPEN_AUDIO_EFFECT_CONTROL_SESSION");
-                    int i = getAudioSessionId();
-                    localIntent
-                            .putExtra("android.media.extra.AUDIO_SESSION", i);
-                    String str = RecordList.this.getPackageName();
-                    localIntent.putExtra("android.media.extra.PACKAGE_NAME",
-                            str);
-                    RecordList.this.sendBroadcast(localIntent);
-                    this.mIsInitialized = true;
-                    return;
-                    this.mMediaPlayer.setDataSource(paramString);
-                }
-            } catch (IOException localIOException) {
-                while (true)
-                    this.mIsInitialized = localObject;
-            } catch (IllegalArgumentException localIllegalArgumentException) {
-                while (true)
-                    this.mIsInitialized = localObject;
-            }
-        }
-
-        public void setHandler(Handler paramHandler) {
-            this.mHandler = paramHandler;
-        }
 
         public void setVolume(float paramFloat) {
             this.mMediaPlayer.setVolume(paramFloat, paramFloat);
@@ -1511,15 +1258,5 @@ public class RecordList extends SherlockListActivity implements
             }
         }
 
-        class QueryArgs {
-            public String orderBy;
-            public String[] projection;
-            public String selection;
-            public String[] selectionArgs;
-            public Uri uri;
-
-            QueryArgs() {
-            }
-        }
     }*/
 }

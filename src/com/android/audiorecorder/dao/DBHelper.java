@@ -73,7 +73,10 @@ public class DBHelper implements BaseColumns{
                 int index = 0;
                 RecorderFile file = new RecorderFile();
                 file.setId(cursor.getInt(index++));
-                file.setPath(cursor.getString(index++));
+                String path = cursor.getString(index++); 
+                file.setPath(path);
+                String name = path.substring(path.lastIndexOf("/")+1, path.indexOf("."));
+                file.setName(name);
                 file.setSize(cursor.getInt(index++));
                 file.setDuration(cursor.getInt(index++));
                 file.setMimeType(cursor.getString(index++));

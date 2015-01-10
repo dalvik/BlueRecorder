@@ -17,6 +17,8 @@ import android.widget.PopupMenu;
 import android.widget.PopupMenu.OnMenuItemClickListener;
 import android.widget.TextView;
 
+import com.android.audiorecorder.audio.MusicUtils;
+
 public class RecordListAdapter extends BaseAdapter {
 
     private Context mContext;
@@ -72,7 +74,7 @@ public class RecordListAdapter extends BaseAdapter {
                     viewHolder.play.setVisibility(View.INVISIBLE);
                     viewHolder.pause.setVisibility(View.VISIBLE);
                     if(mTaskClickListener != null){
-                        mTaskClickListener.onTaskClick(StringUtil.toInt(viewHolder.play.getTag()), RecordList.PLAY);
+                        mTaskClickListener.onTaskClick(StringUtil.toInt(viewHolder.play.getTag()), RecordList.ITEM_OPERATION_PLAY);
                     }
                 }
             });
@@ -85,12 +87,13 @@ public class RecordListAdapter extends BaseAdapter {
                     viewHolder.play.setVisibility(View.VISIBLE);
                     viewHolder.pause.setVisibility(View.INVISIBLE);
                     if(mTaskClickListener != null){
-                        mTaskClickListener.onTaskClick(StringUtil.toInt(viewHolder.pause.getTag()), RecordList.PAUSE);
+                        mTaskClickListener.onTaskClick(StringUtil.toInt(viewHolder.pause.getTag()), RecordList.ITEM_OPERATION_PLAY);
                     }
                 }
             });
             viewHolder.play_indicator = (ImageView)convertView.findViewById(R.id.play_indicator);
             viewHolder.ibListItemMenu = (ImageButton)convertView.findViewById(R.id.list_item_menu);
+            viewHolder.ibListItemMenu.setTag(position);
             viewHolder.ibListItemMenu.setOnClickListener(new OnClickListener() {
                 
                 @Override
@@ -98,14 +101,25 @@ public class RecordListAdapter extends BaseAdapter {
                     
                     PopupMenu localPopupMenu = new PopupMenu(mContext, viewHolder.ibListItemMenu);
                     Menu localMenu = localPopupMenu.getMenu();
-                    localMenu.add(1, 1, 1, R.string.play);
-                    localMenu.add(1, 2, 1, R.string.delete_item);
-                    localMenu.add(1, 3, 1, R.string.information);
+                    if(StringUtil.toInt(viewHolder.ibListItemMenu.getTag()) == mPlayId){
+                        if(mState == RecordList.PLAY){
+                            localMenu.add(1, RecordList.ITEM_OPERATION_PLAY, 1, R.string.play);
+                        } else {
+                            localMenu.add(1, RecordList.ITEM_OPERATION_PLAY, 1, R.string.pause);
+                        }
+                    } else {
+                        localMenu.add(1, RecordList.ITEM_OPERATION_PLAY, 1, R.string.play);
+                    }
+                    localMenu.add(1, RecordList.ITEM_OPERATION_DETAILS, 1, R.string.information);
+                    localMenu.add(1, RecordList.ITEM_OPERATION_DELETE, 1, R.string.delete_item);
                     localPopupMenu.setOnMenuItemClickListener(new OnMenuItemClickListener() {
                         
                         @Override
                         public boolean onMenuItemClick(MenuItem item) {
-                            return false;
+                            if(mTaskClickListener != null){
+                                mTaskClickListener.onTaskClick(StringUtil.toInt(viewHolder.play.getTag()), item.getItemId());
+                            }
+                            return true;
                         }
                     });
                     localPopupMenu.show();
@@ -116,8 +130,6 @@ public class RecordListAdapter extends BaseAdapter {
             viewHolder =  (ViewHolder) convertView.getTag();
         }
         viewHolder.id = position;
-        //viewHolder.id = file.getId();
-        System.out.println(viewHolder.id + "------" + mPlayId);
         if(viewHolder.id == mPlayId){
             if(mState != RecordList.PAUSE){
                 viewHolder.play.setVisibility(View.VISIBLE);
@@ -133,8 +145,8 @@ public class RecordListAdapter extends BaseAdapter {
             viewHolder.pause.setVisibility(View.INVISIBLE);
         }
         viewHolder.title.setText(file.getName());
-        viewHolder.duration.setText(String.valueOf(file.getDuration()));
-        viewHolder.size.setText(String.valueOf(file.getSize()));
+        viewHolder.duration.setText(MusicUtils.makeTimeString(mContext, file.getDuration()));
+        viewHolder.size.setText(FileUtils.formetFileSize(file.getSize()));
         return convertView;
     }
     
@@ -152,7 +164,7 @@ public class RecordListAdapter extends BaseAdapter {
         //public final static int ACTION_PLAY = 1;
         //public final static int ACTION_PAUSE = 2;
         
-        void onTaskClick(int index, int action);
+        void onTaskClick(int index, int itemAction);
     }
     
     class ViewHolder {

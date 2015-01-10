@@ -435,7 +435,7 @@ public class AudioService extends Service {
         if (mMediaRecorder != null) {
             RecorderFile file = new RecorderFile();
             try {
-                file.setDuration((int)(System.currentTimeMillis() - startTime)/1000);
+                file.setDuration((int) ((SystemClock.uptimeMillis() - mRecorderTime) / 1000));
                 mMediaRecorder.stop();
             } catch (IllegalStateException e) {
                 Log.e(TAG, "===> IllegalStateException.");

@@ -9,7 +9,7 @@ public class DateUtil {
 	
 	public static String formatyyMMDDHHmmss(long time){
 		Date date  = new Date(time);
-		SimpleDateFormat sdf = new SimpleDateFormat("yy_MM_dd HH_mm_ss");
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
 		return sdf.format(date);
 	}
 	
