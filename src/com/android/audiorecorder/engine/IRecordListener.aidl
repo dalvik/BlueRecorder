@@ -21,5 +21,9 @@ interface IRecordListener {
 	
 	boolean isTalkStart();
 	
+	void setMode(int mode);
+	
+	int getMode();
+	
 	void adjustStreamVolume(int streamType, int direct, int flag);
 }	

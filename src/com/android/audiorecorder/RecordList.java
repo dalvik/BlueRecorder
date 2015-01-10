@@ -45,6 +45,7 @@ import com.android.audiorecorder.audio.MusicUtils;
 import com.android.audiorecorder.audio.MusicUtils.ServiceToken;
 import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.IFileManager;
+import com.android.audiorecorder.utils.FileUtils;
 
 public class RecordList extends SherlockListActivity implements
         View.OnCreateContextMenuListener, OnItemClickListener, ITaskClickListener{

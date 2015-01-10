@@ -18,6 +18,8 @@ import android.widget.PopupMenu.OnMenuItemClickListener;
 import android.widget.TextView;
 
 import com.android.audiorecorder.audio.MusicUtils;
+import com.android.audiorecorder.utils.FileUtils;
+import com.android.audiorecorder.utils.StringUtil;
 
 public class RecordListAdapter extends BaseAdapter {
 

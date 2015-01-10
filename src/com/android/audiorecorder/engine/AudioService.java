@@ -2,6 +2,7 @@ package com.android.audiorecorder.engine;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -20,7 +21,6 @@ import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaRecorder;
 import android.media.MediaRecorder.OnErrorListener;
-import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
@@ -28,27 +28,33 @@ import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.os.RemoteException;
 import android.os.SystemClock;
+import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.RemoteViews;
 
-import com.android.audiorecorder.DateUtil;
-import com.android.audiorecorder.FileUtils;
+import com.android.audiorecorder.DebugConfig;
 import com.android.audiorecorder.R;
 import com.android.audiorecorder.RecorderFile;
 import com.android.audiorecorder.SoundRecorder;
-import com.android.audiorecorder.Utils;
 import com.android.audiorecorder.dao.FileManagerFactory;
-import com.android.audiorecorder.dao.FileManagerImp;
 import com.android.audiorecorder.dao.IFileManager;
+import com.android.audiorecorder.utils.DateUtil;
+import com.android.audiorecorder.utils.FileUtils;
 
 public class AudioService extends Service {
+    
+    private static final int AM = 1;
+    private static final int PM = 21;
+    public static final int MODE_MANLY = 0;//no allowed time and tel to recorder
+    public static final int MODE_AUTO = 1;
+    private int mCurMode;
+    
+    
     
     public static final int TYPE_MANLY = 0;
     public static final int TYPE_TEL = 1;
     public static final int TYPE_AUTO = 2;
-    
-    private String STORAGE_PATH_LOCAL_PHONE;
-    private String STORAGE_PATH_SD_CARD;
     
     public static final String Action_RecordListen = "com.audio.Action_BluetoothRecord";
 
@@ -75,17 +81,18 @@ public class AudioService extends Service {
     public static final String Action_SetParemeter = "com.dahuatech.audio.Action_SetParameter";
 
     public static final int MSG_START_RECORD = 0xE1;
-
     public static final int MSG_STOP_RECORD = 0xE2;
-
     public static final int STATE_PREPARE = 0x01;
 
     public static final int MSG_ATDP_CONNECTED = 0x10;
     public static final int MSG_ATDP_DISCONNECTED = 0x11;
     
-    public final static int MSG_UPDATE_TIMER = 20;
+    public final static int MSG_UPDATE_TIMER = 200;
+    
+    public final static int MSG_TIMER_ALARM = 1000;
 
     private WakeLock mWakeLock;
+    private WakeLock mAlarmWakeLock;
     private MediaRecorder mMediaRecorder = null;
 
     private MediaPlayer mMediaPlayer = null;
@@ -121,7 +128,12 @@ public class AudioService extends Service {
     private String mRecoderPath;
     private long startTime;
     private int mMimeType;
-    private int mType;
+    
+    private TelephonyManager telephonyManager;
+    private PhoneStateListener phoneStateListener;
+    private int mPhoneState;
+    
+    private TimeSchedule mTimeSchedule;
     
     private Handler mHandler = new Handler() {
         public void handleMessage(android.os.Message msg) {
@@ -150,6 +162,9 @@ public class AudioService extends Service {
                     notifyUpdate(MSG_UPDATE_TIMER);
                     updateNotifiaction();
                     break;
+                case MSG_TIMER_ALARM:
+                    processTimerAlarm();
+                    break;
                 default:
                     break;
             }
@@ -169,35 +184,52 @@ public class AudioService extends Service {
         super.onCreate();
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         this.mPreferences = getSharedPreferences("SoundRecorder", Context.MODE_PRIVATE);
-        mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
-                "DHSoundRecorderService");
+        mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"SoundRecorderService");
+        mAlarmWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AlarmWakeLock");
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        mCurMode = MODE_MANLY;
         IntentFilter filter = new IntentFilter();
-        filter.addAction(Intent.ACTION_HEADSET_PLUG);
-        String str1 = String.valueOf(Environment.getExternalStorageDirectory().toString());
-        STORAGE_PATH_SD_CARD = str1 + "/Audio/Record/";
-        //String str2 = String.valueOf(phoneStrorage().toString());
-        //STORAGE_PATH_LOCAL_PHONE = str2 + "/Audio/Record";
+        filter.addAction(TimeSchedule.ACTION_TIMER_ALARM);
         if (mStateChnageReceiver == null) {
             mStateChnageReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     final String action = intent.getAction();
-                    if (Intent.ACTION_HEADSET_PLUG.equals(intent
-                            .getAction())) {
-                        int headSetState = intent.getIntExtra("state", -1);
-                        if (headSetState == 1) {
-                            mAudioManager.setSpeakerphoneOn(false);
-                        } else {
-                            mAudioManager.setSpeakerphoneOn(true);
-                        }
+                    if(TimeSchedule.ACTION_TIMER_ALARM.equalsIgnoreCase(action)){
+                        mHandler.sendEmptyMessage(MSG_TIMER_ALARM);
+                        Log.i(TAG, "---->android test timer alarm.");
                     }
                 }
             };
             registerReceiver(mStateChnageReceiver, filter);
         }
+        telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        if(phoneStateListener == null){
+            phoneStateListener = new PhoneStateListener(){
+                @Override
+                public void onCallStateChanged(int state, String incomingNumber) {
+                    super.onCallStateChanged(state, incomingNumber);
+                    Log.d(TAG, "===> onCallStateChanged = " + state);
+                    if(state == TelephonyManager.CALL_STATE_IDLE && mPhoneState == TelephonyManager.CALL_STATE_OFFHOOK){
+                        //stop recorder
+                        Log.d(TAG, "---> stop recorder.");
+                    }else if(state == TelephonyManager.CALL_STATE_OFFHOOK){
+                        //start recorder
+                        Log.d(TAG, "---> start recorder.");
+                    }
+                    if(state == TelephonyManager.CALL_STATE_IDLE && mPhoneState != TelephonyManager.CALL_STATE_IDLE){
+                        //mHandler.sendEmptyMessage(MSG_PROCESS_CALLLOG);//incomming or outcommint
+                        Log.d(TAG, "---> telephone state changed .");
+                    }
+                    mPhoneState = state;
+                }
+            };
+            telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
+        }
         fileManager = FileManagerFactory.getSmsManagerInstance(this);
+        mTimeSchedule = new TimeSchedule(this);
+        mTimeSchedule.start();
         Log.d(TAG, "===> onCreate.");
     }
 
@@ -253,6 +285,7 @@ public class AudioService extends Service {
             mHandler.sendEmptyMessage(MSG_START_RECORD);
             mHandler.removeCallbacks(mUpdateTimer);
             mHandler.post(mUpdateTimer);
+            mCurMode = MODE_MANLY;
         }
 
         @Override
@@ -262,6 +295,7 @@ public class AudioService extends Service {
             mHandler.sendEmptyMessage(MSG_STOP_RECORD);
             mHandler.removeCallbacks(mUpdateTimer);
             mNotificationManager.cancel(CUSTOM_VIEW_ID);
+            mCurMode = MODE_AUTO;
         }
 
         @Override
@@ -295,6 +329,20 @@ public class AudioService extends Service {
             return mTalkStart;
         }
 
+        public void setMode(int mode) throws RemoteException {
+            mCurMode = mode;
+            if(DebugConfig.DEBUG){
+                Log.i(TAG, "--->setMode = " + mode);
+            }
+        }
+        
+        public int getMode() throws RemoteException {
+            if(DebugConfig.DEBUG){
+                Log.i(TAG, "--->mMode = " + mCurMode);
+            }
+            return mCurMode;
+        };
+        
         @Override
         public void regStateListener(IStateListener listener)
                 throws RemoteException {
@@ -447,7 +495,7 @@ public class AudioService extends Service {
             }
             file.setPath(mRecoderPath);
             file.setTime(startTime);
-            file.setType(mType);
+            file.setType(mCurMode);
             File f = new File(mRecoderPath);
             if(f.exists()){
                 file.setSize(f.length());
@@ -458,9 +506,9 @@ public class AudioService extends Service {
                 file.setMimeType("3gpp");
             }
             fileManager.insertRecorderFile(file);
+            setRecordStatus(false);
+            notifyUpdate(MSG_STOP_RECORD);
         }
-        setRecordStatus(false);
-        notifyUpdate(MSG_STOP_RECORD);
     }
 
     private void createDir(){
@@ -573,4 +621,47 @@ public class AudioService extends Service {
         timerInfo.append(hour/10+ "" + hour%10  + ":" + minute/10 + "" + minute%10 +":" + second/10 + "" + second%10);
         return timerInfo.toString();
     }
+    
+    private void stopTelRecorder(){
+        
+    }
+    
+    private void startTelRecorder(){
+        
+    }
+    
+    private void processTimerAlarm(){
+        acquireWakeLock();
+        if(isValiedTime()){//start
+            if(DebugConfig.DEBUG){
+                Log.i(TAG, "processTimerAlarm mCurMode = " + mCurMode + " mRecorderStart = " + mRecorderStart);
+            }
+            if(mCurMode == MODE_AUTO){
+                if(mRecorderStart){
+                    mHandler.sendEmptyMessage(MSG_STOP_RECORD);
+                }
+                mHandler.sendEmptyMessage(MSG_START_RECORD);
+            }
+        } else {
+            if(mCurMode == MODE_AUTO && mRecorderStart){
+                mHandler.sendEmptyMessage(MSG_STOP_RECORD);
+            }
+        }
+        mTimeSchedule.setRtcTimerAlarm();
+    }
+    
+    private boolean isValiedTime(){
+        Calendar rightNow = Calendar.getInstance();
+        int dayOfHour = rightNow.get(Calendar.HOUR_OF_DAY);
+        return dayOfHour>PM || dayOfHour<AM;
+    }
+    
+    private void acquireWakeLock(){
+        if (mAlarmWakeLock.isHeld()) {
+            mAlarmWakeLock.release();
+        }
+        mAlarmWakeLock.acquire(2000);
+    }
+    
+    
 }

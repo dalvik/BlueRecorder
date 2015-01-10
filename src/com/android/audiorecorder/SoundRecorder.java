@@ -34,11 +34,13 @@ import com.actionbarsherlock.view.MenuItem;
 import com.android.audiorecorder.engine.AudioService;
 import com.android.audiorecorder.engine.IRecordListener;
 import com.android.audiorecorder.engine.IStateListener;
+import com.android.audiorecorder.utils.FileUtils;
 
 public class SoundRecorder extends SherlockActivity implements View.OnClickListener {
     
     public final static int MIX_STORAGE_CAPACITY = 500;//MB
     public final static int MSG_RECORDER_UPDATE_UI = 10;
+    public final static int MSG_CHECK_MODE = 20;
     
     static final String ANY_ANY = "*/*";
     static final String AUDIO_3GPP = "audio/aac";
@@ -101,7 +103,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     TextView mTimerView;
     com.android.audiorecorder.myview.VUMeter mVUMeter;
     private AlertDialog localAlertDialog;
-    private IRecordListener iRecordListener;
+    private IRecordListener iRecorderService;
 
     private Handler mHandler = new Handler(){
        public void handleMessage(android.os.Message msg) {
@@ -113,6 +115,16 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                    break;
                case AudioService.MSG_UPDATE_TIMER:
                    updateTimerView();
+                   break;
+               case MSG_CHECK_MODE:
+                   try {
+                       if(iRecorderService != null && iRecorderService.isRecorderStart() && iRecorderService.getMode() == AudioService.MODE_AUTO){
+                           iRecorderService.stopRecord();
+                           iRecorderService.setMode(AudioService.MODE_MANLY);
+                       }
+                   } catch (RemoteException e) {
+                        e.printStackTrace();
+                   }
                    break;
                default:
                    break;
@@ -158,9 +170,9 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     
     public void onResume() {
         super.onResume();
-        if(iRecordListener != null) {
+        if(iRecorderService != null) {
             try {
-                iRecordListener.regStateListener(iStateListener);
+                iRecorderService.regStateListener(iStateListener);
             } catch (RemoteException e) {
                 e.printStackTrace();
             } 
@@ -188,27 +200,28 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            iRecordListener = IRecordListener.Stub.asInterface(service);
-            if(iRecordListener != null) {
+            iRecorderService = IRecordListener.Stub.asInterface(service);
+            if(iRecorderService != null) {
                 try {
-                    iRecordListener.regStateListener(iStateListener);
+                    iRecorderService.regStateListener(iStateListener);
                     mRecorder = new Recorder();
                     initResourceRefs();
-                    boolean start = iRecordListener.isRecorderStart();
+                    boolean start = iRecorderService.isRecorderStart();
                     mHandler.sendEmptyMessage(MSG_RECORDER_UPDATE_UI);
+                    mHandler.sendEmptyMessage(MSG_CHECK_MODE);
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }
             }else {
                 if(DebugConfig.DEBUG) {
-                    Log.e(TAG, "===> onServiceConnected error iRecordListener = " + iRecordListener);
+                    Log.e(TAG, "===> onServiceConnected error iRecordListener = " + iRecorderService);
                 }
             }
         }
         
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            iRecordListener = null;
+            iRecorderService = null;
             if(DebugConfig.DEBUG) {
                 Log.d(TAG, "===> onServiceDisconnected");
             }
@@ -270,9 +283,9 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
 
     private long updateTimerView() {
         boolean start = false;
-        if(iRecordListener != null) {
+        if(iRecorderService != null) {
             try {
-                start = iRecordListener.isRecorderStart();
+                start = iRecorderService.isRecorderStart();
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -289,9 +302,9 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     }
 
     private void updateButtonStatus() {
-        if(iRecordListener != null) {
+        if(iRecorderService != null) {
             try {
-                boolean start = iRecordListener.isRecorderStart();
+                boolean start = iRecorderService.isRecorderStart();
                 if(!start) {
                     this.mRecordButton.setEnabled(true);
                     this.mRecordButton.setFocusable(true);
@@ -350,11 +363,11 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     
     private void recordOperation(){
         try {
-            if(iRecordListener.isRecorderStart()){
-                iRecordListener.stopRecord();
+            if(iRecorderService.isRecorderStart()){
+                iRecorderService.stopRecord();
                 popToast(getString(R.string.record_saved));
             } else {
-                iRecordListener.startRecord();
+                iRecorderService.startRecord();
             }
         } catch (RemoteException e) {
             e.printStackTrace();
@@ -369,9 +382,12 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     public void onDestroy() {
         super.onDestroy();
         Log.v("BlueSoundRecorder", "onDestroy");
-        if(iRecordListener != null) {
+        if(iRecorderService != null) {
             try {
-                iRecordListener.unregStateListener(iStateListener);
+                iRecorderService.unregStateListener(iStateListener);
+                if(!iRecorderService.isRecorderStart() && iRecorderService.getMode() == AudioService.MODE_MANLY){
+                    iRecorderService.setMode(AudioService.MODE_AUTO);
+                }
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -402,9 +418,9 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     }
 
     public boolean onPrepareOptionsMenu(Menu paramMenu) {
-        if(iRecordListener != null) {
+        if(iRecorderService != null) {
             try {
-                boolean start = iRecordListener.isRecorderStart();
+                boolean start = iRecorderService.isRecorderStart();
                 MenuItem localMenuItem = paramMenu.findItem(R.id.menu_item_storage);
                 localMenuItem.setEnabled(!start);
                 MenuItem typeMenuItem = paramMenu.findItem(R.id.menu_item_filetype);
@@ -469,12 +485,12 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         }
         
         public int getMaxAmplitude() {
-            if (iRecordListener == null) {
+            if (iRecorderService == null) {
                 Log.d(TAG, "===> audio record state stop");
                 return 0;
             }
             try {
-                return iRecordListener.getMaxAmplitude();
+                return iRecorderService.getMaxAmplitude();
             } catch (RemoteException e) {
                 Log.d(TAG, "===> getMaxAmplitude error " + e.getMessage());
                 e.printStackTrace();
@@ -483,9 +499,9 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         }
         
         public int progress() {
-            if (iRecordListener != null) {
+            if (iRecorderService != null) {
                 try {
-                    return iRecordListener.getRecorderTime();
+                    return iRecorderService.getRecorderTime();
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }
@@ -496,7 +512,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         public boolean state() {
             if(iStateListener != null) {
                 try {
-                    return iRecordListener.isRecorderStart();
+                    return iRecorderService.isRecorderStart();
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }
