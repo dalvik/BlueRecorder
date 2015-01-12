@@ -1,5 +1,6 @@
 package com.android.audiorecorder.dao;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -83,7 +84,12 @@ public class DBHelper implements BaseColumns{
                 file.setType(cursor.getInt(index++));
                 file.setTime(cursor.getLong(index++));
                 file.setProgress(cursor.getInt(index++));
-                list.add(file);
+                File f = new File(path);
+                if(f.exists()){
+                   list.add(file);
+                }else{
+                	delete(file.getId());
+                }
                 cursor.moveToNext();
             }
             cursor.close();
@@ -110,7 +116,12 @@ public class DBHelper implements BaseColumns{
                 file.setType(cursor.getInt(index++));
                 file.setTime(cursor.getLong(index++));
                 file.setProgress(cursor.getInt(index++));
-                list.add(file);
+                File f = new File(file.getPath());
+                if(f.exists()){
+                   list.add(file);
+                }else{
+                	delete(file.getId());
+                }
                 cursor.moveToNext();
             }
             cursor.close();

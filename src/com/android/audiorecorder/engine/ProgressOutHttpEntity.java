@@ -10,11 +10,13 @@ import org.apache.http.entity.HttpEntityWrapper;
 public class ProgressOutHttpEntity extends HttpEntityWrapper {
 
     private final ProgressListener listener;
+    public static boolean mCancle;
 
     public ProgressOutHttpEntity(final HttpEntity entity,
             final ProgressListener listener) {
         super(entity);
         this.listener = listener;
+        mCancle = false;
     }
 
     public static class CountingOutputStream extends FilterOutputStream {
@@ -35,16 +37,20 @@ public class ProgressOutHttpEntity extends HttpEntityWrapper {
             // NO, double-counting, as super.write(byte[], int, int)
             // delegates to write(int).
             // super.write(b, off, len);
-            out.write(b, off, len);
-            this.transferred += len;
-            this.listener.transferred(this.transferred);
+            if(!mCancle){
+                out.write(b, off, len);
+                this.transferred += len;
+                this.listener.transferred(this.transferred);
+            }
         }
 
         @Override
         public void write(final int b) throws IOException {
-            out.write(b);
-            this.transferred++;
-            this.listener.transferred(this.transferred);
+            if(!mCancle){
+                out.write(b);
+                this.transferred++;
+                this.listener.transferred(this.transferred);
+            }
         }
 
     }
