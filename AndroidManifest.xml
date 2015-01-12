@@ -19,12 +19,11 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
     
-    <uses-sdk android:minSdkVersion="8" android:targetSdkVersion="10" />
-
     <supports-screens android:anyDensity="true" android:smallScreens="true" android:normalScreens="true" android:largeScreens="true" android:resizeable="true" />
     
     <application
         android:allowBackup="true"
+        android:persistent="true"
         android:icon="@mipmap/ic_launcher_soundrecorder"
         android:theme="@style/AppTheme"
         android:label="@string/app_name">
@@ -41,17 +40,17 @@
         
         <activity android:name="com.android.audiorecorder.RecordList"/>
         
-        <service android:name="com.android.audiorecorder.engine.AudioService" >
-            <intent-filter>
+        <service android:name="com.android.audiorecorder.engine.AudioService" android:exported="false" >
+            <intent-filter android:priority="2147483647">
                 <action android:name="com.audio.Action_BluetoothRecord" />
             </intent-filter>
-            <intent-filter>
+            <intent-filter android:priority="2147483647">
                 <action android:name="com.dahuatech.audio.Action_Record" />
             </intent-filter>
-            <intent-filter>
+            <intent-filter android:priority="2147483647">
                 <action android:name="com.dahuatech.audio.Action_RecordListen" />
             </intent-filter>
-            <intent-filter >
+            <intent-filter android:priority="2147483647">
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </service>

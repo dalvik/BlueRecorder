@@ -72,7 +72,7 @@ public class FileManagerImp implements IFileManager {
     }
     
     @Override
-    public void updateUpLoadProgress(int progress, long id) {
+    public void updateUpLoadProgress(long progress, long id) {
         dbHelper.updateUpLoadProgress(progress, id);
     }
 

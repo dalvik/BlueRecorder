@@ -9,13 +9,16 @@
     <string name="recording_paused">暫停</string>
     <string name="storage_is_full">儲存空間已滿</string>
     <string name="max_length_reached">已達到長度上限</string>
+    <string name="insert_sd_card">Please insert SD card firstly or change memory location to phone.</string>
     <string name="min_available">還剩約 %d 分鐘</string>
     <string name="sec_available">還剩 %d 秒</string>
     <string name="min_sec_available">%d 秒</string>
     <string name="accept">儲存</string>
     <string name="discard">取消</string>
     <string name="button_ok">確定</string>
+    <string name="timer_format" formatted="false">%02d:%02d</string>
     <string name="press_record">準備</string>
+    <string name="audio_db_title_format">yyyyMMddHHmmss</string>
     <string name="audio_db_artist_name">您的錄音</string>
     <string name="audio_db_album_name">錄音</string>
     <string name="audio_db_playlist_name">我的錄音</string>
@@ -26,6 +29,7 @@
     <string name="pause">暫停</string>
     <string name="stop">停止</string>
     <string name="play">播放</string>
+    <string name="save">Save</string>
     <string name="cancle">取消</string>
     <string name="ask_to_save">是否儲存錄音文件？</string>
     <string name="files_browse">瀏覽錄音文件</string>
@@ -39,6 +43,7 @@
     <string name="delete_song_desc">將刪除此錄音。</string>
     <string name="delete_item">刪除</string>
     <string name="no_records_title">無錄音</string>
+    <string name="zero_time">0:00</string>
     <string name="path">路徑：</string>
     <string name="size">大小：</string>
     <string name="type">類型：</string>
@@ -57,7 +62,28 @@
     <string name="format_setting_3GPP_item">3GPP</string>
     <string name="record_saved">錄音已儲存</string>
     <string name="record_name_cannot_empty">新錄音名不能為空</string>
+    <string name="FileRename_ERR_NAMEINV">"File name include invalid character "</string>
+    <string name="durationformatshort" formatted="false">%2$d:%5$02d</string>
+    <string name="durationformatlong" formatted="false">%1$d:%3$02d:%5$02d</string>
     <string name="no_phonestorage">手機內儲存被卸載</string>
     <string name="file_exists">文件名重複</string>
     <string name="list_changed">清單已改变，請重新加載</string>
+    <string name="list">Record list</string>
+    
+    <string name="audio_bind_error">服务绑定失败</string>
+    <string name="service_open_error_msg" msgid="7061754255330276478">"文件打开失败"</string>
+    <string name="select_delete_file" msgid="7061754255330276478">请先点击欲删除的文件</string>
+    
+    <string-array name="external_sd_path">
+        <item>/storage/extSdCard</item>
+        <item>/storage/sdcard1</item>
+        <item>/mnt/sdcard2</item>
+        <item>/mnt/sdcard-ext</item>
+        <item>/mnt/ext_sdcard</item>
+        <item>/mnt/sdcard/SD_CARD</item>
+        <item>/mnt/sdcard/extra_sd</item>
+        <item>/mnt/extrasd_bind</item>
+        <item>/mnt/sdcard/ext_sd</item>
+        <item>/mnt/sdcard/external_SD</item>
+    </string-array>
 </resources>

@@ -313,6 +313,10 @@ public class RecordList extends SherlockListActivity implements
     public void onDestroy()
     {
         Log.d(TAG, "===> onDestroy.");
+        if(mPlayCompleteReciBroadcastReceiver != null){
+        	unregisterReceiver(mPlayCompleteReciBroadcastReceiver);
+        	mPlayCompleteReciBroadcastReceiver = null;
+        }
         super.onDestroy();
     }
     
@@ -372,6 +376,7 @@ public class RecordList extends SherlockListActivity implements
         mFileManager.delete(file.getId());
         mFileList.remove(position);
         mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
+        updateCounter();
         Toast.makeText(this, getResources().getQuantityString(R.plurals.NNNtracksdeleted, 1, 1), Toast.LENGTH_SHORT).show();
     }
     

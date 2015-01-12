@@ -41,7 +41,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     public final static int MIX_STORAGE_CAPACITY = 500;//MB
     public final static int MSG_RECORDER_UPDATE_UI = 10;
     public final static int MSG_CHECK_MODE = 20;
-    
+
     static final String ANY_ANY = "*/*";
     static final String AUDIO_3GPP = "audio/aac";
     static final String AUDIO_AMR = "audio/amr";
@@ -119,8 +119,8 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                case MSG_CHECK_MODE:
                    try {
                        if(iRecorderService != null && iRecorderService.isRecorderStart() && iRecorderService.getMode() == AudioService.MODE_AUTO){
-                           iRecorderService.stopRecord();
-                           iRecorderService.setMode(AudioService.MODE_MANLY);
+                    	   iRecorderService.stopRecord();
+                    	   iRecorderService.setMode(AudioService.MODE_MANLY);
                        }
                    } catch (RemoteException e) {
                         e.printStackTrace();
@@ -134,8 +134,8 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
 
     public void onCreate(Bundle paramBundle) {
         super.onCreate(paramBundle);
+        startService(new Intent(this, AudioService.class));
         if(bindService(new Intent(AudioService.Action_RecordListen), mServiceConnection, Context.BIND_AUTO_CREATE)){
-            startService(new Intent(this, AudioService.class));
             this.mPreferences = getSharedPreferences("SoundRecorder", Context.MODE_PRIVATE);
             setContentView(R.layout.main1);
             Intent localIntent = getIntent();
@@ -379,6 +379,20 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         return super.onCreateOptionsMenu(paramMenu);
     }
 
+    @Override
+    protected void onStop() {
+    	if(iRecorderService != null) {
+            try {
+                if(!iRecorderService.isRecorderStart() && iRecorderService.getMode() == AudioService.MODE_MANLY){
+                    iRecorderService.setMode(AudioService.MODE_AUTO);
+                }
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+    	super.onStop();
+    }
+    
     public void onDestroy() {
         super.onDestroy();
         Log.v("BlueSoundRecorder", "onDestroy");

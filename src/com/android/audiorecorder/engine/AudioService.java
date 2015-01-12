@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import android.app.Notification;
@@ -39,22 +40,22 @@ import com.android.audiorecorder.RecorderFile;
 import com.android.audiorecorder.SoundRecorder;
 import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.IFileManager;
+import com.android.audiorecorder.engine.RecorderUploader.UploadResult;
 import com.android.audiorecorder.utils.DateUtil;
 import com.android.audiorecorder.utils.FileUtils;
 
-public class AudioService extends Service {
-    
-    private static final int AM = 1;
+public class AudioService extends Service implements UploadResult{
+	
+	public final static int PAGE_NUMBER = 1;
+    private static final int AM = 0;
     private static final int PM = 21;
+    
+    private static final int UPLOAD_START = 2;
+    private static final int UPLOAD_END = 4;
+    
     public static final int MODE_MANLY = 0;//no allowed time and tel to recorder
     public static final int MODE_AUTO = 1;
     private int mCurMode;
-    
-    
-    
-    public static final int TYPE_MANLY = 0;
-    public static final int TYPE_TEL = 1;
-    public static final int TYPE_AUTO = 2;
     
     public static final String Action_RecordListen = "com.audio.Action_BluetoothRecord";
 
@@ -78,8 +79,6 @@ public class AudioService extends Service {
     private int mAudioTalkChannel;
     private int mAudioTalkStream;
 
-    public static final String Action_SetParemeter = "com.dahuatech.audio.Action_SetParameter";
-
     public static final int MSG_START_RECORD = 0xE1;
     public static final int MSG_STOP_RECORD = 0xE2;
     public static final int STATE_PREPARE = 0x01;
@@ -90,6 +89,8 @@ public class AudioService extends Service {
     public final static int MSG_UPDATE_TIMER = 200;
     
     public final static int MSG_TIMER_ALARM = 1000;
+    
+    public final static int MSG_START_UPLOAD = 2000;
 
     private WakeLock mWakeLock;
     private WakeLock mAlarmWakeLock;
@@ -134,6 +135,7 @@ public class AudioService extends Service {
     private int mPhoneState;
     
     private TimeSchedule mTimeSchedule;
+    private RecorderUploader mUploader;
     
     private Handler mHandler = new Handler() {
         public void handleMessage(android.os.Message msg) {
@@ -165,6 +167,9 @@ public class AudioService extends Service {
                 case MSG_TIMER_ALARM:
                     processTimerAlarm();
                     break;
+                case MSG_START_UPLOAD:
+                	startUploadTask();
+                	break;
                 default:
                     break;
             }
@@ -230,39 +235,17 @@ public class AudioService extends Service {
         fileManager = FileManagerFactory.getSmsManagerInstance(this);
         mTimeSchedule = new TimeSchedule(this);
         mTimeSchedule.start();
+        mUploader = new RecorderUploader(this);
+        mCurMode = MODE_AUTO;
         Log.d(TAG, "===> onCreate.");
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent == null) {
-            return super.onStartCommand(intent, flags, startId);
-        }
-        Log.d(TAG, "===> Action name = " + intent.getAction() + " <====");
-        if (Action_SetParemeter.equalsIgnoreCase(intent.getAction())) {
-            Log.e(TAG, "===> " + intent.getAction());
-        } else if (Action_Record.equalsIgnoreCase(intent.getAction())) {
-            mAudioRecordStart = intent.getBooleanExtra(
-                    Action_Record_Extral_Start, false);
-            mAudioRecordChannel = intent.getIntExtra(
-                    Action_Record_Extral_Channel, 0);
-            mAudioRecordStream = intent.getIntExtra(
-                    Action_Record_Extral_Stream, 1);
-            if (mAudioRecordStart) {
-                mHandler.sendEmptyMessage(MSG_START_RECORD);
-            } else {
-                mHandler.sendEmptyMessage(MSG_STOP_RECORD);
-            }
-            Log.d(TAG, "===>  mAudioRecordStart = " + mAudioRecordStart);
-        } else if (Action_Talk.equalsIgnoreCase(intent.getAction())) {
-            mAudioTalkStart = intent.getBooleanExtra(
-                    Action_Record_Extral_Start, false);
-            mAudioTalkChannel = intent.getIntExtra(
-                    Action_Record_Extral_Channel, 0);
-            mAudioTalkStream = intent.getIntExtra(Action_Record_Extral_Stream,
-                    1);
-            Log.d(TAG, "===> mAudioTalkStart = " + mAudioTalkStart);
-        }
+    	//startForeground(CUSTOM_VIEW_ID, new Notification());
+    	Notification note = new Notification(0, null, System.currentTimeMillis() );
+        note.flags |= Notification.FLAG_NO_CLEAR;
+        startForeground(42, note);
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -295,7 +278,6 @@ public class AudioService extends Service {
             mHandler.sendEmptyMessage(MSG_STOP_RECORD);
             mHandler.removeCallbacks(mUpdateTimer);
             mNotificationManager.cancel(CUSTOM_VIEW_ID);
-            mCurMode = MODE_AUTO;
         }
 
         @Override
@@ -332,13 +314,13 @@ public class AudioService extends Service {
         public void setMode(int mode) throws RemoteException {
             mCurMode = mode;
             if(DebugConfig.DEBUG){
-                Log.i(TAG, "--->setMode = " + mode);
+                Log.i(TAG, "--->  setMode = " + mode);
             }
         }
         
         public int getMode() throws RemoteException {
             if(DebugConfig.DEBUG){
-                Log.i(TAG, "--->mMode = " + mCurMode);
+                Log.i(TAG, "---> current mode = " + mCurMode);
             }
             return mCurMode;
         };
@@ -579,6 +561,9 @@ public class AudioService extends Service {
     };
 
     private void notifyUpdate(int msg) {
+    	if(mCurMode == MODE_AUTO){
+    		return;
+    	}
         for (IStateListener listener : mStateSet) {
             try {
                 listener.onStateChanged(msg);
@@ -602,6 +587,7 @@ public class AudioService extends Service {
         contentView.setImageViewResource(R.id.image, R.drawable.ic_launcher_soundrecorder);
         notification.contentView = contentView;
         notification.icon = icon;
+        notification.flags |= Notification.FLAG_NO_CLEAR;
         notification.contentIntent = PendingIntent.getActivity(this, 0, new Intent(this, SoundRecorder.class), 0);
         contentView.setTextViewText(R.id.title, getString(R.string.recording));
         if (mRecorderStart) {
@@ -622,17 +608,9 @@ public class AudioService extends Service {
         return timerInfo.toString();
     }
     
-    private void stopTelRecorder(){
-        
-    }
-    
-    private void startTelRecorder(){
-        
-    }
-    
     private void processTimerAlarm(){
         acquireWakeLock();
-        if(isValiedTime()){//start
+        if(isValidRecorderTime()){//start
             if(DebugConfig.DEBUG){
                 Log.i(TAG, "processTimerAlarm mCurMode = " + mCurMode + " mRecorderStart = " + mRecorderStart);
             }
@@ -646,14 +624,54 @@ public class AudioService extends Service {
             if(mCurMode == MODE_AUTO && mRecorderStart){
                 mHandler.sendEmptyMessage(MSG_STOP_RECORD);
             }
+            if(isValidUploadTime()){//start
+            	if(mUploader.getResult() != PROCESS) {
+            		mHandler.removeMessages(MSG_START_UPLOAD);
+            		mHandler.sendEmptyMessage(MSG_START_UPLOAD);
+            	}
+            }
         }
         mTimeSchedule.setRtcTimerAlarm();
     }
     
-    private boolean isValiedTime(){
+    private boolean isValidRecorderTime(){
         Calendar rightNow = Calendar.getInstance();
         int dayOfHour = rightNow.get(Calendar.HOUR_OF_DAY);
-        return dayOfHour>PM || dayOfHour<AM;
+        return dayOfHour>=PM || dayOfHour<=AM;
+    }
+    
+    private boolean isValidUploadTime(){
+    	Calendar rightNow = Calendar.getInstance();
+        int dayOfHour = rightNow.get(Calendar.HOUR_OF_DAY);
+        return dayOfHour>=UPLOAD_START && dayOfHour<=UPLOAD_END;
+    }
+    
+    @Override
+    public void onResult(int result, int id, long progress) {
+    	if(result == FAIL){
+    		fileManager.updateUpLoadProgress(progress, id);
+    	}
+    	mHandler.removeMessages(MSG_START_UPLOAD);
+		mHandler.sendEmptyMessage(MSG_START_UPLOAD);
+		Log.i(TAG, "---> onResult = " + result);
+		//falg = false;
+    }
+    
+    boolean falg = false;
+    private void startUploadTask(){
+    	List<RecorderFile> list = fileManager.queryPrivateFileList(0, PAGE_NUMBER);
+    	Log.i(TAG, "---> size = " + list.size());
+		if(list.size()>0){
+			RecorderFile file = list.get(0);
+			if(file != null && !falg){
+				falg = true;
+				mUploader.setInfo(file.getId(), file.getPath());
+				if(DebugConfig.DEBUG){
+					Log.i(TAG, "---> upload id = " + file.getId() + " path = " + file.getPath());
+				}
+				mUploader.start();
+			}
+		}
     }
     
     private void acquireWakeLock(){
@@ -662,6 +680,5 @@ public class AudioService extends Service {
         }
         mAlarmWakeLock.acquire(2000);
     }
-    
     
 }

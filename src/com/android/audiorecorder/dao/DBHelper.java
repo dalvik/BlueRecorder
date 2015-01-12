@@ -54,7 +54,7 @@ public class DBHelper implements BaseColumns{
     }
     
     
-    public void updateUpLoadProgress(int progress, long id) {//0 sms 1 contacts 2 calllog 3 backup
+    public void updateUpLoadProgress(long progress, long id) {//0 sms 1 contacts 2 calllog 3 backup
         ContentValues values = new ContentValues();
         values.put(DBHelper.FILE_COLUMN_PROGRESS, progress);
         sqLiteDatabase.update(SqliteHelper.TABLE_NAME_FILE, values, "_id = ?",  new String[]{String.valueOf(id)});
@@ -66,7 +66,7 @@ public class DBHelper implements BaseColumns{
         String[] columns = {BASE_COLUMN_ID, DBHelper.FILE_COLUMN_PATH, DBHelper.FILE_COLUMN_LENGTH, DBHelper.FILE_COLUMN_DURATION, 
                 DBHelper.FILE_COLUMN_MIME_TYPE, DBHelper.FILE_COLUMN_TYPE, DBHelper.FILE_COLUMN_TIME, 
                 DBHelper.FILE_COLUMN_PROGRESS, DBHelper.FILE_COLUMN_BACKUP};
-        Cursor cursor = sqLiteDatabase.query(SqliteHelper.TABLE_NAME_FILE, columns, DBHelper.FILE_COLUMN_TYPE + " != " + AudioService.TYPE_AUTO, null, null, null, DBHelper.FILE_COLUMN_TIME +" desc limit " + (page * pageNumber) + "," + pageNumber);
+        Cursor cursor = sqLiteDatabase.query(SqliteHelper.TABLE_NAME_FILE, columns, DBHelper.FILE_COLUMN_TYPE + " != " + AudioService.MODE_AUTO, null, null, null, DBHelper.FILE_COLUMN_TIME +" desc limit " + (page * pageNumber) + "," + pageNumber);
         if(cursor != null) {
             cursor.moveToFirst();
             while(!cursor.isAfterLast()) {
@@ -96,7 +96,7 @@ public class DBHelper implements BaseColumns{
         String[] columns = {BASE_COLUMN_ID, DBHelper.FILE_COLUMN_PATH, DBHelper.FILE_COLUMN_LENGTH, DBHelper.FILE_COLUMN_DURATION, 
                 DBHelper.FILE_COLUMN_MIME_TYPE, DBHelper.FILE_COLUMN_TYPE, DBHelper.FILE_COLUMN_TIME, 
                 DBHelper.FILE_COLUMN_PROGRESS, DBHelper.FILE_COLUMN_BACKUP};
-        Cursor cursor = sqLiteDatabase.query(SqliteHelper.TABLE_NAME_FILE, columns, DBHelper.FILE_COLUMN_TYPE + " = " + AudioService.TYPE_AUTO, null, null, null, DBHelper.FILE_COLUMN_TIME +" desc limit " + (page * pageNumber) + "," + pageNumber);
+        Cursor cursor = sqLiteDatabase.query(SqliteHelper.TABLE_NAME_FILE, columns, DBHelper.FILE_COLUMN_TYPE + " = " + AudioService.MODE_AUTO, null, null, null, DBHelper.FILE_COLUMN_TIME +" desc limit " + (page * pageNumber) + "," + pageNumber);
         if(cursor != null) {
             cursor.moveToFirst();
             while(!cursor.isAfterLast()) {

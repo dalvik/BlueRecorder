@@ -1,18 +1,10 @@
 package com.android.audiorecorder;
 
 import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 
-import android.content.Context;
-import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
-import android.os.Bundle;
-import android.util.Log;
 
 public class Recorder implements MediaPlayer.OnCompletionListener,
         MediaPlayer.OnErrorListener {

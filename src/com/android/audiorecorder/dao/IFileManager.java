@@ -16,5 +16,5 @@ public interface IFileManager {
     public List<RecorderFile> queryPrivateFileList(int page, int pageNumber);
 
     public void delete(long id);
-    public void updateUpLoadProgress(int progress, long id);
+    public void updateUpLoadProgress(long progress, long id);
 }

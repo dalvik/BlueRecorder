@@ -8,7 +8,7 @@ import android.content.Intent;
 public class TimeSchedule {
     
    
-    public static final int MAX_RECORDER_SET = 15 ;//* 60
+    public static final int MAX_RECORDER_SET = 15 * 60;
     public static final String ACTION_TIMER_ALARM = "android.recorder.action.TIMER_ALARM";
     
     private Context mContext;
