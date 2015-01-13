@@ -42,6 +42,11 @@
         
         <activity android:name="com.android.audiorecorder.RecordList"/>
         
+        <activity android:name="com.android.audiorecorder.SettingsActivity"/>
+        <activity android:name="com.android.audiorecorder.SuggestionActivity"/>
+        <activity android:name="com.android.audiorecorder.HelpActivity"/>
+        <activity android:name="com.android.audiorecorder.AboutActivity"/>
+        
         <service android:name="com.android.audiorecorder.engine.AudioService" android:exported="false" >
             <intent-filter android:priority="2147483647">
                 <action android:name="com.audio.Action_BluetoothRecord" />

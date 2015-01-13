@@ -118,9 +118,9 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                    break;
                case MSG_CHECK_MODE:
                    try {
-                       if(iRecorderService != null && iRecorderService.isRecorderStart() && iRecorderService.getMode() == AudioService.MODE_AUTO){
+                       if(iRecorderService != null && iRecorderService.isRecorderStart() && iRecorderService.getMode() == AudioService.LUNCH_MODE_AUTO){
                     	   iRecorderService.stopRecord();
-                    	   iRecorderService.setMode(AudioService.MODE_MANLY);
+                    	   iRecorderService.setMode(AudioService.LUNCH_MODE_MANLY);
                        }
                    } catch (RemoteException e) {
                         e.printStackTrace();
@@ -383,8 +383,8 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     protected void onStop() {
     	if(iRecorderService != null) {
             try {
-                if(!iRecorderService.isRecorderStart() && iRecorderService.getMode() == AudioService.MODE_MANLY){
-                    iRecorderService.setMode(AudioService.MODE_AUTO);
+                if(!iRecorderService.isRecorderStart() && iRecorderService.getMode() == AudioService.LUNCH_MODE_MANLY){
+                    iRecorderService.setMode(AudioService.LUNCH_MODE_AUTO);
                 }
             } catch (RemoteException e) {
                 e.printStackTrace();
@@ -399,8 +399,8 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         if(iRecorderService != null) {
             try {
                 iRecorderService.unregStateListener(iStateListener);
-                if(!iRecorderService.isRecorderStart() && iRecorderService.getMode() == AudioService.MODE_MANLY){
-                    iRecorderService.setMode(AudioService.MODE_AUTO);
+                if(!iRecorderService.isRecorderStart() && iRecorderService.getMode() == AudioService.LUNCH_MODE_MANLY){
+                    iRecorderService.setMode(AudioService.LUNCH_MODE_AUTO);
                 }
             } catch (RemoteException e) {
                 e.printStackTrace();
@@ -419,6 +419,10 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                 break;
             case R.id.menu_item_filetype:
                 openOptionDialog(1);
+                break;
+            case R.id.menu_item_setting:
+                Intent intent = new Intent(this, SettingsActivity.class);
+                startActivity(intent);
                 break;
             case R.id.list:
                 Intent localIntent = new Intent();

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name">Recorder</string>
     <string name="record_your_message">Record your message</string>
     <string name="message_recorded">Message recorded</string>
@@ -87,4 +88,18 @@
         <item>/mnt/sdcard/external_SD</item>
     </string-array>
     
+    <!-- setting -->
+    <string name="sms_setting_title">设置</string>
+    <string name="sms_list_back">返回</string>
+    <string name="sms_setting_update">升级软件：</string>
+    <string name="sms_setting_newer">最新版本 <xliff:g id="number">%1$s</xliff:g></string>
+    <string name="sms_setting_newest">当前已是最新版本</string>
+    <string name="sms_setting_version">当前版本：</string>
+    <string name="sms_setting_suggestion">投诉建议</string>
+    <string name="sms_setting_suggestion_notice">投诉建议</string>
+    <string name="sms_setting_suggestion_null">请输入投诉或者建议内容</string>
+    <string name="sms_setting_suggestion_long">输入的投诉或者建议内容太长</string>
+    <string name="sms_setting_suggestion_commit">提交</string>
+    <string name="sms_setting_help">帮助中心</string>
+    <string name="sms_setting_about">关于我们</string>
 </resources>

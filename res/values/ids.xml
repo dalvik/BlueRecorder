@@ -45,6 +45,7 @@
     <item type="id" name="list_file_type">false</item>
     <item type="id" name="menu_item_storage">false</item>
     <item type="id" name="menu_item_filetype">false</item>
+    <item type="id" name="menu_item_setting">false</item>
     <item type="id" name="list">false</item>
     <item type="id" name="menu_item_delete">false</item>
     <item type="id" name="delete">false</item>

