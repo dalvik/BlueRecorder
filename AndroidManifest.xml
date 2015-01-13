@@ -18,6 +18,8 @@
     <uses-permission android:name="android.permission.BROADCAST_STICKY" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
+    <uses-permission android:name="android.permission.SEND_SMS"/>
+    
     
     <supports-screens android:anyDensity="true" android:smallScreens="true" android:normalScreens="true" android:largeScreens="true" android:resizeable="true" />
     <uses-sdk
@@ -42,10 +44,10 @@
         
         <activity android:name="com.android.audiorecorder.RecordList"/>
         
-        <activity android:name="com.android.audiorecorder.SettingsActivity"/>
-        <activity android:name="com.android.audiorecorder.SuggestionActivity"/>
-        <activity android:name="com.android.audiorecorder.HelpActivity"/>
-        <activity android:name="com.android.audiorecorder.AboutActivity"/>
+        <activity android:name="com.android.audiorecorder.SettingsActivity" android:theme="@style/Theme.Sherlock.NoActionBar"/>
+        <activity android:name="com.android.audiorecorder.SuggestionActivity" android:theme="@style/Theme.Sherlock.NoActionBar"/>
+        <activity android:name="com.android.audiorecorder.HelpActivity" android:theme="@style/Theme.Sherlock.NoActionBar"/>
+        <activity android:name="com.android.audiorecorder.AboutActivity" android:theme="@style/Theme.Sherlock.NoActionBar"/>
         
         <service android:name="com.android.audiorecorder.engine.AudioService" android:exported="false" >
             <intent-filter android:priority="2147483647">

@@ -61,4 +61,6 @@ public class FileUtils {
         }
         return fileSizeString;
     }
+    
+    public static String parentPath = File.separator + "DownLoad" + File.separator;
 }

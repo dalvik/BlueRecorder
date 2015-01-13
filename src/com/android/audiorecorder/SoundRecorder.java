@@ -34,6 +34,7 @@ import com.actionbarsherlock.view.MenuItem;
 import com.android.audiorecorder.engine.AudioService;
 import com.android.audiorecorder.engine.IRecordListener;
 import com.android.audiorecorder.engine.IStateListener;
+import com.android.audiorecorder.engine.UpdateManager;
 import com.android.audiorecorder.utils.FileUtils;
 
 public class SoundRecorder extends SherlockActivity implements View.OnClickListener {
@@ -138,6 +139,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         if(bindService(new Intent(AudioService.Action_RecordListen), mServiceConnection, Context.BIND_AUTO_CREATE)){
             this.mPreferences = getSharedPreferences("SoundRecorder", Context.MODE_PRIVATE);
             setContentView(R.layout.main1);
+            UpdateManager.getUpdateManager().checkAppUpdate(this, false);
             Intent localIntent = getIntent();
             String type = "";
             if (localIntent != null) {

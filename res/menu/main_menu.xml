@@ -11,8 +11,8 @@
         android:title="@string/format_setting"/>
     <item
         android:id="@id/menu_item_setting"
-        android:icon="@drawable/icon_filetype"
-        android:title="@string/format_setting"/>
+        android:icon="@drawable/icon_settings"
+        android:title="@string/setting_setting"/>
     <item
         android:id="@id/list"
         android:icon="@drawable/btn_list"

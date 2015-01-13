@@ -2,7 +2,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:orientation="vertical" >
+    android:orientation="vertical"
+    android:background="@drawable/white" >
 
     <LinearLayout
         android:id="@+id/title"
@@ -22,16 +23,15 @@
         android:id="@+id/layout_sms_settings_top"
         android:layout_width="fill_parent"
         android:layout_height="45dip"
-        android:background="@drawable/sms_footer_bg"
+        android:background="@drawable/title_background"
         android:gravity="center_vertical" >
 
         <Button
             android:id="@+id/sms_settings_back"
-            android:layout_width="70dip"
+            android:layout_width="55dip"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:background="@drawable/sms_detail_btn_back"
-            android:onClick="smsListBack"
             android:textColor="#fff"
             android:textSize="14sp" />
 
@@ -56,8 +56,33 @@
             android:layout_height="wrap_content"
             android:orientation="vertical" >
 
+            <ImageView
+                android:layout_marginTop="5dip"
+                android:layout_width="80dip"
+                android:layout_height="80dip"
+                android:layout_gravity="center"
+                android:background="@drawable/ic_launcher_soundrecorder" />
+            
+            <TextView
+                   android:layout_width="fill_parent"
+                   android:layout_height="wrap_content"
+                   android:padding="8dp"
+                   android:text="@string/app_name"
+                   android:textColor="#000"
+                   android:gravity="center"
+                   android:textSize="25sp" />
+            
+            <TextView
+                   android:id="@+id/now_version_name"
+                   android:layout_width="fill_parent"
+                   android:layout_height="wrap_content"
+                   android:padding="8dp"
+                   android:textColor="@color/red"
+                   android:gravity="center"
+                   android:textSize="17sp" />
+            
             <RelativeLayout
-                android:id="@+id/version"
+                android:id="@+id/version_layout"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
@@ -65,14 +90,14 @@
                 android:clickable="true"
                 android:gravity="center_vertical" >
 
-               <TextView
-                   android:id="@+id/version_info"
-                   android:layout_width="wrap_content"
-                   android:layout_height="wrap_content"
-                   android:padding="8dp"
-                   android:text="@string/sms_setting_version"
-                   android:textColor="#000"
-                   android:textSize="17sp" />
+                <TextView
+                    android:id="@+id/update_version_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="8dp"
+                    android:text="@string/sms_setting_update"
+                    android:textColor="#000"
+                    android:textSize="17sp" />
                
                 <ImageView
                     android:layout_width="wrap_content"
@@ -84,38 +109,11 @@
                     android:src="@drawable/mm_submenu" />
             </RelativeLayout>
             <RelativeLayout
-                android:id="@+id/update"
+                android:id="@+id/suggestion_layout"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/preference_last_item"
+                android:background="@drawable/preference_item"
                 android:clickable="true"
-                android:gravity="center_vertical" >
-
-               <TextView
-                    android:id="@+id/update_info"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:padding="8dp"
-                    android:text="@string/sms_setting_update"
-                    android:textColor="#000"
-                    android:textSize="17sp" />
-
-                <ImageView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_alignParentRight="true"
-                    android:layout_centerVertical="true"
-                    android:clickable="true"
-                    android:scaleType="matrix"
-                    android:src="@drawable/mm_submenu" />
-            </RelativeLayout>
-            <RelativeLayout
-                android:id="@+id/suggestion"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/preference_first_item"
-                android:clickable="true"
-                android:layout_marginTop="13dip"
                 android:gravity="center_vertical" >
 
                 <TextView
@@ -136,7 +134,7 @@
                     android:src="@drawable/mm_submenu" />
             </RelativeLayout>
             <RelativeLayout
-                android:id="@+id/help"
+                android:id="@+id/help_layout"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/preference_item"
@@ -161,7 +159,7 @@
                     android:src="@drawable/mm_submenu" />
             </RelativeLayout>
             <RelativeLayout
-                android:id="@+id/about"
+                android:id="@+id/about_layout"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/preference_last_item"

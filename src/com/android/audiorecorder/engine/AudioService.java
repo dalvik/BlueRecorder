@@ -760,7 +760,7 @@ public class AudioService extends Service{
                         mTransferedBytes = transferedBytes;
                     }
                 });
-        if(uploadFile(mPreferences.getString(SettingsActivity.key_upload_url, SettingsActivity.value_default_url), progressHttpEntity) == UploadResult.SUCCESS){
+        if(uploadFile(mPreferences.getString(SettingsActivity.KEY_UPLOAD_URL, SettingsActivity.DEFAULT_UPLOAD_URL), progressHttpEntity) == UploadResult.SUCCESS){
             File f = new File(path);
             f.delete();
             fileManager.delete(id);

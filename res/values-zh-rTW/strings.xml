@@ -58,6 +58,7 @@
     <string name="storage_setting_sdcard_item">SD卡</string>
     <string name="storage_setting_Local_item">話機</string>
     <string name="format_setting">文件類型</string>
+    <string name="setting_setting">设置</string>
     <string name="format_setting_AMR_item">AMR</string>
     <string name="format_setting_3GPP_item">3GPP</string>
     <string name="record_saved">錄音已儲存</string>
