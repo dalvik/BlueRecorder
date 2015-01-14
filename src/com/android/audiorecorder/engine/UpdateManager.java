@@ -16,16 +16,6 @@ import org.apache.commons.httpclient.cookie.CookiePolicy;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.params.HttpMethodParams;
 
-import com.android.audiorecorder.DebugConfig;
-import com.android.audiorecorder.R;
-import com.android.audiorecorder.SettingsActivity;
-import com.android.audiorecorder.dao.DBHelper;
-import com.android.audiorecorder.dao.UpdateInfo;
-import com.android.audiorecorder.myview.DownLoadProgressBar;
-import com.android.audiorecorder.utils.NetworkUtil;
-import com.drovik.utils.FileUtil;
-import com.drovik.utils.URLs;
-
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
@@ -45,6 +35,15 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Toast;
+
+import com.android.audiorecorder.DebugConfig;
+import com.android.audiorecorder.R;
+import com.android.audiorecorder.SettingsActivity;
+import com.android.audiorecorder.dao.UpdateInfo;
+import com.android.audiorecorder.myview.DownLoadProgressBar;
+import com.android.audiorecorder.utils.NetworkUtil;
+import com.drovik.utils.FileUtil;
+import com.drovik.utils.URLs;
 
 
 public class UpdateManager {
@@ -149,6 +148,17 @@ public class UpdateManager {
 					updateInfo = (UpdateInfo) msg.obj;
 					if(updateInfo != null) {
 					    SharedPreferences settings = context.getSharedPreferences(SettingsActivity.class.getName(), Context.MODE_PRIVATE);
+					    int[] duration = {21, 23, 2, 4};//default start end time
+					    String[] dur = updateInfo.getDuration().split(";");
+					    if(dur.length == duration.length){
+					        for(int i=0; i<duration.length; i++){
+					            try{
+					                duration[i] = Integer.parseInt(dur[i]);
+					            }catch(Exception e){
+					                
+					            }
+					        }
+					    }
                         settings.edit().putInt(SettingsActivity.KEY_CUR_VERSION_CODE, curVersionCode)
                         .putString(SettingsActivity.KEY_CUR_VERSION_NAME, curVersionName)
                         .putInt(SettingsActivity.KEY_NEW_VERSION_CODE, updateInfo.getVersionCode())
@@ -156,6 +166,10 @@ public class UpdateManager {
                         .putString(SettingsActivity.KEY_NEW_VERSION_URL, updateInfo.getDownloadUrl())
                         .putString(SettingsActivity.KEY_UPLOAD_URL, updateInfo.getUploadUrl())
                         .putString(SettingsActivity.KEY_SUGGESTION_PHONE_NUMBER, updateInfo.getSendSuggesetPhoneNumber())
+                        .putInt(SettingsActivity.KEY_RECORDER_START, duration[0])
+                        .putInt(SettingsActivity.KEY_RECORDER_END, duration[1])
+                        .putInt(SettingsActivity.KEY_DELETE_START, duration[2])
+                        .putInt(SettingsActivity.KEY_DELETE_END, duration[3])
                         .commit();
 						if(DEBUG) {
 							Log.d(TAG, curVersionCode + "  " + updateInfo.getVersionCode());

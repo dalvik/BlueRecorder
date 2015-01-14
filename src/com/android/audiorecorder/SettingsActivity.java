@@ -11,6 +11,11 @@ import android.widget.TextView;
 
 public class SettingsActivity extends Activity {
     
+    public static final String KEY_RECORDER_START = "key_recorder_start";
+    public static final String KEY_RECORDER_END = "key_recorder_end";
+    public static final String KEY_DELETE_START = "key_delete_start";
+    public static final String KEY_DELETE_END = "key_delete_end";
+    
     public static final String KEY_CUR_VERSION_CODE = "cur_version_code";
     public static final String KEY_CUR_VERSION_NAME = "cur_version_name";
     

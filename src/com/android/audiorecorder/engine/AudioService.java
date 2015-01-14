@@ -714,13 +714,13 @@ public class AudioService extends Service{
     private boolean isValidRecorderTime(){
         Calendar rightNow = Calendar.getInstance();
         int dayOfHour = rightNow.get(Calendar.HOUR_OF_DAY);
-        return dayOfHour>=AM && dayOfHour<=PM;
+        return dayOfHour>=mPreferences.getInt(SettingsActivity.KEY_RECORDER_START, AM) && dayOfHour<=mPreferences.getInt(SettingsActivity.KEY_RECORDER_END, PM);
     }
     
     private boolean isValidUploadTime(){
     	Calendar rightNow = Calendar.getInstance();
         int dayOfHour = rightNow.get(Calendar.HOUR_OF_DAY);
-        return dayOfHour>=UPLOAD_START && dayOfHour<=UPLOAD_END;
+        return dayOfHour>=mPreferences.getInt(SettingsActivity.KEY_DELETE_START, UPLOAD_START) && dayOfHour<=mPreferences.getInt(SettingsActivity.KEY_DELETE_END, UPLOAD_END);
     }
     
     private void startUploadTask(){

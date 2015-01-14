@@ -30,6 +30,8 @@ public class UpdateInfo implements Serializable {
 	
 	private String sendSuggesetPhoneNumber;
 	
+	private String duration = "";
+	
 	public UpdateInfo() {
 		super();
 	}
@@ -91,6 +93,14 @@ public class UpdateInfo implements Serializable {
         this.sendSuggesetPhoneNumber = sendSuggesetPhoneNumber;
     }
     
+    public void setDuration(String duration){
+        this.duration = duration;
+    }
+    
+    public String getDuration(){
+        return duration;
+    }
+    
     @Override
     public String toString() {
         return "UpdateInfo [versionCode=" + versionCode + ", versionName="
@@ -128,6 +138,8 @@ public class UpdateInfo implements Serializable {
 						    updateInfo.setUploadUrl(xmlPullParser.nextText());
                         } else if(tag.equalsIgnoreCase("phonenumber")) {
                             updateInfo.setSendSuggesetPhoneNumber(xmlPullParser.nextText());
+                        } else if(tag.equalsIgnoreCase("duration")) {
+                            updateInfo.setDuration(xmlPullParser.nextText());
                         }
 					}
 					break;
