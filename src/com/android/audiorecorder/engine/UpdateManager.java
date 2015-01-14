@@ -16,8 +16,10 @@ import org.apache.commons.httpclient.cookie.CookiePolicy;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.params.HttpMethodParams;
 
+import com.android.audiorecorder.DebugConfig;
 import com.android.audiorecorder.R;
 import com.android.audiorecorder.SettingsActivity;
+import com.android.audiorecorder.dao.DBHelper;
 import com.android.audiorecorder.dao.UpdateInfo;
 import com.android.audiorecorder.myview.DownLoadProgressBar;
 import com.android.audiorecorder.utils.NetworkUtil;
@@ -47,7 +49,7 @@ import android.widget.Toast;
 
 public class UpdateManager {
 
-	private boolean DEBUG = true;
+	private boolean DEBUG = DebugConfig.DEBUG;
 	
 	private static final int DOWN_NOSDCARD = 0;
 	
@@ -272,7 +274,7 @@ public class UpdateManager {
 			}
 		}while(time<RETRY_TIME);
 		if(DEBUG) {
-			Log.d(TAG, "### " + responseBody);
+			Log.i(TAG, "### " + responseBody);
 		}
 		//responseBody = responseBody.replace('', '?');
 		//if(responseBody.contains("result") && responseBody.contains("errorCode")) {

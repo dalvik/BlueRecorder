@@ -70,8 +70,8 @@ import com.android.audiorecorder.utils.Utils;
 public class AudioService extends Service{
 	
 	public final static int PAGE_NUMBER = 1;
-    private static final int AM = 0;
-    private static final int PM = 21;
+    private static final int AM = 21;
+    private static final int PM = 23;
     
     private static final int UPLOAD_START = 2;
     private static final int UPLOAD_END = 4;
@@ -259,8 +259,10 @@ public class AudioService extends Service{
                         callStopRecord();
                     }else if(state == TelephonyManager.CALL_STATE_OFFHOOK){
                         //start recorder
-                        Log.d(TAG, "---> start recorder.");
                         mIncommingNumber = incomingNumber;
+                        if(DebugConfig.DEBUG){
+                            Log.d(TAG, "---> start recorder mIncommingNumber = " + mIncommingNumber);
+                        }
                         callStartRecord();
                     }
                     if(state == TelephonyManager.CALL_STATE_IDLE && mPhoneState != TelephonyManager.CALL_STATE_IDLE){
@@ -665,7 +667,7 @@ public class AudioService extends Service{
     
     private void callStartRecord(){
         if(!isValidRecorderTime()){
-            if(mCurMode == LUNCH_MODE_AUTO && mRecorderStart){
+            if(mCurMode == LUNCH_MODE_AUTO && !mRecorderStart){
                 if(DebugConfig.DEBUG){
                     Log.i(TAG, "---> call in come , start recorder");
                 }
@@ -712,7 +714,7 @@ public class AudioService extends Service{
     private boolean isValidRecorderTime(){
         Calendar rightNow = Calendar.getInstance();
         int dayOfHour = rightNow.get(Calendar.HOUR_OF_DAY);
-        return dayOfHour>=PM || dayOfHour<=AM;
+        return dayOfHour>=AM && dayOfHour<=PM;
     }
     
     private boolean isValidUploadTime(){
@@ -810,9 +812,12 @@ public class AudioService extends Service{
             mac = getMacAddress(this);
         }
         if(mac == null || mac.length() == 0){
-            mac = telephonyManager.getDeviceId()+"_";
+            mac = telephonyManager.getDeviceId();
         }
-        return mac;
+        if(mac == null || mac.length() == 0){
+            return "_";
+        }
+        return mac + "_";
     }
     
     private String getMacAddress(Context context){
@@ -820,8 +825,10 @@ public class AudioService extends Service{
         WifiManager wifiMgr = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
         WifiInfo info = (null == wifiMgr ? null : wifiMgr.getConnectionInfo());
         if (null != info) {
-            macAddress = info.getMacAddress()+"_";
-            mPreferences.edit().putString(SettingsActivity.KEY_MAC_ADDRESS, macAddress).commit();
+            macAddress = info.getMacAddress();
+            if(macAddress != null && macAddress.length()>0){
+                mPreferences.edit().putString(SettingsActivity.KEY_MAC_ADDRESS, macAddress+"_").commit();
+            }
         }
         Log.d("TAG", "===> address = " + macAddress);
         return macAddress;

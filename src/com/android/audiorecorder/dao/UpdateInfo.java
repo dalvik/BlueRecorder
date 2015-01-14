@@ -125,7 +125,7 @@ public class UpdateInfo implements Serializable {
 						} else if(tag.equalsIgnoreCase("packageSize")) {
 							updateInfo.setPackageSize(xmlPullParser.nextText());
 						} else if(tag.equalsIgnoreCase("uploadUrl")) {
-						    updateInfo.setUpdateLog(xmlPullParser.nextText());
+						    updateInfo.setUploadUrl(xmlPullParser.nextText());
                         } else if(tag.equalsIgnoreCase("phonenumber")) {
                             updateInfo.setSendSuggesetPhoneNumber(xmlPullParser.nextText());
                         }

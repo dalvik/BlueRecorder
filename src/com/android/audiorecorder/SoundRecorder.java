@@ -137,7 +137,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         super.onCreate(paramBundle);
         startService(new Intent(this, AudioService.class));
         if(bindService(new Intent(AudioService.Action_RecordListen), mServiceConnection, Context.BIND_AUTO_CREATE)){
-            this.mPreferences = getSharedPreferences("SoundRecorder", Context.MODE_PRIVATE);
+            this.mPreferences = getSharedPreferences(SettingsActivity.class.getName(), Context.MODE_PRIVATE);
             setContentView(R.layout.main1);
             UpdateManager.getUpdateManager().checkAppUpdate(this, false);
             Intent localIntent = getIntent();

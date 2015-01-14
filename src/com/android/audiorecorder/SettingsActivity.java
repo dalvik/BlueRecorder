@@ -22,7 +22,7 @@ public class SettingsActivity extends Activity {
     public static final String KEY_MAC_ADDRESS = "key_mac";
     
     public static final String KEY_UPLOAD_URL = "key_upload_url";
-    public static final String DEFAULT_UPLOAD_URL = "http://davmb.com/file_recv.php";
+    public static final String DEFAULT_UPLOAD_URL = "http://alumb.sinaapp.com/file_recv.php";
     
     public static final String KEY_SUGGESTION_PHONE_NUMBER = "key_phone_number";
     

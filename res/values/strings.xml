@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_name">Recorder</string>
+    <string name="app_name">SoundRecorder</string>
     <string name="record_your_message">Record your message</string>
     <string name="message_recorded">Message recorded</string>
     <string name="review_message">Review message</string>
@@ -116,30 +116,31 @@
     <string name="sms_setting_suggestion_commit">提交</string>
     <string name="sms_setting_help">帮助中心</string>
     <string name="sms_setting_help_software">1、软件介绍</string>
-    <string name="sms_setting_help_software_content">蓝牙录音机是一款轻量级的蓝牙录音软件。能够适配市面上大部分的蓝牙耳机协调工作。软件轻便、小巧，运行高效。支持后台不间断录音，录音音质细腻，悦耳动听。</string>
+    <string name="sms_setting_help_software_content"><![CDATA[<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;蓝牙录音机是一款轻量级的蓝牙录音软件。能够适配市面上大部分的蓝牙耳机协调工作。软件轻便、小巧，运行高效。支持后台不间断录音，录音音质细腻，悦耳动听。<br/>]]></string>
     <string name="sms_setting_help_function">2、功能介绍</string>
-    <string name="sms_setting_help_function_content">蓝牙录音机界面设计简单，操作灵活方便，功能稳定。其中主要包括以下功能：
-        \n1、蓝牙录音
-        \n蓝牙录音是该软件的特功能。市场上大部分的录音软件都不支持蓝牙录音。但该软件支持A2DP和非A2DP两张类型的蓝牙耳机。录音过程当初如果有蓝牙耳机成功连接，该软件会强制开启蓝牙录音功能。
-        \n2、后台录音
-        \n在录音过程当中，您可以点击home键或者返回键去做其他事情。录音不会停止。方便用户。一般的录音软件只能前台录音，点击返回键录音就自动停止了。
-        \n3、电话录音
-        \n您可以设置是否开启来电自动录音功能。如果开启自动来电录音，当有电话呼入，该软件会自动记录通过过程，通话结束，自动停止录音。方便快速保留依据。
-        \n4、录音路径和录音格式设置
-        \n您可以方便的设置录音文件保存的位置。您也可以设置音频文件的存储格式。
-        \n5、录音文件浏览
-        \n您可以快速的查阅所有的录音文件，默认以开始录音的时间先后倒叙排列。方便查看。
-        \n6、录音文件的回放、查看和删除
-        \n您可以对所有的录音文件进行实时的浏览回放、详情查看和删除等操作。
-        \n\n感谢您使用该软件，您的支持是我们前进的动力！
-        \n\n\n</string>
+    <string name="sms_setting_help_function_content"><![CDATA[<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;蓝牙录音机界面设计简单，操作灵活方便，功能稳定。其中主要包括以下功能：<br/>
+        <font color="#0000ff"><br/>1、蓝牙录音<br/></font>
+        <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;蓝牙录音是该软件的特功能。市场上大部分的录音软件都不支持蓝牙录音。但该软件支持A2DP和非A2DP两种类型的蓝牙耳机。录音过程当初如果有蓝牙耳机成功连接，该软件会强制开启蓝牙录音功能。<br/>
+        <font color="#0000ff"><br/>2、后台录音<br/></font>
+        <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;在录音过程当中，您可以点击home键或者返回键去做其他事情。录音不会停止。方便用户。一般的录音软件只能前台录音，点击返回键录音就自动停止了。<br/>
+        <font color="#0000ff"><br/>3、电话录音<br/></font>
+        <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;您可以设置是否开启来电自动录音功能。如果开启自动来电录音，当有电话呼入，该软件会自动记录通过过程，通话结束，自动停止录音。方便快速保留依据。<br/>
+        <font color="#0000ff"><br/>4、录音路径和录音格式设置<br/></font>
+        <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;您可以方便的设置录音文件保存的位置。您也可以设置音频文件的存储格式。<br/>
+        <font color="#0000ff"><br/>5、录音文件浏览<br/></font>
+        <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;您可以快速的查阅所有的录音文件，默认以开始录音的时间先后倒叙排列。方便查看。<br/>
+        <font color="#0000ff"><br/>6、录音文件的回放、查看和删除<br/></font>
+        <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;您可以对所有的录音文件进行实时的浏览回放、详情查看和删除等操作。
+        <br/><br/>&nbsp;&nbsp;&nbsp;&nbsp&nbsp;&nbsp;&nbsp;&nbsp;感谢您使用该软件，您的支持是我们前进的动力！
+        <br/><br/><br/>]]></string>
     <string name="sms_setting_about">关于我们</string>
     <string name="sms_setting_about_us">1、关于我们</string>
     <string name="sms_setting_about_us_content">项目团队是由多年从事JavaEE开发和Android移动物联网开发的资深技术专家组成。拥有丰富的基于Android平台开发经营，能高效、快速完成Android定制开发。</string>
     <string name="sms_setting_about_contact">2、联系我们</string>
     <string name="sms_setting_about_contact_content">地址：杭州市西湖区天目山路160号国际花园写字楼
-        \nTel:15068885227
+        \nHome:<a href="http://www.davmb.com">http://www.davmb.com</a>
+        \nTel:<a href="tel:15068885227">15068885227</a>
         \nQQ:513518064</string>
     <string name="sms_setting_about_cooperation">3、项目合作</string>
-    <string name="sms_setting_about_cooperation_content">项目合作Email: sky.xctc@163.com</string>
+    <string name="sms_setting_about_cooperation_content">项目合作Email: <a href="mailto:sky.xctc@163.com">sky.xctc@163.com</a></string>
 </resources>
