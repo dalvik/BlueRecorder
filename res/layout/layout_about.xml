@@ -74,14 +74,14 @@
 	            android:textSize="20sp" />
             
             <TextView
-	            android:id="@+id/sms_contact_name"
+	            android:id="@+id/sms_about_contact_content"
 	            android:layout_width="fill_parent"
 	            android:layout_height="wrap_content"
 	            android:layout_marginTop="10dip"
 	            android:layout_marginLeft="35dip"
 	            android:layout_marginRight="35dip"
 	            android:textColor="@color/black"
-	            android:text="@string/sms_setting_about_contact_content" />
+	            android:autoLink="all" />
             
             <TextView
 	            android:id="@+id/sms_contact_name"
@@ -94,14 +94,14 @@
 	            android:textSize="20sp" />
 
             <TextView
-	            android:id="@+id/sms_contact_name"
+	            android:id="@+id/setting_about_cooperation_id"
 	            android:layout_width="fill_parent"
 	            android:layout_height="wrap_content"
 	            android:layout_marginTop="10dip"
 	            android:layout_marginLeft="35dip"
 	            android:layout_marginRight="35dip"
 	            android:textColor="@color/black"
-	            android:text="@string/sms_setting_about_cooperation_content" />
+	            android:autoLink="all"/>
         </LinearLayout>
     </ScrollView>
 

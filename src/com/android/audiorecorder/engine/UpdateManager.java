@@ -27,13 +27,20 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.text.Html;
+import android.text.Spanned;
+import android.text.util.Linkify;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.LinearLayout.LayoutParams;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.audiorecorder.DebugConfig;
@@ -42,6 +49,7 @@ import com.android.audiorecorder.SettingsActivity;
 import com.android.audiorecorder.dao.UpdateInfo;
 import com.android.audiorecorder.myview.DownLoadProgressBar;
 import com.android.audiorecorder.utils.NetworkUtil;
+import com.android.audiorecorder.utils.StringUtil;
 import com.drovik.utils.FileUtil;
 import com.drovik.utils.URLs;
 
@@ -224,6 +232,10 @@ public class UpdateManager {
 		try {
 			InputStream s = http_get(URLs.getUpdateVersion(false, "BlueRecorder"));
 			return UpdateInfo.parse(s);
+			//UpdateInfo u = new UpdateInfo();
+			//u.setUpdateLog("&nbsp;&nbsp;&nbsp;&nbsp;1、增加加载本地内存卡的图片。<br/>&nbsp;&nbsp;&nbsp;&nbsp;2、解决某些定制安卓系统4.03版本上无法运行的bug。<br/><br/>&nbsp;&nbsp;&nbsp;&nbsp;请点击确定在线升级。<br/>&nbsp;&nbsp;&nbsp;&nbsp;如果升级失败，请到<a href='http://www.davmb.com'>http://drovik.com/html/902637248.html</a>下载最新版本。<br/>安装包大小：899KB");
+			//u.setVersionCode(3000);
+			//return u;
 		} catch (IOException e) {
 			throw new IOException();
 		}
@@ -234,8 +246,22 @@ public class UpdateManager {
 	 */
 	private void showNoticeDialog(){
 		AlertDialog.Builder builder = new Builder(context);
+		TextView view = new TextView(context);
+		LayoutParams keyParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+        keyParams.gravity = Gravity.LEFT;
+        keyParams.leftMargin = 15;
+        keyParams.rightMargin = 15;
+        keyParams.topMargin = 5;
+        keyParams.bottomMargin = 5;
+        view.setTextColor(Color.BLACK);
+        view.setTextSize(18);
+        view.setAutoLinkMask(Linkify.ALL);
+        view.setLayoutParams(keyParams);
+		Spanned spaned = Html.fromHtml(updateMsg);
+		view.setText(spaned);
 		builder.setTitle(context.getText(R.string._check_version_dialog_title_str));
-		builder.setMessage(updateMsg);
+		//builder.setMessage(spaned);
+		builder.setView(view);
 		builder.setPositiveButton(context.getText(R.string._check_version_dialog_ok_button_str), new OnClickListener() {			
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
