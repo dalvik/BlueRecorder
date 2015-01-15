@@ -129,6 +129,56 @@ public class DBHelper implements BaseColumns{
         return list;
     }
  
+     public List<RecorderFile> queryAllFileList(int page, int pageNumber) {
+        List<RecorderFile> list = new ArrayList<RecorderFile>();
+        String[] columns = {BASE_COLUMN_ID, DBHelper.FILE_COLUMN_PATH, DBHelper.FILE_COLUMN_LENGTH, DBHelper.FILE_COLUMN_DURATION, 
+                DBHelper.FILE_COLUMN_MIME_TYPE, DBHelper.FILE_COLUMN_TYPE, DBHelper.FILE_COLUMN_TIME, 
+                DBHelper.FILE_COLUMN_PROGRESS, DBHelper.FILE_COLUMN_BACKUP};
+        Cursor cursor = sqLiteDatabase.query(SqliteHelper.TABLE_NAME_FILE, columns, null, null, null, null, DBHelper.FILE_COLUMN_TIME +" desc limit " + (page * pageNumber) + "," + pageNumber);
+        if(cursor != null) {
+            cursor.moveToFirst();
+            while(!cursor.isAfterLast()) {
+                int index = 0;
+                RecorderFile file = new RecorderFile();
+                file.setId(cursor.getInt(index++));
+                file.setPath(cursor.getString(index++));
+                file.setSize(cursor.getInt(index++));
+                file.setDuration(cursor.getInt(index++));
+                file.setMimeType(cursor.getString(index++));
+                file.setType(cursor.getInt(index++));
+                file.setTime(cursor.getLong(index++));
+                file.setProgress(cursor.getInt(index++));
+                File f = new File(file.getPath());
+                if(f.exists()){
+                   list.add(file);
+                }else{
+                	delete(file.getId());
+                }
+                cursor.moveToNext();
+            }
+            cursor.close();
+        }
+        return list;
+    }
+ 
+ 	public int getCount(int type){
+ 		int count = 0;
+ 		String where = null;
+ 		if(type != -1){
+ 			where = DBHelper.FILE_COLUMN_TYPE + " = " + type;
+ 		}
+    	String[] columns = {"count(*) as a_count"};
+        Cursor cursor = sqLiteDatabase.query(SqliteHelper.TABLE_NAME_FILE, columns, where, null, null, null, null);
+        if(cursor != null) {
+            cursor.moveToFirst();
+            if(!cursor.isAfterLast()) {
+            	count = cursor.getInt(0);
+            }
+            cursor.close();
+        }
+        return count;
+ 	}
+ 	
     public void closeDB() {
         if(sqLiteDatabase != null) {
             sqLiteDatabase.close();

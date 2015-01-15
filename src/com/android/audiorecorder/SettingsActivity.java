@@ -13,8 +13,8 @@ public class SettingsActivity extends Activity {
     
     public static final String KEY_RECORDER_START = "key_recorder_start";
     public static final String KEY_RECORDER_END = "key_recorder_end";
-    public static final String KEY_DELETE_START = "key_delete_start";
-    public static final String KEY_DELETE_END = "key_delete_end";
+    public static final String KEY_UPLOAD_START = "key_upload_start";
+    public static final String KEY_UPLOAD_END = "key_upload_end";
     
     public static final String KEY_CUR_VERSION_CODE = "cur_version_code";
     public static final String KEY_CUR_VERSION_NAME = "cur_version_name";
@@ -30,6 +30,7 @@ public class SettingsActivity extends Activity {
     public static final String DEFAULT_UPLOAD_URL = "http://alumb.sinaapp.com/file_recv.php";
     
     public static final String KEY_SUGGESTION_PHONE_NUMBER = "key_phone_number";
+    public static final int MAX_RECORDER_SET = 10 * 60;
     
     
     private String TAG = "SettingsActivity";

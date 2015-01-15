@@ -49,8 +49,8 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     static final String AUDIO_ANY = "audio/*";
     static final int BITRATE_3GPP = 65536;
     static final int BITRATE_AMR = 12841;
-    public static final int FILE_TYPE_3GPP = 1;
     public static final int FILE_TYPE_AMR = 0;
+    public static final int FILE_TYPE_3GPP = 1;
     public static final int FILE_TYPE_DEFAULT = 1;
     static final String MAX_FILE_SIZE_KEY = "max_file_size";
     public static float PIXEL_DENSITY = 0.0F;
@@ -58,16 +58,14 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     public static final String PREFERENCE_TAG_STORAGE_LOCATION = "storagepath";
     private static final int Phone_Storage = 1;
     private static final int Position_Setting = 0;
-    private static final int QUIT = 2;
     static final String RECORDER_STATE_KEY = "recorder_state";
-    private static final int REFRESH = 1;
     static final String SAMPLE_INTERRUPTED_KEY = "sample_interrupted";
     static final int SETTING_TYPE_FILE_TYPE = 1;
     static final int SETTING_TYPE_STORAGE_LOCATION = 0;
     static final String STATE_FILE_NAME = "soundrecorder.state";
     public static final int STORAGE_LOCATION_DEFAULT = 0;
-    public static final int STORAGE_LOCATION_LOCAL_PHONE = 0;
-    public static final int STORAGE_LOCATION_SD_CARD = 1;
+    public static final int STORAGE_LOCATION_SD_CARD = 0;
+    public static final int STORAGE_LOCATION_LOCAL_PHONE = 1;
     static final String STORAGE_PATH_LOCAL_PHONE = null;
     static final String STORAGE_PATH_SD_CARD = null;
     static final String TAG = "SoundRecorder";
@@ -252,7 +250,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                 
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    mPreferences.edit().putInt(PREFERENCE_TAG_STORAGE_LOCATION, which).commit();
+                    mPreferences.edit().putInt(PREFERENCE_TAG_STORAGE_LOCATION, which==0 ? STORAGE_LOCATION_SD_CARD : STORAGE_LOCATION_LOCAL_PHONE).commit();
                     localAlertDialog.dismiss();
                 }
             }).create();
@@ -268,7 +266,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                 
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    mPreferences.edit().putInt(PREFERENCE_TAG_FILE_TYPE, which).commit();
+                    mPreferences.edit().putInt(PREFERENCE_TAG_FILE_TYPE, which==0 ? FILE_TYPE_AMR : FILE_TYPE_3GPP).commit();
                     localAlertDialog.dismiss();
                 }
             }).create();

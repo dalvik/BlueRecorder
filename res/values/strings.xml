@@ -116,9 +116,9 @@
     <string name="sms_setting_suggestion_commit">提交</string>
     <string name="sms_setting_help">帮助中心</string>
     <string name="sms_setting_help_software">1、软件介绍</string>
-    <string name="sms_setting_help_software_content"><![CDATA[<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;蓝牙录音机是一款轻量级的蓝牙录音软件。能够适配市面上大部分的蓝牙耳机协调工作。软件轻便、小巧，运行高效。支持后台不间断录音，录音音质细腻，悦耳动听。<br/>]]></string>
+    <string name="sms_setting_help_software_content"><![CDATA[<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;蓝牙录音机是一款轻量级的蓝牙录音软件，主要是为了解决蓝牙耳机种类众多，而蓝牙录音软件严重不足的问题。本软件能够适配市面上大部分的蓝牙耳机，录音音质细腻、清晰，悦耳动听。同时支持后台不间断录音，软件小巧、轻便，运行高效、省点，适合长时间录音。<br/>]]></string>
     <string name="sms_setting_help_function">2、功能介绍</string>
-    <string name="sms_setting_help_function_content"><![CDATA[<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;蓝牙录音机界面设计简单，操作灵活方便，功能稳定。其中主要包括以下功能：<br/>
+    <string name="sms_setting_help_function_content"><![CDATA[<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;蓝牙录音机软件界面设计简单，操作灵活方便，功能稳定。其中主要包括以下功能：<br/>
         <font color="#0000ff"><br/>1、蓝牙录音<br/></font>
         <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;蓝牙录音是该软件的特功能。市场上大部分的录音软件都不支持蓝牙录音。但该软件支持A2DP和非A2DP两种类型的蓝牙耳机。录音过程当初如果有蓝牙耳机成功连接，该软件会强制开启蓝牙录音功能。<br/>
         <font color="#0000ff"><br/>2、后台录音<br/></font>
@@ -142,5 +142,5 @@
         \nTel:<a href="tel:15068885227">15068885227</a>
         \nQQ:513518064</string>
     <string name="sms_setting_about_cooperation">3、项目合作</string>
-    <string name="sms_setting_about_cooperation_content">项目合作Email: <a href="mailto:sky.xctc@163.com">sky.xctc@163.com</a></string>
+    <string name="sms_setting_about_cooperation_content">Email: <a href="mailto:sky.xctc@163.com">sky.xctc@163.com</a></string>
 </resources>

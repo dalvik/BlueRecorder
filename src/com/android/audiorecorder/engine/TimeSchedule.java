@@ -5,10 +5,11 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 
+import com.android.audiorecorder.SettingsActivity;
+
 public class TimeSchedule {
     
    
-    public static final int MAX_RECORDER_SET = 15 * 60;
     public static final String ACTION_TIMER_ALARM = "android.recorder.action.TIMER_ALARM";
     
     private Context mContext;
@@ -31,7 +32,7 @@ public class TimeSchedule {
         if (mAlarmManager == null) {
             mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
         }
-        mAlarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + MAX_RECORDER_SET*1000, mTimerPendingIntent);
+        mAlarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + SettingsActivity.MAX_RECORDER_SET*1000, mTimerPendingIntent);
     }
     
     private void cancleRtcTimerAlarm(){

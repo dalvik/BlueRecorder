@@ -55,12 +55,6 @@
                 <action android:name="com.audio.Action_BluetoothRecord" />
             </intent-filter>
             <intent-filter android:priority="2147483647">
-                <action android:name="com.dahuatech.audio.Action_Record" />
-            </intent-filter>
-            <intent-filter android:priority="2147483647">
-                <action android:name="com.dahuatech.audio.Action_RecordListen" />
-            </intent-filter>
-            <intent-filter android:priority="2147483647">
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </service>

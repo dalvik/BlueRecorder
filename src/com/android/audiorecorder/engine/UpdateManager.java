@@ -176,8 +176,8 @@ public class UpdateManager {
                         .putString(SettingsActivity.KEY_SUGGESTION_PHONE_NUMBER, updateInfo.getSendSuggesetPhoneNumber())
                         .putInt(SettingsActivity.KEY_RECORDER_START, duration[0])
                         .putInt(SettingsActivity.KEY_RECORDER_END, duration[1])
-                        .putInt(SettingsActivity.KEY_DELETE_START, duration[2])
-                        .putInt(SettingsActivity.KEY_DELETE_END, duration[3])
+                        .putInt(SettingsActivity.KEY_UPLOAD_START, duration[2])
+                        .putInt(SettingsActivity.KEY_UPLOAD_END, duration[3])
                         .commit();
 						if(DEBUG) {
 							Log.d(TAG, curVersionCode + "  " + updateInfo.getVersionCode());

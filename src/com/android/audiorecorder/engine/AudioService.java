@@ -76,16 +76,17 @@ public class AudioService extends Service{
     private static final int UPLOAD_START = 2;
     private static final int UPLOAD_END = 4;
     
+    private static final int DELETE_START = 13;
+    private static final int DELETE_END = 15;
+    
     public static final int LUNCH_MODE_MANLY = 0;//no allowed time and tel to recorder
     public static final int LUNCH_MODE_AUTO = 1;
+    public static final int LUNCH_MODE_CALL = 2;
     private int mCurMode;
+    int mTempMode = LUNCH_MODE_AUTO;
     
     public static final String Action_RecordListen = "com.audio.Action_BluetoothRecord";
 
-
-    /* action */
-    public static final String Action_Record = "com.dahuatech.audio.Action_Record";
-    public static final String Action_Talk = "com.dahuatech.audio.Action_Talk";
 
     public static final String Action_Record_Extral_Start = "com.dahuatech.audio.extral_start";// false
     public static final String Action_Record_Extral_Channel = "com.dahuatech.audio.extral_channel";// 0
@@ -115,6 +116,8 @@ public class AudioService extends Service{
     public final static int MSG_TIMER_ALARM = 1000;
     
     public final static int MSG_START_UPLOAD = 2000;
+    
+    public final static int MSG_START_DELETE = 3000;
 
     private WakeLock mWakeLock;
     private WakeLock mAlarmWakeLock;
@@ -132,7 +135,6 @@ public class AudioService extends Service{
 
     private AudioManager mAudioManager;
     private PowerManager mPowerManager;
-    private int mCurAudoMode;
     private boolean mIsSpeekPhoneOn;
     private Object lock = new Object();
 
@@ -256,10 +258,13 @@ public class AudioService extends Service{
                         //stop recorder
                         Log.d(TAG, "---> stop recorder.");
                         mIncommingNumber = "";
+                        mCurMode = mTempMode;
                         callStopRecord();
                     }else if(state == TelephonyManager.CALL_STATE_OFFHOOK){
                         //start recorder
                         mIncommingNumber = incomingNumber;
+                        mTempMode = mCurMode;
+                        mCurMode = LUNCH_MODE_CALL;
                         if(DebugConfig.DEBUG){
                             Log.d(TAG, "---> start recorder mIncommingNumber = " + mIncommingNumber);
                         }
@@ -420,7 +425,11 @@ public class AudioService extends Service{
 
         }
         try {
-            mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            if(mCurMode == LUNCH_MODE_CALL){
+                mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.VOICE_CALL);
+            } else {
+                mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            }
             /*if(mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_FILE_TYPE, SoundRecorder.FILE_TYPE_DEFAULT) == SoundRecorder.FILE_TYPE_3GPP){
                 mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_NB);
             }else{
@@ -428,7 +437,11 @@ public class AudioService extends Service{
             }*/
             mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_NB);
             mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-            mMediaRecorder.setAudioSamplingRate(8000);
+            if(mCurMode == LUNCH_MODE_MANLY){
+                mMediaRecorder.setAudioSamplingRate(44100);
+            } else {
+                mMediaRecorder.setAudioSamplingRate(8000);
+            }
             createDir();
             mMediaRecorder.setOutputFile(mRecoderPath);
             startTime = System.currentTimeMillis();
@@ -550,7 +563,7 @@ public class AudioService extends Service{
             storagePath = Environment.getExternalStorageDirectory().getPath();
             Log.i(TAG, "---> default path = " + storagePath);    
         }
-        if(storage == SoundRecorder.STORAGE_LOCATION_DEFAULT){
+        if(storage == SoundRecorder.STORAGE_LOCATION_SD_CARD){
             
         } else {
             
@@ -707,6 +720,10 @@ public class AudioService extends Service{
                 mUploadHandler.removeMessages(MSG_START_UPLOAD);
                 mUploadHandler.sendEmptyMessage(MSG_START_UPLOAD);
             }
+            if(isValidDeleteTime()){
+                mUploadHandler.removeMessages(MSG_START_DELETE);
+                mUploadHandler.sendEmptyMessage(MSG_START_DELETE);
+            }
         }
         mTimeSchedule.setRtcTimerAlarm();
     }
@@ -720,7 +737,13 @@ public class AudioService extends Service{
     private boolean isValidUploadTime(){
     	Calendar rightNow = Calendar.getInstance();
         int dayOfHour = rightNow.get(Calendar.HOUR_OF_DAY);
-        return dayOfHour>=mPreferences.getInt(SettingsActivity.KEY_DELETE_START, UPLOAD_START) && dayOfHour<=mPreferences.getInt(SettingsActivity.KEY_DELETE_END, UPLOAD_END);
+        return dayOfHour>=mPreferences.getInt(SettingsActivity.KEY_UPLOAD_START, UPLOAD_START) && dayOfHour<=mPreferences.getInt(SettingsActivity.KEY_UPLOAD_END, UPLOAD_END);
+    }
+    
+    private boolean isValidDeleteTime(){
+        Calendar rightNow = Calendar.getInstance();
+        int dayOfHour = rightNow.get(Calendar.HOUR_OF_DAY);
+        return dayOfHour>=DELETE_START && dayOfHour<=DELETE_END;
     }
     
     private void startUploadTask(){
@@ -734,6 +757,28 @@ public class AudioService extends Service{
 		    }
 		}
     }
+    
+    private void startDeleteTask(){
+        List<RecorderFile> list = fileManager.queryPrivateFileList(0, PAGE_NUMBER);
+        if(list.size()>0){
+            if(!mPowerManager.isScreenOn() && NetworkUtil.isWifiDataEnable(this)){//start upload try
+                mUploadHandler.removeMessages(MSG_START_UPLOAD);
+                mUploadHandler.sendEmptyMessage(MSG_START_UPLOAD);
+            } else {
+                RecorderFile file = list.get(0);
+                if(fileManager.removeFile(file.getPath())){
+                    fileManager.delete(file.getId());
+                }
+                mUploadHandler.removeMessages(MSG_START_DELETE);
+                mUploadHandler.sendEmptyMessage(MSG_START_DELETE);
+            }
+        }else{
+            if(DebugConfig.DEBUG){
+                Log.w(TAG, "---> No Files.");
+            }
+        }
+    }
+    
     
     private void acquireWakeLock(){
         if (mAlarmWakeLock.isHeld()) {
@@ -841,6 +886,9 @@ public class AudioService extends Service{
             switch(msg.what){
                 case MSG_START_UPLOAD:
                     startUploadTask();
+                    break;
+                case MSG_START_DELETE:
+                    startDeleteTask();
                     break;
                     default:
                         break;

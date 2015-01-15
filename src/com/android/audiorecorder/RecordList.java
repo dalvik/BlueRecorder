@@ -45,6 +45,7 @@ import com.android.audiorecorder.audio.MusicUtils;
 import com.android.audiorecorder.audio.MusicUtils.ServiceToken;
 import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.IFileManager;
+import com.android.audiorecorder.engine.AudioService;
 import com.android.audiorecorder.utils.FileUtils;
 
 public class RecordList extends SherlockListActivity implements
@@ -259,7 +260,7 @@ public class RecordList extends SherlockListActivity implements
         return true;
     }
     public void init() {
-        mFileList = mFileManager.queryPublicFileList(0, PAGE_NUMBER);
+        mFileList = DebugConfig.DEBUG ? mFileManager.queryAllFileList(0, PAGE_NUMBER) : mFileManager.queryPublicFileList(0, PAGE_NUMBER);
         updateCounter();
         mCurPlayIndex = -1;
         this.mAdapter = new RecordListAdapter(this, mFileList);
@@ -273,7 +274,7 @@ public class RecordList extends SherlockListActivity implements
           this.mIndicator.setVisibility(View.GONE);
       } else {
           this.mIndicator.setVisibility(View.VISIBLE);
-          int count = mFileList.size();
+          int count = mFileManager.getFileCount(DebugConfig.DEBUG ? -1 : AudioService.LUNCH_MODE_MANLY);
           this.mIndicator.setText(getResources().getQuantityString(R.plurals.NNNtrackscount, count, count));
       }
     }

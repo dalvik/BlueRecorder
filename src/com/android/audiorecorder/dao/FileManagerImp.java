@@ -44,11 +44,12 @@ public class FileManagerImp implements IFileManager {
     }
     
     @Override
-    public void removeFile(String path) {
+    public boolean removeFile(String path) {
         File file = new File(path);
         if(file.exists()){
-            file.delete();
+            return file.delete();
         }
+        return true;
     }
     
     @Override
@@ -57,8 +58,18 @@ public class FileManagerImp implements IFileManager {
     }
     
     @Override
+    public int getFileCount(int type) {
+        return dbHelper.getCount(type);
+    }
+    
+    @Override
     public void insertRecorderFile(RecorderFile file) {
         dbHelper.insertRecorderFile(file);
+    }
+    
+    @Override
+    public List<RecorderFile> queryAllFileList(int page, int pageNumber) {
+        return dbHelper.queryAllFileList(page, pageNumber);
     }
     
     @Override
