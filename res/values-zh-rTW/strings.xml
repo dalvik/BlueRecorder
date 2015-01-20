@@ -59,8 +59,8 @@
     <string name="storage_setting_Local_item">話機</string>
     <string name="format_setting">文件類型</string>
     <string name="setting_setting">设置</string>
-    <string name="format_setting_AMR_item">AMR</string>
     <string name="format_setting_3GPP_item">3GPP</string>
+    <string name="format_setting_AMR_item">WAV</string>
     <string name="record_saved">錄音已儲存</string>
     <string name="record_name_cannot_empty">新錄音名不能為空</string>
     <string name="FileRename_ERR_NAMEINV">"File name include invalid character "</string>

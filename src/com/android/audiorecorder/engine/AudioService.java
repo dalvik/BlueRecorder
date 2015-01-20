@@ -1,7 +1,13 @@
 package com.android.audiorecorder.engine;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.util.Calendar;
 import java.util.HashSet;
@@ -27,12 +33,19 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothA2dp;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothClass;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothProfile;
+import android.bluetooth.BluetoothProfile.ServiceListener;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.media.AudioFormat;
 import android.media.AudioManager;
+import android.media.AudioRecord;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaRecorder;
@@ -65,10 +78,11 @@ import com.android.audiorecorder.engine.RecorderUploader.UploadResult;
 import com.android.audiorecorder.utils.DateUtil;
 import com.android.audiorecorder.utils.FileUtils;
 import com.android.audiorecorder.utils.NetworkUtil;
-import com.android.audiorecorder.utils.Utils;
 
 public class AudioService extends Service{
 	
+    private String Temp_Wave_Name = "temp";
+    
 	public final static int PAGE_NUMBER = 1;
     private static final int AM = 21;
     private static final int PM = 23;
@@ -79,38 +93,23 @@ public class AudioService extends Service{
     private static final int DELETE_START = 13;
     private static final int DELETE_END = 15;
     
-    public static final int LUNCH_MODE_MANLY = 0;//no allowed time and tel to recorder
-    public static final int LUNCH_MODE_AUTO = 1;
-    public static final int LUNCH_MODE_CALL = 2;
+    public static final int LUNCH_MODE_IDLE = 0;
+    public static final int LUNCH_MODE_CALL = 1;
+    public static final int LUNCH_MODE_MANLY = 2;//no allowed time and tel to recorder
+    public static final int LUNCH_MODE_AUTO = 3;
     private int mCurMode;
-    int mTempMode = LUNCH_MODE_AUTO;
     
     public static final String Action_RecordListen = "com.audio.Action_BluetoothRecord";
-
-
-    public static final String Action_Record_Extral_Start = "com.dahuatech.audio.extral_start";// false
-    public static final String Action_Record_Extral_Channel = "com.dahuatech.audio.extral_channel";// 0
-    public static final String Action_Record_Extral_Stream = "com.dahuatech.audio.extral_stream";// 1
-
-    public static final String Action_TALK_Extral_Start = "com.dahuatech.audio.extral_start";// false
-    public static final String Action_TALK_Extral_Channel = "com.dahuatech.audio.extral_channel";// 0
-    public static final String Action_TALK_Extral_Stream = "com.dahuatech.audio.extral_stream";// 1
-
-    private boolean mAudioRecordStart;
-    private int mAudioRecordChannel;
-    private int mAudioRecordStream;
-
-    private boolean mAudioTalkStart;
-    private int mAudioTalkChannel;
-    private int mAudioTalkStream;
+    
+    private int bufferSizeInBytes = 0;
+    private AudioRecord mAudioRecord;
+    public final static int AUDIO_SAMPLE_RATE = 44100;
+    private static final int RECORDER_BPP = 16;
 
     public static final int MSG_START_RECORD = 0xE1;
     public static final int MSG_STOP_RECORD = 0xE2;
     public static final int STATE_PREPARE = 0x01;
 
-    public static final int MSG_ATDP_CONNECTED = 0x10;
-    public static final int MSG_ATDP_DISCONNECTED = 0x11;
-    
     public final static int MSG_UPDATE_TIMER = 200;
     
     public final static int MSG_TIMER_ALARM = 1000;
@@ -118,7 +117,14 @@ public class AudioService extends Service{
     public final static int MSG_START_UPLOAD = 2000;
     
     public final static int MSG_START_DELETE = 3000;
+    
+    private static final int MSG_BLUETOOTH_START_SCO = 4000;
+    private static final int MSG_BLUETOOTH_STOP_SCO = 4001;
+    private static final int MSG_BLUETOOTH_PROFILE_MATCH = 4002;
 
+    private boolean mAtdpEnable;
+    private boolean mIsBluetoothConnected;
+    
     private WakeLock mWakeLock;
     private WakeLock mAlarmWakeLock;
     private MediaRecorder mMediaRecorder = null;
@@ -130,12 +136,8 @@ public class AudioService extends Service{
 
     private Set<IStateListener> mStateSet = new HashSet<IStateListener>();
 
-    private int audioStartId;
-    private int audioStopId;
-
     private AudioManager mAudioManager;
     private PowerManager mPowerManager;
-    private boolean mIsSpeekPhoneOn;
     private Object lock = new Object();
 
     private boolean mRecorderStart;
@@ -143,9 +145,7 @@ public class AudioService extends Service{
     private long mRecorderTime;
     private long mTalkTime;
 
-    private BroadcastReceiver receiver = null;
     private BroadcastReceiver mStateChnageReceiver = null;
-    private BroadcastReceiver bluetoothStateReceiver = null;
     
     private SharedPreferences mPreferences;
     private NotificationManager mNotificationManager;
@@ -154,6 +154,7 @@ public class AudioService extends Service{
     
     private IFileManager fileManager;
     private String mRecoderPath;
+    //private String mRecoderPathTemp;
     private long startTime;
     private int mMimeType;
     
@@ -171,38 +172,68 @@ public class AudioService extends Service{
     
     private long mTransferedBytes;
     
-    private String mPath;
+    private BluetoothA2dp mService;
     
     private Handler mHandler = new Handler() {
         public void handleMessage(android.os.Message msg) {
             switch (msg.what) {
                 case MSG_START_RECORD:
-                    startRecorder();
+                    int startMode = msg.arg1;
+                    startRecorder(startMode);
                     break;
                 case MSG_STOP_RECORD:
-                    stopRecord();
-                    break;
-                case MSG_ATDP_CONNECTED:
-                     mAudioManager.setStreamMute(AudioManager.STREAM_VOICE_CALL, true);
-                     mAudioManager.setBluetoothScoOn(true);
-                     mAudioManager.startBluetoothSco();
-                    break;
-                case MSG_ATDP_DISCONNECTED:
-                    if(mAudioManager.isBluetoothA2dpOn()){
-                        mAudioManager.setBluetoothScoOn(false);
-                        mAudioManager.stopBluetoothSco();
-                    }
-                    if(!mAudioManager.isWiredHeadsetOn() && !mAudioManager.isBluetoothA2dpOn()){
-                        mAudioManager.setSpeakerphoneOn(true);
-                    }
+                    int stopMode = msg.arg1;
+                    stopRecord(stopMode);
                     break;
                 case MSG_UPDATE_TIMER:
                     notifyUpdate(MSG_UPDATE_TIMER);
                     updateNotifiaction();
                     break;
                 case MSG_TIMER_ALARM:
-                    processTimerAlarm();
+                    processAutoTimerAlarm();
                     break;
+                case MSG_BLUETOOTH_PROFILE_MATCH:
+                    if (mService != null) {
+                        List<BluetoothDevice> devs = getConnectedDevices();
+                        for (final BluetoothDevice dev : devs) {
+                            BluetoothClass cl = dev.getBluetoothClass();
+                            try {
+                                Class<?> classObj = cl.getClass();
+                                Method doesClassMatch = classObj.getDeclaredMethod("doesClassMatch", new Class[]{Integer.class});
+                                doesClassMatch.setAccessible(true);
+                                Field profile = classObj.getDeclaredField("PROFILE_A2DP");
+                                profile.setAccessible(true);
+                                Integer profileType = (Integer)profile.get(cl);
+                                Boolean result = (Boolean)doesClassMatch.invoke(doesClassMatch, profileType);
+                                Log.d(TAG, "------> invoke doesClassMatch result = " + result);
+                                if(result){
+                                    Log.d(TAG, "BluetoothClass.PROFILE_A2DP");
+                                    mAtdpEnable =  true;
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        Log.i(TAG, "---> mAtdpEnable = " + mAtdpEnable);
+                        if (!mAtdpEnable) {
+                            mHandler.removeMessages(MSG_BLUETOOTH_START_SCO);
+                            mHandler.sendEmptyMessageDelayed(MSG_BLUETOOTH_START_SCO, 1500);
+                        }
+                    }
+                    break;
+                case MSG_BLUETOOTH_START_SCO:
+                    if (mIsBluetoothConnected && !mAudioManager.isBluetoothScoOn()) {
+                       mAudioManager.startBluetoothSco();
+                    }
+                    Log.d(TAG, "---> bluetooth sco state = " + mAudioManager.isBluetoothScoOn());
+                  break;
+
+              case MSG_BLUETOOTH_STOP_SCO:
+                  if (mIsBluetoothConnected) {
+                      mAudioManager.setBluetoothScoOn(false);
+                      mAudioManager.stopBluetoothSco();
+                  }
+                  break;
                 default:
                     break;
             }
@@ -221,7 +252,7 @@ public class AudioService extends Service{
     public void onCreate() {
         super.onCreate();
         mPowerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        this.mPreferences = getSharedPreferences("SoundRecorder", Context.MODE_PRIVATE);
+        this.mPreferences = getSharedPreferences(SettingsActivity.class.getName(), Context.MODE_PRIVATE);
         mWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"SoundRecorderService");
         mAlarmWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AlarmWakeLock");
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
@@ -230,6 +261,8 @@ public class AudioService extends Service{
         IntentFilter filter = new IntentFilter();
         filter.addAction(TimeSchedule.ACTION_TIMER_ALARM);
         filter.addAction(Intent.ACTION_USER_PRESENT);
+        filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
+        filter.addAction(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED);
         if (mStateChnageReceiver == null) {
             mStateChnageReceiver = new BroadcastReceiver() {
                 @Override
@@ -242,6 +275,50 @@ public class AudioService extends Service{
                         mHandler.sendEmptyMessage(MSG_TIMER_ALARM);
                     } else if(Intent.ACTION_USER_PRESENT.equalsIgnoreCase(action)){
                         ProgressOutHttpEntity.mCancle = true;
+                    } else if (action.equals(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)) {
+                        int state = intent.getIntExtra(BluetoothAdapter.EXTRA_CONNECTION_STATE, -1);
+                        if(state == BluetoothAdapter.STATE_CONNECTED){
+                             mIsBluetoothConnected = true;
+                             BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+                             if(bluetoothAdapter != null){
+                                   if(mService == null){
+                                          bluetoothAdapter.getProfileProxy(AudioService.this, new  ServiceListener(){
+                                             @Override
+                                             public void onServiceConnected(int arg0, BluetoothProfile service) {
+                                                 mService = (BluetoothA2dp) service;
+                                             }
+                                             @Override
+                                             public void onServiceDisconnected(int arg0) {
+                                                 mService = null;
+                                             }
+                                          }, BluetoothProfile.A2DP);
+                                   }
+                             }
+                             mHandler.removeMessages(MSG_BLUETOOTH_PROFILE_MATCH);
+                             mHandler.sendEmptyMessageDelayed(MSG_BLUETOOTH_PROFILE_MATCH, 1500);
+                        } else if(state == BluetoothAdapter.STATE_DISCONNECTED || state == BluetoothAdapter.STATE_DISCONNECTING){
+                             mAtdpEnable =  false;
+                             mIsBluetoothConnected = false;
+                             mAudioManager.setBluetoothScoOn(false);
+                             mAudioManager.stopBluetoothSco();
+                             Log.d(TAG,"==> bluetooth connected  state = " + state + " atdp enable = " + mAtdpEnable);
+                        }
+                    } else if(action.equals(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED)) {
+                        int state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, AudioManager.SCO_AUDIO_STATE_ERROR);
+                        Log.d(TAG,"===> bluetooth sco state = " + state);
+                        if(state == AudioManager.SCO_AUDIO_STATE_CONNECTED){
+                             mAudioManager.setBluetoothScoOn(true);
+                        } else if(state == AudioManager.SCO_AUDIO_STATE_DISCONNECTED){
+                             if(mAudioManager.isBluetoothScoOn()) {
+                                   mAudioManager.setBluetoothScoOn(false);
+                                   mAudioManager.stopBluetoothSco();
+                             }
+                             if(mIsBluetoothConnected && !mAtdpEnable){
+                                   Log.d(TAG, "===> start reconnected bluetooth sco.");
+                                   mHandler.removeMessages(MSG_BLUETOOTH_START_SCO);
+                                   mHandler.sendEmptyMessageDelayed(MSG_BLUETOOTH_START_SCO, 1500);
+                             }
+                        }
                     }
                 }
             };
@@ -258,17 +335,15 @@ public class AudioService extends Service{
                         //stop recorder
                         Log.d(TAG, "---> stop recorder.");
                         mIncommingNumber = "";
-                        mCurMode = mTempMode;
-                        callStopRecord();
+                        callStopRecord(LUNCH_MODE_CALL);
                     }else if(state == TelephonyManager.CALL_STATE_OFFHOOK){
                         //start recorder
                         mIncommingNumber = incomingNumber;
-                        mTempMode = mCurMode;
-                        mCurMode = LUNCH_MODE_CALL;
+                        callStopRecord(mCurMode);
                         if(DebugConfig.DEBUG){
                             Log.d(TAG, "---> start recorder mIncommingNumber = " + mIncommingNumber);
                         }
-                        callStartRecord();
+                        callStartRecord(LUNCH_MODE_CALL);
                     }
                     if(state == TelephonyManager.CALL_STATE_IDLE && mPhoneState != TelephonyManager.CALL_STATE_IDLE){
                         //mHandler.sendEmptyMessage(MSG_PROCESS_CALLLOG);//incomming or outcommint
@@ -286,7 +361,7 @@ public class AudioService extends Service{
         mUpHandlerThread = new HandlerThread("upload_thread", HandlerThread.MAX_PRIORITY);
         mUpHandlerThread.start();
         mUploadHandler = new Handler(mUpHandlerThread.getLooper(), mUploadHandlerCallback);
-        mCurMode = LUNCH_MODE_AUTO;
+        mCurMode = LUNCH_MODE_IDLE;
         Log.d(TAG, "===> onCreate.");
     }
 
@@ -319,17 +394,20 @@ public class AudioService extends Service{
         public void startRecord() throws RemoteException {
             Log.i(TAG, "===>Call startRecorder");
             mHandler.removeMessages(MSG_START_RECORD);
-            mHandler.sendEmptyMessage(MSG_START_RECORD);
+            Message msg = mHandler.obtainMessage(MSG_START_RECORD);
+            msg.arg1 = LUNCH_MODE_MANLY;
+            mHandler.sendMessage(msg);
             mHandler.removeCallbacks(mUpdateTimer);
             mHandler.post(mUpdateTimer);
-            mCurMode = LUNCH_MODE_MANLY;
         }
 
         @Override
         public void stopRecord() throws RemoteException {
             Log.d(TAG, "===> stopRecorder");
             mHandler.removeMessages(MSG_STOP_RECORD);
-            mHandler.sendEmptyMessage(MSG_STOP_RECORD);
+            Message msg = mHandler.obtainMessage(MSG_STOP_RECORD);
+            msg.arg1 = LUNCH_MODE_MANLY;
+            mHandler.sendMessage(msg);
             mHandler.removeCallbacks(mUpdateTimer);
             mNotificationManager.cancel(CUSTOM_VIEW_ID);
         }
@@ -411,148 +489,77 @@ public class AudioService extends Service{
         }
     }
 
-    private void startRecorder() {
-        if (mMediaRecorder == null) {
-            mMediaRecorder = new MediaRecorder();
-            mMediaRecorder.setOnErrorListener(new OnErrorListener() {
-
-                @Override
-                public void onError(MediaRecorder mr, int what, int extra) {
-                    Log.d(TAG, "===> startRecorder onError : what = " + what);
-                    stopRecord();
-                }
-            });
-
+    private void startRecorder(int mode) {
+        mMimeType = mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_FILE_TYPE, SoundRecorder.FILE_TYPE_3GPP);
+        createDir();
+        Log.d(TAG, "---> startRecorder mode = " + mode + "  mMimeType= " + mMimeType);
+        if(!mWakeLock.isHeld()){
+            mWakeLock.acquire();
         }
-        try {
-            if(mCurMode == LUNCH_MODE_CALL){
+        if(mode == LUNCH_MODE_MANLY && mMimeType == SoundRecorder.FILE_TYPE_WAV){
+            creatAudioRecord(mode);
+        } else {
+            if (mMediaRecorder == null) {
+                mMediaRecorder = new MediaRecorder();
+                mMediaRecorder.setOnErrorListener(mRecorderErrorListener);
+            }
+            if(mode == LUNCH_MODE_CALL){
                 mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.VOICE_CALL);
             } else {
                 mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
             }
-            /*if(mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_FILE_TYPE, SoundRecorder.FILE_TYPE_DEFAULT) == SoundRecorder.FILE_TYPE_3GPP){
-                mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_NB);
-            }else{
-                mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_NB);
-            }*/
             mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_NB);
             mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-            if(mCurMode == LUNCH_MODE_MANLY){
-                mMediaRecorder.setAudioSamplingRate(44100);
-            } else {
-                mMediaRecorder.setAudioSamplingRate(8000);
-            }
-            createDir();
+            mMediaRecorder.setAudioSamplingRate(8000);
             mMediaRecorder.setOutputFile(mRecoderPath);
             startTime = System.currentTimeMillis();
-            mMediaRecorder.setOnErrorListener(mRecorderErrorListener);
-            mMediaRecorder.prepare();
-            IntentFilter filter = new IntentFilter(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED);
-            if (receiver == null) {
-                receiver = new BroadcastReceiver() {
-                    public void onReceive(Context context, Intent intent) {
-                        int state = intent.getIntExtra(
-                                BluetoothA2dp.EXTRA_STATE, -1);
-                        Log.d(TAG, "===>BluetoothA2dp state = " + state);
-                        int di = BluetoothA2dp.STATE_DISCONNECTING;
-                        if (state == BluetoothA2dp.STATE_CONNECTED) {
-                            mHandler.sendEmptyMessageDelayed(
-                                    MSG_ATDP_CONNECTED, 2000);
-                        } else if (state == BluetoothA2dp.STATE_DISCONNECTED) {
-                            mHandler.sendEmptyMessage(MSG_ATDP_DISCONNECTED);
-                        }
-                    }
-                };
-                registerReceiver(receiver, filter);
-            }
-            if (mAudioManager.isBluetoothScoAvailableOffCall()) {
-                mHandler.sendEmptyMessage(MSG_ATDP_CONNECTED);
-                Log.d(TAG,
-                        "===> startRecorder isBluetoothA2dpOn = "
-                                + mAudioManager.isBluetoothA2dpOn()
-                                + " isBluetoothScoOn  = "
-                                + mAudioManager.isBluetoothScoOn());
-                if (bluetoothStateReceiver == null && Utils.hasHoneycomb()) {
-                    bluetoothStateReceiver = new BroadcastReceiver() {
-                        @Override
-                        public void onReceive(Context context, Intent intent) {
-                            if (intent != null) {
-                                int state = intent.getIntExtra(
-                                        AudioManager.EXTRA_SCO_AUDIO_STATE, -1);
-                                Log.d(TAG, "===> audio sco state = " + state);
-                                if (AudioManager.SCO_AUDIO_STATE_CONNECTED == state) {
-                                    Log.i(TAG,
-                                            "AudioManager.SCO_AUDIO_STATE_CONNECTED");
-                                    mAudioManager.setStreamMute(
-                                            AudioManager.STREAM_VOICE_CALL,
-                                            true);
-                                    // mAudioManager.setMode(AudioManager.STREAM_MUSIC);
-                                    if (bluetoothStateReceiver != null) {
-                                        unregisterReceiver(bluetoothStateReceiver);
-                                        bluetoothStateReceiver = null;
-                                    }
-                                }
-                            }
-                        }
-                    };
-                    registerReceiver(bluetoothStateReceiver, new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED));
+            try {
+                mMediaRecorder.prepare();
+                mMediaRecorder.start();
+                if(mode == LUNCH_MODE_MANLY){
+                    setRecordStatus(true);
+                    notifyUpdate(MSG_START_RECORD);
                 }
+                mCurMode = mode;
+                Log.i(TAG, "---> startRecorder mCurMode = " + mCurMode);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            mMediaRecorder.start();
-            mWakeLock.acquire();
-            setRecordStatus(true);
-            notifyUpdate(MSG_START_RECORD);
-        } catch (IOException e) {
-            e.printStackTrace();
-            Log.e(TAG, "===> startRecorder error --- " + e.getMessage());
-            stopRecord();
-        } 
+        }
     }
 
-    private void stopRecord() {
-        if (receiver != null) {
-            unregisterReceiver(receiver);
-            receiver = null;
+    private void stopRecord(int mode) {
+        Log.d(TAG, "---> stopRecord mode = " + mode + "  mMimeType= " + mMimeType);
+        if(mode == LUNCH_MODE_IDLE){
+            return;
         }
-        mHandler.sendEmptyMessage(MSG_ATDP_DISCONNECTED);
-        if (bluetoothStateReceiver != null) {
-            unregisterReceiver(bluetoothStateReceiver);
-            bluetoothStateReceiver = null;
-        }
-        Log.d(TAG,
-                "===>stopRecord isBluetoothA2dpOn = "
-                        + mAudioManager.isBluetoothA2dpOn()
-                        + " isBluetoothScoOn  = "
-                        + mAudioManager.isBluetoothScoOn());
-        if (mMediaRecorder != null) {
-            RecorderFile file = new RecorderFile();
-            try {
-                file.setDuration((int) ((SystemClock.uptimeMillis() - mRecorderTime) / 1000));
-                mMediaRecorder.stop();
-            } catch (IllegalStateException e) {
-                Log.e(TAG, "===> IllegalStateException.");
-            }
-            mMediaRecorder.release();
-            mMediaRecorder = null;
-            if (mWakeLock.isHeld()) {
-                mWakeLock.release();
-            }
-            file.setPath(mRecoderPath);
-            file.setTime(startTime);
-            file.setType(mCurMode);
-            File f = new File(mRecoderPath);
-            if(f.exists()){
-                file.setSize(f.length());
-            }
-            if(mMimeType == SoundRecorder.FILE_TYPE_AMR) {
-                file.setMimeType("amr");
-            } else {
-                file.setMimeType("3gpp");
-            }
-            fileManager.insertRecorderFile(file);
+        if(mode == LUNCH_MODE_MANLY && mMimeType == SoundRecorder.FILE_TYPE_WAV){
             setRecordStatus(false);
             notifyUpdate(MSG_STOP_RECORD);
+        } else {
+            if (mMediaRecorder != null) {
+                mMediaRecorder.stop();
+                mMediaRecorder.release();
+                mMediaRecorder = null;
+                RecorderFile file = new RecorderFile();
+                file.setDuration((int) ((SystemClock.uptimeMillis() - mRecorderTime) / 1000));
+                file.setPath(mRecoderPath);
+                file.setTime(startTime);
+                file.setType(mode);
+                File f = new File(mRecoderPath);
+                if(f.exists()){
+                    file.setSize(f.length());
+                }
+                file.setMimeType("3gpp");
+                fileManager.insertRecorderFile(file);
+                notifyUpdate(MSG_STOP_RECORD);
+                setRecordStatus(false);
+            }
         }
+        if (mWakeLock.isHeld()) {
+            mWakeLock.release();
+        }
+        mCurMode = LUNCH_MODE_IDLE;
     }
 
     private void createDir(){
@@ -590,10 +597,11 @@ public class AudioService extends Service{
                 pre = getNamePrefix();
             }
         }
-        if(mMimeType == SoundRecorder.FILE_TYPE_AMR){
-            mRecoderPath += File.separator + pre + DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis())+".mp3";
-        } else {
+        //mRecoderPathTemp = mRecoderPath + File.separator + Temp_Wave_Name;
+        if(mMimeType == SoundRecorder.FILE_TYPE_3GPP){
             mRecoderPath += File.separator + pre + DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis())+".3gp";
+        } else {
+            mRecoderPath += File.separator + pre + DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis())+".wav";
         }
         fileManager.createFile(mRecoderPath);
     }
@@ -604,29 +612,9 @@ public class AudioService extends Service{
         @Override
         public void onError(MediaRecorder arg0, int arg1, int arg2) {
             Log.e(TAG, "  MediaRecorder Error: " + arg1 + "," + arg1);
-            mAudioRecordStart = false;
-            mHandler.sendEmptyMessage(MSG_STOP_RECORD);
-        }
-    };
-
-    // talk
-    private MediaPlayer.OnCompletionListener mCompletionListener = new MediaPlayer.OnCompletionListener() {
-        public void onCompletion(MediaPlayer mp) {
-            mAudioTalkStart = false;
-            mHandler.sendEmptyMessage(MSG_STOP_RECORD);
-            if (mOnCompletionListener != null) {
-                mOnCompletionListener.onCompletion(mMediaPlayer);
-            }
-        }
-    };
-
-    // talk
-    private MediaPlayer.OnErrorListener mErrorListener = new MediaPlayer.OnErrorListener() {
-        public boolean onError(MediaPlayer mp, int framework_err, int impl_err) {
-            Log.e(TAG, "  MediaPlayer Error: " + framework_err + "," + impl_err);
-            mAudioTalkStart = false;
-            mHandler.sendEmptyMessage(MSG_STOP_RECORD);
-            return true;
+            Message msg = mHandler.obtainMessage(MSG_STOP_RECORD);
+            msg.arg1 = mCurMode;
+            mHandler.sendMessage(msg);
         }
     };
 
@@ -678,49 +666,49 @@ public class AudioService extends Service{
         return timerInfo.toString();
     }
     
-    private void callStartRecord(){
-        if(!isValidRecorderTime()){
-            if(mCurMode == LUNCH_MODE_AUTO && !mRecorderStart){
-                if(DebugConfig.DEBUG){
-                    Log.i(TAG, "---> call in come , start recorder");
-                }
-                mHandler.sendEmptyMessage(MSG_START_RECORD);
-            }
+    private void callStartRecord(int mode){
+        if(DebugConfig.DEBUG){
+            Log.i(TAG, "---> call in come , start recorder");
         }
+        Message msg = mHandler.obtainMessage(MSG_START_RECORD);
+        msg.arg1 = mode;
+        mHandler.sendMessage(msg);
     }
     
-    private void callStopRecord(){
-        if(!isValidRecorderTime()){
-            if(mCurMode == LUNCH_MODE_AUTO && mRecorderStart){
-                if(DebugConfig.DEBUG){
-                    Log.i(TAG, "---> call over , stop recorder");
-                }
-                mHandler.sendEmptyMessage(MSG_STOP_RECORD);
-            }
+    private void callStopRecord(int mode){
+        if(DebugConfig.DEBUG){
+            Log.i(TAG, "---> call over , stop recorder");
         }
+        Message msg = mHandler.obtainMessage(MSG_STOP_RECORD);
+        msg.arg1 = mode;
+        mHandler.sendMessage(msg);
     }
     
-    private void processTimerAlarm(){
+    private void processAutoTimerAlarm(){
         acquireWakeLock();
         if(isValidRecorderTime()){//start
             if(DebugConfig.DEBUG){
                 Log.i(TAG, "processTimerAlarm mCurMode = " + mCurMode + " mRecorderStart = " + mRecorderStart);
             }
-            if(mCurMode == LUNCH_MODE_AUTO){
-                if(mRecorderStart){
-                    mHandler.sendEmptyMessage(MSG_STOP_RECORD);
-                }
-                mHandler.sendEmptyMessage(MSG_START_RECORD);
+            if(mCurMode == LUNCH_MODE_IDLE){
+                mHandler.removeMessages(MSG_START_RECORD);
+                Message msg = mHandler.obtainMessage(MSG_START_RECORD);
+                msg.arg1 = LUNCH_MODE_AUTO;
+                mHandler.sendMessage(msg);
             }
         } else {
-            if(mCurMode == LUNCH_MODE_AUTO && mRecorderStart){
-                mHandler.sendEmptyMessage(MSG_STOP_RECORD);
+            if(mCurMode == LUNCH_MODE_AUTO){
+                mHandler.removeMessages(MSG_STOP_RECORD);
+                Message msg = mHandler.obtainMessage(MSG_STOP_RECORD);
+                msg.arg1 = LUNCH_MODE_AUTO;
+                mHandler.sendMessage(msg);
             }
             if(isValidUploadTime() && !mPowerManager.isScreenOn() && NetworkUtil.isWifiDataEnable(this)){//start
                 mUploadHandler.removeMessages(MSG_START_UPLOAD);
                 mUploadHandler.sendEmptyMessage(MSG_START_UPLOAD);
             }
             if(isValidDeleteTime()){
+                mUploadHandler.removeMessages(MSG_START_UPLOAD);
                 mUploadHandler.removeMessages(MSG_START_DELETE);
                 mUploadHandler.sendEmptyMessage(MSG_START_DELETE);
             }
@@ -877,7 +865,167 @@ public class AudioService extends Service{
         }
         Log.d("TAG", "===> address = " + macAddress);
         return macAddress;
-   }
+    }
+   
+    private List<BluetoothDevice> getConnectedDevices() {
+        return mService.getDevicesMatchingConnectionStates(new int[] {BluetoothProfile.STATE_CONNECTED});
+    }
+    
+    private void creatAudioRecord(final int mode) { 
+        // 获得缓冲区字节大小 
+        bufferSizeInBytes = AudioRecord.getMinBufferSize(AUDIO_SAMPLE_RATE, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT); 
+        // 创建AudioRecord对象 
+        mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, AUDIO_SAMPLE_RATE,  AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, bufferSizeInBytes);
+        mAudioRecord.startRecording();
+        startTime = System.currentTimeMillis();
+        new Thread(new Runnable() {
+            
+            @Override
+            public void run() {
+                mCurMode = mode;
+                Log.i(TAG, "---> startRecorder creatAudioRecord mCurMode = " + mCurMode);
+                setRecordStatus(true);
+                notifyUpdate(MSG_STOP_RECORD);
+                writeDateTOFile();//往文件中写入裸数据 
+                insertWaveTitle(mode);
+            }
+        }).start();
+    }
+    
+    private void writeDateTOFile() { 
+        // new一个byte数组用来存一些字节数据，大小为缓冲区大小 
+        byte[] audiodata = new byte[bufferSizeInBytes]; 
+        FileOutputStream fos = null; 
+        int readsize = 0; 
+        File file = new File(mRecoderPath); 
+        try { 
+            if (file.exists()) { 
+                file.delete(); 
+            }
+            Log.d(TAG, "---> tmp file = " + mRecoderPath);
+            fos = new FileOutputStream(file, false);// 建立一个可存取字节的文件 
+            fos.write(audiodata, 0, 44);
+            fos.flush();
+        } catch (Exception e) { 
+            e.printStackTrace(); 
+        } 
+        while (mRecorderStart) {
+            readsize = mAudioRecord.read(audiodata, 0, bufferSizeInBytes); 
+            if (AudioRecord.ERROR_INVALID_OPERATION != readsize && fos!=null) { 
+                try { 
+                    fos.write(audiodata, 0 , readsize);
+                } catch (IOException e) { 
+                    e.printStackTrace(); 
+                } 
+            } 
+        }
+        if(mAudioRecord != null){
+            mAudioRecord.stop();
+            mAudioRecord = null;
+        }
+        try {
+            if(fos != null){
+                fos.flush();
+                fos.close();// 关闭写入流
+                fos = null;
+            }
+            Log.d(TAG, "---> recorder over.");
+        } catch (IOException e) { 
+            e.printStackTrace(); 
+        } 
+    } 
+   
+    // 这里得到可播放的音频文件 
+    private void insertWaveTitle(int mode) { 
+        FileInputStream in = null; 
+        long totalAudioLen = 0; 
+        long totalDataLen = totalAudioLen + 36; 
+        long longSampleRate = AUDIO_SAMPLE_RATE; 
+        int channels = 2; 
+        long byteRate = RECORDER_BPP * AUDIO_SAMPLE_RATE * channels / 8;
+        try {
+            RandomAccessFile randomAccess = new RandomAccessFile(mRecoderPath, "rw");
+            randomAccess.seek(0);
+            in = new FileInputStream(mRecoderPath); 
+            totalAudioLen = in.getChannel().size(); 
+            totalDataLen = totalAudioLen + 36; 
+            Log.d(TAG, "write before totalAudioLen = " + totalAudioLen);
+            byte[] header = writeWaveFileHeader(totalAudioLen, totalDataLen, longSampleRate, channels, byteRate);
+            randomAccess.write(header, 0, header.length);
+            randomAccess.close();
+            Log.d(TAG, "write after totalAudioLen = " + in.getChannel().size());
+            in.close();
+            RecorderFile file = new RecorderFile();
+            file.setDuration((int) ((SystemClock.uptimeMillis() - mRecorderTime) / 1000));
+            file.setPath(mRecoderPath);
+            file.setTime(startTime);
+            file.setType(mode);
+            file.setSize(totalDataLen);
+            file.setMimeType("wav");
+            fileManager.insertRecorderFile(file);
+        } catch (FileNotFoundException e) { 
+            e.printStackTrace(); 
+        } catch (IOException e) { 
+            e.printStackTrace(); 
+        } 
+    } 
+   
+    /**
+     * 这里提供一个头信息。插入这些信息就可以得到可以播放的文件。
+     * 为我为啥插入这44个字节，这个还真没深入研究，不过你随便打开一个wav
+     * 音频的文件，可以发现前面的头文件可以说基本一样哦。每种格式的文件都有
+     * 自己特有的头文件。
+     */ 
+    private byte[] writeWaveFileHeader(long totalAudioLen, 
+            long totalDataLen, long longSampleRate, int channels, long byteRate) 
+            throws IOException { 
+        byte[] header = new byte[44]; 
+        header[0] = 'R'; // RIFF/WAVE header 
+        header[1] = 'I'; 
+        header[2] = 'F'; 
+        header[3] = 'F'; 
+        header[4] = (byte) (totalDataLen & 0xff); 
+        header[5] = (byte) ((totalDataLen >> 8) & 0xff); 
+        header[6] = (byte) ((totalDataLen >> 16) & 0xff); 
+        header[7] = (byte) ((totalDataLen >> 24) & 0xff); 
+        header[8] = 'W'; 
+        header[9] = 'A'; 
+        header[10] = 'V'; 
+        header[11] = 'E'; 
+        header[12] = 'f'; // 'fmt ' chunk 
+        header[13] = 'm'; 
+        header[14] = 't'; 
+        header[15] = ' '; 
+        header[16] = 16; // 4 bytes: size of 'fmt ' chunk 
+        header[17] = 0; 
+        header[18] = 0; 
+        header[19] = 0; 
+        header[20] = 1; // format = 1 
+        header[21] = 0; 
+        header[22] = (byte) channels; 
+        header[23] = 0; 
+        header[24] = (byte) (longSampleRate & 0xff); 
+        header[25] = (byte) ((longSampleRate >> 8) & 0xff); 
+        header[26] = (byte) ((longSampleRate >> 16) & 0xff); 
+        header[27] = (byte) ((longSampleRate >> 24) & 0xff); 
+        header[28] = (byte) (byteRate & 0xff); 
+        header[29] = (byte) ((byteRate >> 8) & 0xff); 
+        header[30] = (byte) ((byteRate >> 16) & 0xff); 
+        header[31] = (byte) ((byteRate >> 24) & 0xff); 
+        header[32] = (byte) (2 * 16 / 8); // block align 
+        header[33] = 0; 
+        header[34] = RECORDER_BPP; // bits per sample 
+        header[35] = 0; 
+        header[36] = 'd'; 
+        header[37] = 'a'; 
+        header[38] = 't'; 
+        header[39] = 'a'; 
+        header[40] = (byte) (totalAudioLen & 0xff); 
+        header[41] = (byte) ((totalAudioLen >> 8) & 0xff); 
+        header[42] = (byte) ((totalAudioLen >> 16) & 0xff); 
+        header[43] = (byte) ((totalAudioLen >> 24) & 0xff);
+        return header;
+    } 
     
     private class UploadHandlerCallback implements Handler.Callback{
         

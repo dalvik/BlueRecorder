@@ -49,8 +49,8 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     static final String AUDIO_ANY = "audio/*";
     static final int BITRATE_3GPP = 65536;
     static final int BITRATE_AMR = 12841;
-    public static final int FILE_TYPE_AMR = 0;
-    public static final int FILE_TYPE_3GPP = 1;
+    public static final int FILE_TYPE_3GPP = 0;
+    public static final int FILE_TYPE_WAV = 1;
     public static final int FILE_TYPE_DEFAULT = 1;
     static final String MAX_FILE_SIZE_KEY = "max_file_size";
     public static float PIXEL_DENSITY = 0.0F;
@@ -206,7 +206,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                     iRecorderService.regStateListener(iStateListener);
                     mRecorder = new Recorder();
                     initResourceRefs();
-                    boolean start = iRecorderService.isRecorderStart();
                     mHandler.sendEmptyMessage(MSG_RECORDER_UPDATE_UI);
                     mHandler.sendEmptyMessage(MSG_CHECK_MODE);
                 } catch (RemoteException e) {
@@ -266,7 +265,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                 
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    mPreferences.edit().putInt(PREFERENCE_TAG_FILE_TYPE, which==0 ? FILE_TYPE_AMR : FILE_TYPE_3GPP).commit();
+                    mPreferences.edit().putInt(PREFERENCE_TAG_FILE_TYPE, which==0 ? FILE_TYPE_3GPP : FILE_TYPE_WAV).commit();
                     localAlertDialog.dismiss();
                 }
             }).create();

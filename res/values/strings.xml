@@ -60,8 +60,8 @@
     <string name="storage_setting_Local_item">Phone</string>
     <string name="format_setting">File type</string>
     <string name="setting_setting">Settings</string>
-    <string name="format_setting_AMR_item">AMR</string>
     <string name="format_setting_3GPP_item">3GPP</string>
+    <string name="format_setting_AMR_item">WAV</string>
     <string name="record_saved">Record saved</string>
     <string name="record_name_cannot_empty">New record name can not be empty</string>
     <string name="FileRename_ERR_NAMEINV">"File name include invalid character "</string>
