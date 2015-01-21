@@ -65,4 +65,13 @@ public class ProgressOutHttpEntity extends HttpEntityWrapper {
         public void transferred(long transferedBytes);
     }
 
+    public interface UploadResult{
+    	
+    	public final static int IDLE = -1;
+    	public final static int PROCESS = 0;
+    	public final static int SUCCESS = 1;
+    	public final static int FAIL = 2;
+    	
+    	public void onResult(int result, int id, long progress);
+    }
 }

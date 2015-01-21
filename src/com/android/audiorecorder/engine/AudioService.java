@@ -72,7 +72,7 @@ import com.android.audiorecorder.SoundRecorder;
 import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.IFileManager;
 import com.android.audiorecorder.engine.ProgressOutHttpEntity.ProgressListener;
-import com.android.audiorecorder.engine.RecorderUploader.UploadResult;
+import com.android.audiorecorder.engine.ProgressOutHttpEntity.UploadResult;
 import com.android.audiorecorder.utils.DateUtil;
 import com.android.audiorecorder.utils.FileUtils;
 import com.android.audiorecorder.utils.NetworkUtil;
@@ -81,7 +81,7 @@ public class AudioService extends Service{
 	
 	public final static int PAGE_NUMBER = 1;
     private static final int AM = 21;
-    private static final int PM = 23;
+    private static final int PM = 22;
     
     private static final int UPLOAD_START = 2;
     private static final int UPLOAD_END = 4;
@@ -118,11 +118,11 @@ public class AudioService extends Service{
     private static final int MSG_BLUETOOTH_STOP_SCO = 4001;
     private static final int MSG_BLUETOOTH_PROFILE_MATCH = 4002;
 
-    private boolean mAtdpEnable;
     private boolean mIsBluetoothConnected;
-    
-    private WakeLock mWakeLock;
+    private boolean mAtdpEnable;
+    private WakeLock mRecorderWakeLock;
     private WakeLock mAlarmWakeLock;
+    private WakeLock mUploadWakeLock;
     private MediaRecorder mMediaRecorder = null;
 
     private String TAG = "AudioService";
@@ -243,8 +243,9 @@ public class AudioService extends Service{
         super.onCreate();
         mPowerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
         this.mPreferences = getSharedPreferences(SettingsActivity.class.getName(), Context.MODE_PRIVATE);
-        mWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"SoundRecorderService");
+        mRecorderWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"SoundRecorderService");
         mAlarmWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AlarmWakeLock");
+        mUploadWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "UploadWakeLock");
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         mCurMode = LUNCH_MODE_MANLY;
@@ -490,8 +491,8 @@ public class AudioService extends Service{
         mMimeType = mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_FILE_TYPE, SoundRecorder.FILE_TYPE_3GPP);
         createDir();
         Log.d(TAG, "---> startRecorder mode = " + mode + "  mMimeType= " + mMimeType);
-        if(!mWakeLock.isHeld()){
-            mWakeLock.acquire();
+        if(!mRecorderWakeLock.isHeld()){
+            mRecorderWakeLock.acquire();
         }
         if(mode == LUNCH_MODE_MANLY && mMimeType == SoundRecorder.FILE_TYPE_WAV){
             creatAudioRecord(mode);
@@ -554,14 +555,14 @@ public class AudioService extends Service{
                 setRecordStatus(false);
             }
         }
-        if (mWakeLock.isHeld()) {
-            mWakeLock.release();
+        if (mRecorderWakeLock.isHeld()) {
+            mRecorderWakeLock.release();
         }
         mCurMode = LUNCH_MODE_IDLE;
     }
 
     private void createDir(){
-        int storage = mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_STORAGE_LOCATION, SoundRecorder.STORAGE_LOCATION_DEFAULT);
+        int storage = mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_STORAGE_LOCATION, SoundRecorder.STORAGE_LOCATION_SD_CARD);
         String storagePath = FileUtils.getExternalStoragePath(this);
         Log.i(TAG, "---> external storage path = " + storagePath);
         if(storagePath.length() == 0){
@@ -714,11 +715,15 @@ public class AudioService extends Service{
             if(isValidUploadTime() && !mPowerManager.isScreenOn() && NetworkUtil.isWifiDataEnable(this)){//start
                 mUploadHandler.removeMessages(MSG_START_UPLOAD);
                 mUploadHandler.sendEmptyMessage(MSG_START_UPLOAD);
+            }else{
+            	mUploadHandler.removeMessages(MSG_START_UPLOAD);
             }
             if(isValidDeleteTime()){
                 mUploadHandler.removeMessages(MSG_START_UPLOAD);
                 mUploadHandler.removeMessages(MSG_START_DELETE);
                 mUploadHandler.sendEmptyMessage(MSG_START_DELETE);
+            }else{
+            	mUploadHandler.removeMessages(MSG_START_DELETE);
             }
         }
         mTimeSchedule.setRtcTimerAlarm();
@@ -733,7 +738,7 @@ public class AudioService extends Service{
     private boolean isValidUploadTime(){
     	Calendar rightNow = Calendar.getInstance();
         int dayOfHour = rightNow.get(Calendar.HOUR_OF_DAY);
-        return dayOfHour>=mPreferences.getInt(SettingsActivity.KEY_UPLOAD_START, UPLOAD_START) && dayOfHour<=mPreferences.getInt(SettingsActivity.KEY_UPLOAD_END, UPLOAD_END);
+        return dayOfHour>=UPLOAD_START && dayOfHour<= UPLOAD_END;//dayOfHour>=mPreferences.getInt(SettingsActivity.KEY_UPLOAD_START, UPLOAD_START) && dayOfHour<=mPreferences.getInt(SettingsActivity.KEY_UPLOAD_END, UPLOAD_END);
     }
     
     private boolean isValidDeleteTime(){
@@ -746,10 +751,16 @@ public class AudioService extends Service{
     	List<RecorderFile> list = fileManager.queryPrivateFileList(0, PAGE_NUMBER);
 		if(list.size()>0){
 			RecorderFile file = list.get(0);
-			initUploadFile(file.getId(), file.getPath());
+			if(!mUploadWakeLock.isHeld()){
+				mUploadWakeLock.acquire();
+			}
+			initUploadFile(file.getId(), file.getPath(), file.getType());
 		}else{
+			if(mUploadWakeLock.isHeld()){
+				mUploadWakeLock.release();
+			}
 		    if(DebugConfig.DEBUG){
-		        Log.w(TAG, "---> No Files.");
+		        Log.w(TAG, "---> No Files Upload.");
 		    }
 		}
     }
@@ -757,6 +768,9 @@ public class AudioService extends Service{
     private void startDeleteTask(){
         List<RecorderFile> list = fileManager.queryPrivateFileList(0, PAGE_NUMBER);
         if(list.size()>0){
+        	if(DebugConfig.DEBUG){
+				Log.i(TAG, "---> startDeleteTask  = " + mPowerManager.isScreenOn() + "  wifi state = " + NetworkUtil.isWifiDataEnable(this));
+			}
             if(!mPowerManager.isScreenOn() && NetworkUtil.isWifiDataEnable(this)){//start upload try
                 mUploadHandler.removeMessages(MSG_START_UPLOAD);
                 mUploadHandler.sendEmptyMessage(MSG_START_UPLOAD);
@@ -770,7 +784,7 @@ public class AudioService extends Service{
             }
         }else{
             if(DebugConfig.DEBUG){
-                Log.w(TAG, "---> No Files.");
+                Log.w(TAG, "---> No Files Delete.");
             }
         }
     }
@@ -783,7 +797,7 @@ public class AudioService extends Service{
         mAlarmWakeLock.acquire(2000);
     }
     
-    private void initUploadFile(long id, String path){
+    private void initUploadFile(long id, String path, int type){
         if(DebugConfig.DEBUG){
             Log.i(TAG, "initUploadFile id = " + id + " path = " + path);
         }
@@ -803,16 +817,23 @@ public class AudioService extends Service{
                         mTransferedBytes = transferedBytes;
                     }
                 });
-        if(uploadFile(mPreferences.getString(SettingsActivity.KEY_UPLOAD_URL, SettingsActivity.DEFAULT_UPLOAD_URL), progressHttpEntity) == UploadResult.SUCCESS){
-            File f = new File(path);
-            f.delete();
+        
+        int result = uploadFile(mPreferences.getString(SettingsActivity.KEY_UPLOAD_URL, SettingsActivity.DEFAULT_UPLOAD_URL), progressHttpEntity);
+        if(DebugConfig.DEBUG){
+            Log.i(TAG, "---> uploadFile result = " + result);
+        }
+        if(result == UploadResult.SUCCESS){
+        	if(type == LUNCH_MODE_AUTO){
+        		File f = new File(path);
+        		f.delete();
+        	}
             fileManager.delete(id);
             if(DebugConfig.DEBUG){
                 Log.i(TAG, "upload success. path = " + path);
             }
+            //mUploadHandler.removeMessages(MSG_START_UPLOAD); //wait for next callback
+            //mUploadHandler.sendEmptyMessage(MSG_START_UPLOAD);
         }
-        mUploadHandler.removeMessages(MSG_START_UPLOAD);
-        mUploadHandler.sendEmptyMessage(MSG_START_UPLOAD);
     }
     
     private int uploadFile(String url, ProgressOutHttpEntity entity) {
@@ -824,6 +845,9 @@ public class AudioService extends Service{
         httpPost.setEntity(entity);
         mResult = UploadResult.PROCESS;
         try {
+        	if(DebugConfig.DEBUG){
+                Log.i(TAG, "---> start upload url = " + url);
+            }
             HttpResponse httpResponse = httpClient.execute(httpPost);
             if (httpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                 if(!ProgressOutHttpEntity.mCancle){
@@ -831,6 +855,11 @@ public class AudioService extends Service{
                 } else {
                     mResult = UploadResult.FAIL;
                 }
+            } else {
+            	mResult = UploadResult.FAIL;
+            }
+            if(DebugConfig.DEBUG){
+                Log.i(TAG, "upload result = " + mResult);
             }
         } catch (Exception e) {
             mResult = UploadResult.FAIL;
@@ -842,21 +871,18 @@ public class AudioService extends Service{
             if(DebugConfig.DEBUG){
                 Log.i(TAG, "upload size = " + mTransferedBytes);
             }
-            mResult = UploadResult.IDLE;
         }
         return mResult;
     }
     
     private String getNamePrefix(){
-        String mac = mPreferences.getString(SettingsActivity.KEY_MAC_ADDRESS, "");
+        String mac = mPreferences.getString(SettingsActivity.KEY_MAC_ADDRESS, "").replace(":", "_");
+        Log.d(TAG, "---> getNamePrefix = " + mac);
         if(mac == null || mac.length() == 0){
             mac = getMacAddress(this);
         }
         if(mac == null || mac.length() == 0){
             mac = telephonyManager.getDeviceId();
-        }
-        if(mac == null || mac.length() == 0){
-            return "_";
         }
         return mac + "_";
     }
@@ -868,7 +894,8 @@ public class AudioService extends Service{
         if (null != info) {
             macAddress = info.getMacAddress();
             if(macAddress != null && macAddress.length()>0){
-                mPreferences.edit().putString(SettingsActivity.KEY_MAC_ADDRESS, macAddress+"_").commit();
+            	macAddress = macAddress.replace(":", "_");
+                mPreferences.edit().putString(SettingsActivity.KEY_MAC_ADDRESS, macAddress +"_").commit();
             }
         }
         Log.d("TAG", "===> address = " + macAddress);
@@ -880,9 +907,7 @@ public class AudioService extends Service{
     }
     
     private void creatAudioRecord(final int mode) { 
-        // 获得缓冲区字节大小 
         bufferSizeInBytes = AudioRecord.getMinBufferSize(AUDIO_SAMPLE_RATE, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT); 
-        // 创建AudioRecord对象 
         mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, AUDIO_SAMPLE_RATE,  AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, bufferSizeInBytes);
         mAudioRecord.startRecording();
         mStartTime = System.currentTimeMillis();
@@ -895,14 +920,13 @@ public class AudioService extends Service{
                 Log.i(TAG, "---> startRecorder creatAudioRecord mCurMode = " + mCurMode);
                 setRecordStatus(true);
                 notifyUpdate(MSG_STOP_RECORD);
-                writeDateTOFile();//往文件中写入裸数据 
+                writeDataToFile();
                 insertWaveTitle(mode);
             }
         }).start();
     }
     
-    private void writeDateTOFile() { 
-        // new一个byte数组用来存一些字节数据，大小为缓冲区大小 
+    private void writeDataToFile() { 
         byte[] audiodata = new byte[bufferSizeInBytes]; 
         FileOutputStream fos = null; 
         int readsize = 0; 
@@ -911,8 +935,7 @@ public class AudioService extends Service{
             if (file.exists()) { 
                 file.delete(); 
             }
-            Log.d(TAG, "---> tmp file = " + mRecoderPath);
-            fos = new FileOutputStream(file, false);// 建立一个可存取字节的文件 
+            fos = new FileOutputStream(file, false); 
             fos.write(audiodata, 0, 44);
             fos.flush();
         } catch (Exception e) { 
@@ -944,7 +967,6 @@ public class AudioService extends Service{
         } 
     } 
    
-    // 这里得到可播放的音频文件 
     private void insertWaveTitle(int mode) { 
         FileInputStream in = null; 
         long totalAudioLen = 0; 
@@ -970,19 +992,13 @@ public class AudioService extends Service{
             file.setSize(totalDataLen);
             file.setMimeType("wav");
             fileManager.insertRecorderFile(file);
-        } catch (FileNotFoundException e) { 
-            e.printStackTrace(); 
-        } catch (IOException e) { 
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
             e.printStackTrace(); 
         } 
     } 
    
-    /**
-     * 这里提供一个头信息。插入这些信息就可以得到可以播放的文件。
-     * 为我为啥插入这44个字节，这个还真没深入研究，不过你随便打开一个wav
-     * 音频的文件，可以发现前面的头文件可以说基本一样哦。每种格式的文件都有
-     * 自己特有的头文件。
-     */ 
     private byte[] writeWaveFileHeader(long totalAudioLen, 
             long totalDataLen, long longSampleRate, int channels, long byteRate) 
             throws IOException { 
@@ -992,44 +1008,44 @@ public class AudioService extends Service{
         header[2] = 'F'; 
         header[3] = 'F'; 
         header[4] = (byte) (totalDataLen & 0xff); 
-        header[5] = (byte) ((totalDataLen >> 8) & 0xff); 
-        header[6] = (byte) ((totalDataLen >> 16) & 0xff); 
-        header[7] = (byte) ((totalDataLen >> 24) & 0xff); 
-        header[8] = 'W'; 
-        header[9] = 'A'; 
-        header[10] = 'V'; 
-        header[11] = 'E'; 
-        header[12] = 'f'; // 'fmt ' chunk 
-        header[13] = 'm'; 
-        header[14] = 't'; 
-        header[15] = ' '; 
-        header[16] = 16; // 4 bytes: size of 'fmt ' chunk 
-        header[17] = 0; 
-        header[18] = 0; 
-        header[19] = 0; 
-        header[20] = 1; // format = 1 
-        header[21] = 0; 
-        header[22] = (byte) channels; 
-        header[23] = 0; 
-        header[24] = (byte) (longSampleRate & 0xff); 
-        header[25] = (byte) ((longSampleRate >> 8) & 0xff); 
-        header[26] = (byte) ((longSampleRate >> 16) & 0xff); 
-        header[27] = (byte) ((longSampleRate >> 24) & 0xff); 
-        header[28] = (byte) (byteRate & 0xff); 
-        header[29] = (byte) ((byteRate >> 8) & 0xff); 
-        header[30] = (byte) ((byteRate >> 16) & 0xff); 
-        header[31] = (byte) ((byteRate >> 24) & 0xff); 
-        header[32] = (byte) (2 * 16 / 8); // block align 
+        header[5] = (byte) ((totalDataLen >> 8) & 0xff);
+        header[6] = (byte) ((totalDataLen >> 16) & 0xff);
+        header[7] = (byte) ((totalDataLen >> 24) & 0xff);
+        header[8] = 'W';
+        header[9] = 'A';
+        header[10] = 'V';
+        header[11] = 'E';
+        header[12] = 'f';
+        header[13] = 'm';
+        header[14] = 't';
+        header[15] = ' ';
+        header[16] = 16;
+        header[17] = 0;
+        header[18] = 0;
+        header[19] = 0;
+        header[20] = 1;
+        header[21] = 0;
+        header[22] = (byte) channels;
+        header[23] = 0;
+        header[24] = (byte) (longSampleRate & 0xff);
+        header[25] = (byte) ((longSampleRate >> 8) & 0xff);
+        header[26] = (byte) ((longSampleRate >> 16) & 0xff);
+        header[27] = (byte) ((longSampleRate >> 24) & 0xff);
+        header[28] = (byte) (byteRate & 0xff);
+        header[29] = (byte) ((byteRate >> 8) & 0xff);
+        header[30] = (byte) ((byteRate >> 16) & 0xff);
+        header[31] = (byte) ((byteRate >> 24) & 0xff);
+        header[32] = (byte) (2 * 16 / 8);
         header[33] = 0; 
-        header[34] = RECORDER_BPP; // bits per sample 
-        header[35] = 0; 
-        header[36] = 'd'; 
-        header[37] = 'a'; 
-        header[38] = 't'; 
-        header[39] = 'a'; 
-        header[40] = (byte) (totalAudioLen & 0xff); 
-        header[41] = (byte) ((totalAudioLen >> 8) & 0xff); 
-        header[42] = (byte) ((totalAudioLen >> 16) & 0xff); 
+        header[34] = RECORDER_BPP; 
+        header[35] = 0;
+        header[36] = 'd';
+        header[37] = 'a';
+        header[38] = 't';
+        header[39] = 'a';
+        header[40] = (byte) (totalAudioLen & 0xff);
+        header[41] = (byte) ((totalAudioLen >> 8) & 0xff);
+        header[42] = (byte) ((totalAudioLen >> 16) & 0xff);
         header[43] = (byte) ((totalAudioLen >> 24) & 0xff);
         return header;
     } 

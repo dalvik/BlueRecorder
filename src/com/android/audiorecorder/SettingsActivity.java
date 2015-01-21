@@ -9,6 +9,8 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.TextView;
 
+import com.baidu.mobstat.StatService;
+
 public class SettingsActivity extends Activity {
     
     public static final String KEY_RECORDER_START = "key_recorder_start";
@@ -64,11 +66,13 @@ public class SettingsActivity extends Activity {
 	@Override
 	protected void onResume() {
 		super.onResume();
+		StatService.onResume(this);
 	}
 	
 	@Override
 	protected void onPause() {
 		super.onPause();
+		StatService.onPause(this);
 	}
     
     @Override

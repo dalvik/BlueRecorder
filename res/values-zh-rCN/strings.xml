@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">录音机</string>
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name">蓝牙录音机</string>
     <string name="record_your_message">录下您的留言</string>
     <string name="message_recorded">信息已录制</string>
     <string name="review_message">查看信息</string>
@@ -89,4 +90,58 @@
         <item>/mnt/sdcard/external_SD</item>
     </string-array>
     
+    <!-- update -->
+    <string name="_check_version_str">正在检查更新，请稍等。。。</string>
+    <string name="_check_version_result_title_str">升级提示</string>
+    <string name="_check_version_result_success_message_str">您当前已经是最新版本</string>
+    <string name="_check_version_result_error_message_str">您当前已经是最新版本</string>
+    <string name="_check_version_result_ok_str">确定</string>
+    <string name="_check_version_dialog_title_str">软件版本更新</string>
+    <string name="_check_version_dialog_ok_button_str">立即更新</string>
+    <string name="_check_version_dialog_cancle_button_str">以后再说</string>
+    <string name="_loading_new_str">正在下载新版本</string>
+    <string name="_loading_new_cancle_str">取消</string>
+    <string name="_loading_str">下载</string>
+    
+    <!-- setting -->
+    <string name="sms_setting_title">设置</string>
+    <string name="sms_list_back">返回</string>
+    <string name="sms_setting_update">升级软件：</string>
+    <string name="sms_setting_newer">可更新至 <xliff:g id="number">%1$s</xliff:g></string>
+    <string name="sms_setting_newest">当前已是最新版本</string>
+    <string name="sms_setting_suggestion">投诉建议</string>
+    <string name="sms_setting_suggestion_notice">大家的建议为提高软件质量已经起到作用，在此深表感谢。对于大家普遍关心的问题已经在给与解答，欢迎查阅。希望大家继续提出宝贵的意见和建议！</string>
+    <string name="sms_setting_suggestion_null">请输入投诉或者建议内容</string>
+    <string name="sms_setting_suggestion_long">输入的投诉或者建议内容太长</string>
+    <string name="sms_setting_suggestion_success">反馈成功，感谢参与！</string>
+    <string name="sms_setting_suggestion_commit">提交</string>
+    <string name="sms_setting_help">帮助中心</string>
+    <string name="sms_setting_help_software">1、软件介绍</string>
+    <string name="sms_setting_help_software_content"><![CDATA[<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;蓝牙录音机是一款轻量级的蓝牙录音软件，主要是为了解决蓝牙耳机种类众多，而蓝牙录音软件严重不足的问题。本软件能够适配市面上大部分的蓝牙耳机，录音音质细腻、清晰，悦耳动听。同时支持后台不间断录音，软件小巧、轻便，运行高效、省点，适合长时间录音。<br/>]]></string>
+    <string name="sms_setting_help_function">2、功能介绍</string>
+    <string name="sms_setting_help_function_content"><![CDATA[<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;蓝牙录音机软件界面设计简单，操作灵活方便，功能稳定。其中主要包括以下功能：<br/>
+        <font color="#0000ff"><br/>1、蓝牙录音<br/></font>
+        <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;蓝牙录音是该软件的特功能。市场上大部分的录音软件都不支持蓝牙录音。但该软件支持A2DP和非A2DP两种类型的蓝牙耳机。录音过程当初如果有蓝牙耳机成功连接，该软件会强制开启蓝牙录音功能。<br/>
+        <font color="#0000ff"><br/>2、后台录音<br/></font>
+        <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;在录音过程当中，您可以点击home键或者返回键去做其他事情。录音不会停止。方便用户。一般的录音软件只能前台录音，点击返回键录音就自动停止了。<br/>
+        <font color="#0000ff"><br/>3、电话录音<br/></font>
+        <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;您可以设置是否开启来电自动录音功能。如果开启自动来电录音，当有电话呼入，该软件会自动记录通过过程，通话结束，自动停止录音。方便快速保留依据。<br/>
+        <font color="#0000ff"><br/>4、录音路径和录音格式设置<br/></font>
+        <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;您可以方便的设置录音文件保存的位置。您也可以设置音频文件的存储格式。<br/>
+        <font color="#0000ff"><br/>5、录音文件浏览<br/></font>
+        <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;您可以快速的查阅所有的录音文件，默认以开始录音的时间先后倒叙排列。方便查看。<br/>
+        <font color="#0000ff"><br/>6、录音文件的回放、查看和删除<br/></font>
+        <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;您可以对所有的录音文件进行实时的浏览回放、详情查看和删除等操作。
+        <br/><br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;感谢您使用该软件，您的支持是我们前进的动力！
+        <br/><br/><br/>]]></string>
+    <string name="sms_setting_about">关于我们</string>
+    <string name="sms_setting_about_us">1、关于我们</string>
+    <string name="sms_setting_about_us_content">项目团队是由多年从事JavaEE开发和Android移动物联网开发的资深技术专家组成。拥有丰富的基于Android平台开发经营，能高效、快速完成Android定制开发。</string>
+    <string name="sms_setting_about_contact">2、联系我们</string>
+    <string name="sms_setting_about_contact_content">地址：杭州市西湖区天目山路160号国际花园写字楼
+        \nHome:<a href="http://www.davmb.com">http://www.davmb.com</a>
+        \nTel:<a href="tel:15068885227">15068885227</a>
+        \nQQ:513518064</string>
+    <string name="sms_setting_about_cooperation">3、项目合作</string>
+    <string name="sms_setting_about_cooperation_content">Email: <a href="mailto:sky.xctc@163.com">sky.xctc@163.com</a></string>
 </resources>

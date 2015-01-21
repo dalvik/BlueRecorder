@@ -1,5 +1,7 @@
 package com.android.audiorecorder;
 
+import com.baidu.mobstat.StatService;
+
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -30,11 +32,13 @@ public class SuggestionActivity extends Activity {
 	@Override
 	protected void onResume() {
 		super.onResume();
+		StatService.onResume(this);
 	}
 	
 	@Override
 	protected void onPause() {
 		super.onPause();
+		StatService.onPause(this);
 	}
     
     @Override

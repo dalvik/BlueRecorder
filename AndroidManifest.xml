@@ -22,8 +22,9 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
     <uses-permission android:name="android.permission.SEND_SMS"/>
     
-    
     <supports-screens android:anyDensity="true" android:smallScreens="true" android:normalScreens="true" android:largeScreens="true" android:resizeable="true" />
+    <!-- 
+     -->
     <uses-sdk
         android:minSdkVersion="11"
         android:targetSdkVersion="17" />

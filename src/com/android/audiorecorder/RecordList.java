@@ -47,6 +47,7 @@ import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.IFileManager;
 import com.android.audiorecorder.engine.AudioService;
 import com.android.audiorecorder.utils.FileUtils;
+import com.baidu.mobstat.StatService;
 
 public class RecordList extends SherlockListActivity implements
         View.OnCreateContextMenuListener, OnItemClickListener, ITaskClickListener{
@@ -279,6 +280,18 @@ public class RecordList extends SherlockListActivity implements
       }
     }
     
+	@Override
+	protected void onResume() {
+		super.onResume();
+		StatService.onResume(this);
+	}
+	
+	@Override
+	protected void onPause() {
+		super.onPause();
+		StatService.onPause(this);
+	}
+	
     @Override
     public void onStart() {
         super.onStart();

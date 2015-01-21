@@ -232,10 +232,6 @@ public class UpdateManager {
 		try {
 			InputStream s = http_get(URLs.getUpdateVersion(false, "BlueRecorder"));
 			return UpdateInfo.parse(s);
-			//UpdateInfo u = new UpdateInfo();
-			//u.setUpdateLog("&nbsp;&nbsp;&nbsp;&nbsp;1、增加加载本地内存卡的图片。<br/>&nbsp;&nbsp;&nbsp;&nbsp;2、解决某些定制安卓系统4.03版本上无法运行的bug。<br/><br/>&nbsp;&nbsp;&nbsp;&nbsp;请点击确定在线升级。<br/>&nbsp;&nbsp;&nbsp;&nbsp;如果升级失败，请到<a href='http://www.davmb.com'>http://drovik.com/html/902637248.html</a>下载最新版本。<br/>安装包大小：899KB");
-			//u.setVersionCode(3000);
-			//return u;
 		} catch (IOException e) {
 			throw new IOException();
 		}

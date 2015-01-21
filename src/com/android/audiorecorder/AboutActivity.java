@@ -1,6 +1,7 @@
 package com.android.audiorecorder;
 
 import com.android.audiorecorder.utils.StringUtil;
+import com.baidu.mobstat.StatService;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -27,11 +28,13 @@ public class AboutActivity extends Activity {
 	@Override
 	protected void onResume() {
 		super.onResume();
+		StatService.onResume(this);
 	}
 	
 	@Override
 	protected void onPause() {
 		super.onPause();
+		StatService.onPause(this);
 	}
     
     @Override
