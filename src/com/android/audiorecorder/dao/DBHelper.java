@@ -11,6 +11,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import com.android.audiorecorder.DebugConfig;
 import com.android.audiorecorder.RecorderFile;
 import com.android.audiorecorder.engine.AudioService;
 
@@ -27,9 +28,6 @@ public class DBHelper implements BaseColumns{
     
     
     private SQLiteDatabase sqLiteDatabase;
-    
-    private boolean DEBUG = true;
-    private String TAG = "DBHelper";
     
     public DBHelper(Context context) {
         SqliteHelper helper = new SqliteHelper(context);
@@ -218,7 +216,7 @@ public class DBHelper implements BaseColumns{
         @Override
         public void onCreate(SQLiteDatabase db) {
             db.execSQL(createFilesTable);
-            if(DEBUG){
+            if(DebugConfig.DEBUG){
             	Log.d(TAG, "createFilesTable = " + createFilesTable);
             }
         }

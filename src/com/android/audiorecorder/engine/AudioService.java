@@ -46,8 +46,6 @@ import android.content.SharedPreferences;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
-import android.media.MediaPlayer;
-import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaRecorder;
 import android.media.MediaRecorder.OnErrorListener;
 import android.net.wifi.WifiInfo;
@@ -81,8 +79,6 @@ import com.android.audiorecorder.utils.NetworkUtil;
 
 public class AudioService extends Service{
 	
-    private String Temp_Wave_Name = "temp";
-    
 	public final static int PAGE_NUMBER = 1;
     private static final int AM = 21;
     private static final int PM = 23;
@@ -129,16 +125,12 @@ public class AudioService extends Service{
     private WakeLock mAlarmWakeLock;
     private MediaRecorder mMediaRecorder = null;
 
-    private MediaPlayer mMediaPlayer = null;
-    private OnCompletionListener mOnCompletionListener;
-
     private String TAG = "AudioService";
 
     private Set<IStateListener> mStateSet = new HashSet<IStateListener>();
 
     private AudioManager mAudioManager;
     private PowerManager mPowerManager;
-    private Object lock = new Object();
 
     private boolean mRecorderStart;
     private boolean mTalkStart;
@@ -154,8 +146,7 @@ public class AudioService extends Service{
     
     private IFileManager fileManager;
     private String mRecoderPath;
-    //private String mRecoderPathTemp;
-    private long startTime;
+    private long mStartTime;
     private int mMimeType;
     
     private TelephonyManager telephonyManager;
@@ -164,7 +155,6 @@ public class AudioService extends Service{
     private String mIncommingNumber;
     
     private TimeSchedule mTimeSchedule;
-    //private RecorderUploader mUploader;
     
     private UploadHandlerCallback mUploadHandlerCallback;
     private HandlerThread mUpHandlerThread;
@@ -339,7 +329,9 @@ public class AudioService extends Service{
                     }else if(state == TelephonyManager.CALL_STATE_OFFHOOK){
                         //start recorder
                         mIncommingNumber = incomingNumber;
-                        callStopRecord(mCurMode);
+                        if(mCurMode != LUNCH_MODE_IDLE){
+                            callStopRecord(mCurMode);
+                        }
                         if(DebugConfig.DEBUG){
                             Log.d(TAG, "---> start recorder mIncommingNumber = " + mIncommingNumber);
                         }
@@ -444,7 +436,12 @@ public class AudioService extends Service{
         }
 
         public void setMode(int mode) throws RemoteException {
-            mCurMode = mode;
+            if(mCurMode == LUNCH_MODE_AUTO){//reset state machine
+                mHandler.removeMessages(MSG_STOP_RECORD);
+                Message msg = mHandler.obtainMessage(MSG_STOP_RECORD);
+                msg.arg1 = mode;
+                mHandler.sendMessage(msg);
+            }
             if(DebugConfig.DEBUG){
                 Log.i(TAG, "--->  setMode = " + mode);
             }
@@ -512,13 +509,14 @@ public class AudioService extends Service{
             mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
             mMediaRecorder.setAudioSamplingRate(8000);
             mMediaRecorder.setOutputFile(mRecoderPath);
-            startTime = System.currentTimeMillis();
             try {
                 mMediaRecorder.prepare();
                 mMediaRecorder.start();
                 if(mode == LUNCH_MODE_MANLY){
                     setRecordStatus(true);
                     notifyUpdate(MSG_START_RECORD);
+                }else{
+                    mStartTime = System.currentTimeMillis();
                 }
                 mCurMode = mode;
                 Log.i(TAG, "---> startRecorder mCurMode = " + mCurMode);
@@ -544,7 +542,7 @@ public class AudioService extends Service{
                 RecorderFile file = new RecorderFile();
                 file.setDuration((int) ((SystemClock.uptimeMillis() - mRecorderTime) / 1000));
                 file.setPath(mRecoderPath);
-                file.setTime(startTime);
+                file.setTime(mStartTime);
                 file.setType(mode);
                 File f = new File(mRecoderPath);
                 if(f.exists()){
@@ -695,6 +693,16 @@ public class AudioService extends Service{
                 Message msg = mHandler.obtainMessage(MSG_START_RECORD);
                 msg.arg1 = LUNCH_MODE_AUTO;
                 mHandler.sendMessage(msg);
+            }
+            if(mCurMode == LUNCH_MODE_AUTO){
+                mHandler.removeMessages(MSG_STOP_RECORD);
+                Message msg = mHandler.obtainMessage(MSG_STOP_RECORD);
+                msg.arg1 = LUNCH_MODE_AUTO;
+                mHandler.sendMessage(msg);
+                mHandler.removeMessages(MSG_START_RECORD);
+                Message msg2 = mHandler.obtainMessage(MSG_START_RECORD);
+                msg2.arg1 = LUNCH_MODE_AUTO;
+                mHandler.sendMessage(msg2);
             }
         } else {
             if(mCurMode == LUNCH_MODE_AUTO){
@@ -877,7 +885,8 @@ public class AudioService extends Service{
         // 创建AudioRecord对象 
         mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, AUDIO_SAMPLE_RATE,  AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, bufferSizeInBytes);
         mAudioRecord.startRecording();
-        startTime = System.currentTimeMillis();
+        mStartTime = System.currentTimeMillis();
+        mRecorderTime = SystemClock.uptimeMillis();
         new Thread(new Runnable() {
             
             @Override
@@ -949,16 +958,14 @@ public class AudioService extends Service{
             in = new FileInputStream(mRecoderPath); 
             totalAudioLen = in.getChannel().size(); 
             totalDataLen = totalAudioLen + 36; 
-            Log.d(TAG, "write before totalAudioLen = " + totalAudioLen);
             byte[] header = writeWaveFileHeader(totalAudioLen, totalDataLen, longSampleRate, channels, byteRate);
             randomAccess.write(header, 0, header.length);
             randomAccess.close();
-            Log.d(TAG, "write after totalAudioLen = " + in.getChannel().size());
             in.close();
             RecorderFile file = new RecorderFile();
             file.setDuration((int) ((SystemClock.uptimeMillis() - mRecorderTime) / 1000));
             file.setPath(mRecoderPath);
-            file.setTime(startTime);
+            file.setTime(mStartTime);
             file.setType(mode);
             file.setSize(totalDataLen);
             file.setMimeType("wav");

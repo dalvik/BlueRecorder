@@ -117,9 +117,8 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                    break;
                case MSG_CHECK_MODE:
                    try {
-                       if(iRecorderService != null && iRecorderService.isRecorderStart() && iRecorderService.getMode() == AudioService.LUNCH_MODE_AUTO){
-                    	   iRecorderService.stopRecord();
-                    	   iRecorderService.setMode(AudioService.LUNCH_MODE_MANLY);
+                       if(iRecorderService != null){
+                    	   iRecorderService.setMode(iRecorderService.getMode());
                        }
                    } catch (RemoteException e) {
                         e.printStackTrace();
@@ -362,6 +361,10 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     
     private void recordOperation(){
         try {
+            if(iRecorderService.getMode() == AudioService.LUNCH_MODE_CALL){
+                popToast(getString(R.string.recoring_inCall));
+                return;
+            }
             if(iRecorderService.isRecorderStart()){
                 iRecorderService.stopRecord();
                 popToast(getString(R.string.record_saved));
@@ -380,15 +383,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
 
     @Override
     protected void onStop() {
-    	if(iRecorderService != null) {
-            try {
-                if(!iRecorderService.isRecorderStart() && iRecorderService.getMode() == AudioService.LUNCH_MODE_MANLY){
-                    iRecorderService.setMode(AudioService.LUNCH_MODE_AUTO);
-                }
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        }
     	super.onStop();
     }
     
@@ -398,9 +392,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         if(iRecorderService != null) {
             try {
                 iRecorderService.unregStateListener(iStateListener);
-                if(!iRecorderService.isRecorderStart() && iRecorderService.getMode() == AudioService.LUNCH_MODE_MANLY){
-                    iRecorderService.setMode(AudioService.LUNCH_MODE_AUTO);
-                }
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
