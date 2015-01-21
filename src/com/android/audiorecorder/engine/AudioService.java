@@ -185,6 +185,9 @@ public class AudioService extends Service{
                 case MSG_BLUETOOTH_PROFILE_MATCH:
                     if (mService != null) {
                         List<BluetoothDevice> devs = getConnectedDevices();
+                        if(DebugConfig.DEBUG) {
+                            Log.d(TAG, "---> buletooth connected number = " + devs.size());
+                        }
                         for (final BluetoothDevice dev : devs) {
                             BluetoothClass cl = dev.getBluetoothClass();
                             try {
@@ -214,14 +217,16 @@ public class AudioService extends Service{
                 case MSG_BLUETOOTH_START_SCO:
                     if (mIsBluetoothConnected && !mAudioManager.isBluetoothScoOn()) {
                        mAudioManager.startBluetoothSco();
+                       mAudioManager.setMode(AudioManager.MODE_IN_CALL);
+                       Log.d(TAG, "---> start bluetooth sco : " + mAudioManager.isBluetoothScoOn());
                     }
-                    Log.d(TAG, "---> bluetooth sco state = " + mAudioManager.isBluetoothScoOn());
                   break;
 
               case MSG_BLUETOOTH_STOP_SCO:
                   if (mIsBluetoothConnected) {
-                      mAudioManager.setBluetoothScoOn(false);
                       mAudioManager.stopBluetoothSco();
+                      mAudioManager.setBluetoothScoOn(false);
+                      mAudioManager.setMode(AudioManager.MODE_NORMAL);
                   }
                   break;
                 default:
@@ -290,19 +295,21 @@ public class AudioService extends Service{
                         } else if(state == BluetoothAdapter.STATE_DISCONNECTED || state == BluetoothAdapter.STATE_DISCONNECTING){
                              mAtdpEnable =  false;
                              mIsBluetoothConnected = false;
-                             mAudioManager.setBluetoothScoOn(false);
                              mAudioManager.stopBluetoothSco();
-                             Log.d(TAG,"==> bluetooth connected  state = " + state + " atdp enable = " + mAtdpEnable);
+                             mAudioManager.setBluetoothScoOn(false);
+                             mAudioManager.setMode(AudioManager.MODE_NORMAL);
+                             Log.d(TAG,"==> recv bluetooth connected  state = " + state + " atdp enable = " + mAtdpEnable);
                         }
                     } else if(action.equals(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED)) {
                         int state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, AudioManager.SCO_AUDIO_STATE_ERROR);
-                        Log.d(TAG,"===> bluetooth sco state = " + state);
+                        Log.d(TAG,"===> recv  bluetooth sco state update to = " + state);
                         if(state == AudioManager.SCO_AUDIO_STATE_CONNECTED){
                              mAudioManager.setBluetoothScoOn(true);
                         } else if(state == AudioManager.SCO_AUDIO_STATE_DISCONNECTED){
                              if(mAudioManager.isBluetoothScoOn()) {
+                                 mAudioManager.stopBluetoothSco();
                                    mAudioManager.setBluetoothScoOn(false);
-                                   mAudioManager.stopBluetoothSco();
+                                   mAudioManager.setMode(AudioManager.MODE_NORMAL);
                              }
                              if(mIsBluetoothConnected && !mAtdpEnable){
                                    Log.d(TAG, "===> start reconnected bluetooth sco.");
