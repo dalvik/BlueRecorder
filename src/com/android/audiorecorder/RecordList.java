@@ -73,7 +73,7 @@ public class RecordList extends SherlockListActivity implements
     public static final int ITEM_OPERATION_DETAILS = 3;
     public static final int ITEM_OPERATION_DELETE = 4;
     
-    private int mCurPlayIndex;
+    //private int mCurPlayIndex;
     
     private BroadcastReceiver mPlayCompleteReciBroadcastReceiver;
     
@@ -105,6 +105,7 @@ public class RecordList extends SherlockListActivity implements
     private IMediaPlaybackService mService;
     private ServiceToken mToken;
     private boolean paused;
+    private String mPlayPath;
 
     private int mLastVisibleIndex = 0;
     private boolean mLoadLogFlag;
@@ -127,11 +128,7 @@ public class RecordList extends SherlockListActivity implements
                     break;
                 case MSG_TOGGLE_UI:
                     int position = msg.arg1;
-                    mAdapter.setPlayId(position, mCurState);
-                    mProgressLayout.setVisibility(View.VISIBLE);
-                    mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
                     startPlayback(position);
-                    mCurPlayIndex = position;
                     break;
                 case MSG_LOAD_SMSLIST:
                 	int page = msg.arg1;
@@ -155,7 +152,6 @@ public class RecordList extends SherlockListActivity implements
     };
 
     public void onCreate(Bundle paramBundle) {
-        //ModeCallback localModeCallback1 = null;
         super.onCreate(paramBundle);
         setVolumeControlStream(3);
         setContentView(R.layout.recordlist_view);
@@ -195,10 +191,16 @@ public class RecordList extends SherlockListActivity implements
                 public void onReceive(Context context, Intent intent) {
                     if(MediaPlaybackService.PLAY_COMPLETE_ACTION.equals(intent.getAction())){
                         mProgress.setProgress(1000);
-                        Message msg = mHandler.obtainMessage(MSG_TOGGLE_UI);
-                        msg.arg1 = mCurPlayIndex;
-                        mCurState = PLAY;
-                        mHandler.sendMessage(msg);
+                        if(mService != null){
+                            try {
+                                mService.pause();
+                                int playPositoin = checkNewPlayPosition();
+                                mAdapter.setPlayId(playPositoin, PAUSE);
+                                mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
+                            } catch (RemoteException e) {
+                                e.printStackTrace();
+                            }
+                        }
                     }
                 }
             };
@@ -223,11 +225,11 @@ public class RecordList extends SherlockListActivity implements
     public boolean onOptionsItemSelected(MenuItem item) {
         switch(item.getItemId()){
             case R.id.menu_item_delete:
-                if(mCurPlayIndex == -1 && mCurPlayIndex>=mFileList.size()){
+                /*if(mCurPlayIndex == -1 && mCurPlayIndex>=mFileList.size()){
                     Toast.makeText(this, getString(R.string.select_delete_file), Toast.LENGTH_SHORT).show();
                     return true;
                 }
-                deleteItem(mCurPlayIndex);
+                deleteItem(mCurPlayIndex);*/
                 break;
                 default:
                     break;
@@ -235,7 +237,6 @@ public class RecordList extends SherlockListActivity implements
         return true;
     }
     public void init() {
-        mCurPlayIndex = -1;
         mAdapter.setPlayId(-1, mCurState);
         mAdapter.setTaskClickListener(this);
         Message msg = mHandler.obtainMessage(MSG_LOAD_SMSLIST);
@@ -320,12 +321,10 @@ public class RecordList extends SherlockListActivity implements
                 toggleAudio(index);
                 break;
             case ITEM_OPERATION_DETAILS:
-                mCurPlayIndex = index;
                 showInfomationDlg(index);
                 break;
             case ITEM_OPERATION_DELETE:
                 deleteItem(index);
-                mCurPlayIndex = -1;
                 break;
                 default:
                     break;
@@ -352,40 +351,40 @@ public class RecordList extends SherlockListActivity implements
     }
     
     private void toggleAudio(int position){
-        if(mCurPlayIndex == position){
-            if(mCurState == PLAY){
-                mCurState = PAUSE;
-            } else {
-                mCurState = PLAY;
-            }
-        }else{
-            mCurState = PAUSE;
-        }
         Message msg = mHandler.obtainMessage(MSG_TOGGLE_UI);
         msg.arg1 = position;
         mHandler.sendMessage(msg);
     }
     
     private void deleteItem(int position){
-    	Log.d(TAG, "---> delete index = " + position + " " + mCurPlayIndex);
+        if(position == - 1 || position>=mFileList.size()){
+            return;
+        }
         try {
-            if(mService != null && mService.isPlaying()){
-            	if(mCurPlayIndex == position){
-            		mService.stop();
-            	}else{
-            		toggleAudio(position);
-            	}
+            int playPositoin = checkNewPlayPosition();
+            Log.d(TAG, "---> delete position = " + position + " playPositoin = " + playPositoin);
+            if(playPositoin == position){
+                if(mService != null){
+                    mService.stop();
+                }
+                mPlayPath = "";
             }
+            RecorderFile file = mFileList.get(position);
+            mFileManager.removeFile(file.getPath());
+            mFileManager.delete(file.getId());
+            mFileList.remove(position);
+            if(playPositoin == position){
+                mAdapter.setPlayId(-1, PAUSE);
+            }else{
+                int newPositoin = checkNewPlayPosition();
+                mAdapter.setPlayId(newPositoin, mAdapter.getPlayState());
+            }
+            mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
+            updateCounter();
+            Toast.makeText(this, getResources().getQuantityString(R.plurals.NNNtracksdeleted, 1, 1), Toast.LENGTH_SHORT).show();
         } catch (RemoteException e) {
             e.printStackTrace();
         }
-        RecorderFile file = mFileList.get(position);
-        mFileManager.removeFile(file.getPath());
-        mFileManager.delete(file.getId());
-        mFileList.remove(position);
-        mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
-        updateCounter();
-        Toast.makeText(this, getResources().getQuantityString(R.plurals.NNNtracksdeleted, 1, 1), Toast.LENGTH_SHORT).show();
     }
     
     private ServiceConnection osc = new ServiceConnection() {
@@ -399,34 +398,41 @@ public class RecordList extends SherlockListActivity implements
     };
     
     private void startPlayback(int position) {
-        if(mService == null || mFileList.size()<=position){
+        Log.i(TAG, "---> startPlayback position = " + position);
+        if(mService == null || position <0 || mFileList.size()<=position){
             return;
         }
-        String filename = mFileList.get(position).getPath();
-        if (filename != null && filename.length() > 0) {
-            if(position == mCurPlayIndex){
-                try {
-                    if(mService.isPlaying()){
-                        mService.pause();
-                    }else {
-                        mService.play();
-                    }
-                } catch (RemoteException e) {
-                    e.printStackTrace();
+        int curPlayPosition = checkNewPlayPosition();
+        if(position == curPlayPosition){
+            try {
+                if(mService.isPlaying()){
+                    mService.pause();
+                    mAdapter.setPlayId(position, PAUSE);
+                }else {
+                    mService.play();
+                    mAdapter.setPlayId(position, PLAY);
                 }
-            }else {
-                if(DebugConfig.DEBUG) {
-                    Log.d(TAG, "===> open audio filename = " + filename);
-                }
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        } else {
+            mPlayPath = mFileList.get(position).getPath();
+            if(DebugConfig.DEBUG) {
+                Log.d(TAG, "===> open audio filename = " + mPlayPath);
+            }
+            if (mPlayPath != null && mPlayPath.length() > 0) {
                 try {
                     mService.stop();
-                    mService.openFile(filename);
+                    mService.openFile(mPlayPath);
                     mService.play();
+                    mAdapter.setPlayId(position, PLAY);
                 } catch (Exception ex) {
                     Log.d("MediaPlaybackActivity", "couldn't start playback: " + ex);
                 }
             }
         }
+        mProgressLayout.setVisibility(View.VISIBLE);
+        mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
         updateTrackInfo();
         long next = refreshNow();
         queueNextRefresh(next);
@@ -572,4 +578,14 @@ public class RecordList extends SherlockListActivity implements
         localBuilder.show();
     }
     
+    private int checkNewPlayPosition(){
+        int i = -1;
+        for(RecorderFile file:mFileList){
+            i++;
+            if(file.getPath().equalsIgnoreCase(mPlayPath)){
+                return i;
+            }
+        }
+        return -1;
+    }
 }

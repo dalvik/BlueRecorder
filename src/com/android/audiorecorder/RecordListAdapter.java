@@ -2,7 +2,6 @@ package com.android.audiorecorder;
 
 import java.util.List;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -39,6 +38,7 @@ public class RecordListAdapter extends BaseAdapter {
         this.mContext = context;
         mInflater = LayoutInflater.from(mContext);
         this.mFileList = fileList;
+        mState = RecordList.IDLE;
     }
 
     @Override
@@ -56,7 +56,6 @@ public class RecordListAdapter extends BaseAdapter {
         return 0;
     }
 
-    @SuppressLint("NewApi")
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         final ViewHolder viewHolder;
@@ -73,23 +72,8 @@ public class RecordListAdapter extends BaseAdapter {
                 
                 @Override
                 public void onClick(View v) {
-                    viewHolder.play.setVisibility(View.INVISIBLE);
-                    viewHolder.pause.setVisibility(View.VISIBLE);
                     if(mTaskClickListener != null){
                         mTaskClickListener.onTaskClick(StringUtil.toInt(viewHolder.play.getTag()), RecordList.ITEM_OPERATION_PLAY);
-                    }
-                }
-            });
-            viewHolder.pause = (ImageButton)convertView.findViewById(R.id.pause);
-            viewHolder.pause.setTag(position);
-            viewHolder.pause.setOnClickListener(new OnClickListener() {
-                
-                @Override
-                public void onClick(View v) {
-                    viewHolder.play.setVisibility(View.VISIBLE);
-                    viewHolder.pause.setVisibility(View.INVISIBLE);
-                    if(mTaskClickListener != null){
-                        mTaskClickListener.onTaskClick(StringUtil.toInt(viewHolder.pause.getTag()), RecordList.ITEM_OPERATION_PLAY);
                     }
                 }
             });
@@ -105,9 +89,9 @@ public class RecordListAdapter extends BaseAdapter {
                     Menu localMenu = localPopupMenu.getMenu();
                     if(StringUtil.toInt(viewHolder.ibListItemMenu.getTag()) == mPlayId){
                         if(mState == RecordList.PLAY){
-                            localMenu.add(1, RecordList.ITEM_OPERATION_PLAY, 1, R.string.play);
-                        } else {
                             localMenu.add(1, RecordList.ITEM_OPERATION_PLAY, 1, R.string.pause);
+                        } else {
+                            localMenu.add(1, RecordList.ITEM_OPERATION_PLAY, 1, R.string.play);
                         }
                     } else {
                         localMenu.add(1, RecordList.ITEM_OPERATION_PLAY, 1, R.string.play);
@@ -131,20 +115,16 @@ public class RecordListAdapter extends BaseAdapter {
         } else {
             viewHolder =  (ViewHolder) convertView.getTag();
         }
-        viewHolder.id = position;
-        if(viewHolder.id == mPlayId){
-            if(mState != RecordList.PAUSE){
-                viewHolder.play.setVisibility(View.VISIBLE);
-                viewHolder.pause.setVisibility(View.INVISIBLE);
+        if(mPlayId == position){
+            if(mState == RecordList.PLAY){
+                viewHolder.play.setBackgroundResource(R.drawable.playpause_button_selector);
             }else{
-                viewHolder.play.setVisibility(View.INVISIBLE);
-                viewHolder.pause.setVisibility(View.VISIBLE);
+                viewHolder.play.setBackgroundResource(R.drawable.play_button_selector);
             }
             viewHolder.play_indicator.setVisibility(View.VISIBLE);
         } else {
             viewHolder.play_indicator.setVisibility(View.INVISIBLE);
-            viewHolder.play.setVisibility(View.VISIBLE);
-            viewHolder.pause.setVisibility(View.INVISIBLE);
+            viewHolder.play.setBackgroundResource(R.drawable.play_button_selector);
         }
         viewHolder.title.setText(file.getName());
         viewHolder.duration.setText(MusicUtils.makeTimeString(mContext, file.getDuration()));
@@ -157,14 +137,19 @@ public class RecordListAdapter extends BaseAdapter {
         this.mState = state;
     }
     
+    public int getPlayState(){
+        return this.mState;
+    }
+    
+    public int getPlayId(){
+        return this.mPlayId;
+    }
+    
     public void setTaskClickListener(ITaskClickListener listener){
         this.mTaskClickListener = listener;
     }
     
     public interface ITaskClickListener{
-        
-        //public final static int ACTION_PLAY = 1;
-        //public final static int ACTION_PAUSE = 2;
         
         void onTaskClick(int index, int itemAction);
     }
@@ -172,9 +157,7 @@ public class RecordListAdapter extends BaseAdapter {
     class ViewHolder {
       TextView duration;
       ImageButton ibListItemMenu;
-      int id;
       String path;
-      ImageButton pause;
       ImageButton play;
       ImageView play_indicator;
       int position;

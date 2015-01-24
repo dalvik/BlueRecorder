@@ -17,6 +17,7 @@
         android:background="@drawable/play_button_selector"
         android:focusable="false" />
 
+    <!-- 
     <ImageButton
         android:id="@id/pause"
         android:layout_width="wrap_content"
@@ -26,6 +27,7 @@
         android:layout_margin="2.0dip"
         android:background="@drawable/playpause_button_selector"
         android:focusable="false" />
+     -->
 
     <ImageButton
         android:id="@id/list_item_menu"
