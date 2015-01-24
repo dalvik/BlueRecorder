@@ -63,4 +63,31 @@ public class FileUtils {
     }
     
     public static String parentPath = File.separator + "DownLoad" + File.separator;
+    
+    public static File getDiskCacheDir(Context context, String uniqueName) {
+        // Check if media is mounted or storage is built-in, if so, try and use external cache dir
+        // otherwise use internal cache dir
+        final String cachePath =
+                Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState()) ||
+                        !isExternalStorageRemovable() ? getExternalCacheDir(context).getPath() :
+                                context.getCacheDir().getPath();
+
+        return new File(cachePath + File.separator + uniqueName);
+    }
+    
+    public static boolean isExternalStorageRemovable() {
+        if (Utils.hasGingerbread()) {
+            return Environment.isExternalStorageRemovable();
+        }
+        return true;
+    }
+    
+    public static File getExternalCacheDir(Context context) {
+        if (Utils.hasFroyo()) {
+            return context.getExternalCacheDir();
+        }
+        // Before Froyo we need to construct the external cache dir ourselves
+        final String cacheDir = "/Android/data/" + context.getPackageName() + "/cache/";
+        return new File(Environment.getExternalStorageDirectory().getPath() + cacheDir);
+    }
 }

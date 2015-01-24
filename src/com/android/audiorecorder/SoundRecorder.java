@@ -42,7 +42,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     
     public final static int MIX_STORAGE_CAPACITY = 500;//MB
     public final static int MSG_RECORDER_UPDATE_UI = 10;
-    public final static int MSG_CHECK_MODE = 20;
 
     static final String ANY_ANY = "*/*";
     static final String AUDIO_3GPP = "audio/aac";
@@ -113,15 +112,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                    break;
                case AudioService.MSG_UPDATE_TIMER:
                    updateTimerView();
-                   break;
-               case MSG_CHECK_MODE:
-                   try {
-                       if(iRecorderService != null){
-                    	   iRecorderService.setMode(iRecorderService.getMode());
-                       }
-                   } catch (RemoteException e) {
-                        e.printStackTrace();
-                   }
                    break;
                default:
                    break;
@@ -211,9 +201,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                     iRecorderService.regStateListener(iStateListener);
                     mRecorder = new Recorder();
                     initResourceRefs();
-                    boolean start = iRecorderService.isRecorderStart();
                     mHandler.sendEmptyMessage(MSG_RECORDER_UPDATE_UI);
-                    mHandler.sendEmptyMessage(MSG_CHECK_MODE);
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }
