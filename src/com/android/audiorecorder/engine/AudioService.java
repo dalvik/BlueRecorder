@@ -38,7 +38,6 @@ import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothProfile;
-import android.bluetooth.BluetoothProfile.ServiceListener;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -80,6 +79,7 @@ import com.android.audiorecorder.utils.NetworkUtil;
 
 public class AudioService extends Service{
 	
+    public final static int MIX_STORAGE_CAPACITY = 100;//MB
 	private static final String Recorder_CACHE_DIR = "Recorder";
 	
 	public final static int PAGE_NUMBER = 1;
@@ -483,6 +483,11 @@ public class AudioService extends Service{
                 throws RemoteException {
             mAudioManager.adjustStreamVolume(streamType, direct, flag);
         }
+        
+        @Override
+        public long checkDiskCapacity() throws RemoteException {
+            return avliableDiskSize();
+        }
     };
 
     private void setRecordStatus(boolean start) {
@@ -567,17 +572,26 @@ public class AudioService extends Service{
     }
 
     private void createDir(int mode){
+        
+        String storagePath;
         int storage = mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_STORAGE_LOCATION, SoundRecorder.STORAGE_LOCATION_SD_CARD);
-        String storagePath = FileUtils.getExternalStoragePath(this);
-        Log.i(TAG, "---> external storage path = " + storagePath);
-        if(storagePath.length() == 0){
-            storagePath = Environment.getExternalStorageDirectory().getPath();
-            Log.i(TAG, "---> default path = " + storagePath);    
-        }
         if(storage == SoundRecorder.STORAGE_LOCATION_SD_CARD){
-            
+            storagePath = Environment.getExternalStorageDirectory().getPath();
+            if(DebugConfig.DEBUG){
+                Log.i(TAG, "---> external storage path = " + storagePath);
+            }
         } else {
-            
+            storagePath = FileUtils.getExternalStoragePath(this);
+            if(storagePath.length() > 0){
+                if(DebugConfig.DEBUG){
+                    Log.i(TAG, "---> internal storage path = " + storagePath);
+                }
+            } else {
+                storagePath = Environment.getExternalStorageDirectory().getPath();
+                if(DebugConfig.DEBUG){
+                    Log.i(TAG, "---> internal storage do not exist, get default path = " + storagePath);    
+                }
+            }
         }
         if(mode != LUNCH_MODE_AUTO){
         	 String parent = "/BlueRecorder/";
@@ -1110,9 +1124,35 @@ public class AudioService extends Service{
 
         @Override
         public void onServiceDisconnected(int profile) {
-            // TODO Auto-generated method stub
             
         }
         
+    }
+    
+    private long avliableDiskSize(){
+        int storage = mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_STORAGE_LOCATION, SoundRecorder.STORAGE_LOCATION_SD_CARD);
+        if(storage == SoundRecorder.STORAGE_LOCATION_SD_CARD){
+            if(!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
+                return 0;
+            }
+            String extStoragePath = Environment.getExternalStorageDirectory().getPath();
+            if(DebugConfig.DEBUG){
+                Log.i(TAG, "---> external storage path = " + extStoragePath);
+            }
+            return FileUtils.getAvailableSize(extStoragePath);
+        } else {
+            String interStoragePath = FileUtils.getExternalStoragePath(this);
+            if(interStoragePath.length() > 0){
+                if(DebugConfig.DEBUG){
+                    Log.i(TAG, "---> internal storage path = " + interStoragePath);
+                }
+            } else {
+                interStoragePath = Environment.getExternalStorageDirectory().getPath();
+                if(DebugConfig.DEBUG){
+                    Log.i(TAG, "---> internal storage do not exist, get default path = " + interStoragePath);    
+                }
+            }
+            return FileUtils.getAvailableSize(interStoragePath);
+        }
     }
 }

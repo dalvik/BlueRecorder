@@ -8,7 +8,8 @@
     <string name="recording">正在錄音</string>
     <string name="recording_stopped">停止</string>
     <string name="recording_paused">暫停</string>
-    <string name="storage_is_full">儲存空間已滿</string>
+    <string name="internal_storage_is_full">話機卡存储空间已满</string>
+    <string name="external_storage_is_full">SD卡存储空间已满</string>
     <string name="max_length_reached">已達到長度上限</string>
     <string name="insert_sd_card">Please insert SD card firstly or change memory location to phone.</string>
     <string name="min_available">還剩約 %d 分鐘</string>
@@ -57,7 +58,7 @@
     <string name="record_rename">請輸入錄音新名稱:</string>
     <string name="storage_setting">儲存位置</string>
     <string name="storage_setting_sdcard_item">SD卡</string>
-    <string name="storage_setting_Local_item">話機</string>
+    <string name="storage_setting_local_item">話機</string>
     <string name="format_setting">文件類型</string>
     <string name="setting_setting">设置</string>
     <string name="format_setting_3GPP_item">3GPP</string>

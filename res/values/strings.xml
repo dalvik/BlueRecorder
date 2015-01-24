@@ -8,7 +8,8 @@
     <string name="recording">Record</string>
     <string name="recording_stopped">Stop</string>
     <string name="recording_paused">Pause</string>
-    <string name="storage_is_full">Storage is full</string>
+    <string name="internal_storage_is_full">Phone storage is full</string>
+    <string name="external_storage_is_full">SD card storage is full</string>
     <string name="max_length_reached">Maximum length reached</string>
     <string name="insert_sd_card">Please insert SD card firstly or change memory location to phone.</string>
     <string name="min_available">%d min available</string>
@@ -57,7 +58,7 @@
     <string name="record_rename">Please input new record name:</string>
     <string name="storage_setting">Memory location</string>
     <string name="storage_setting_sdcard_item">SD card</string>
-    <string name="storage_setting_Local_item">Phone</string>
+    <string name="storage_setting_local_item">Phone</string>
     <string name="format_setting">File type</string>
     <string name="setting_setting">Settings</string>
     <string name="format_setting_3GPP_item">3GPP</string>

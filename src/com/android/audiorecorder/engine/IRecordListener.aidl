@@ -26,4 +26,6 @@ interface IRecordListener {
 	int getMode();
 	
 	void adjustStreamVolume(int streamType, int direct, int flag);
+	
+	long checkDiskCapacity();
 }	

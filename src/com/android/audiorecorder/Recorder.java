@@ -21,7 +21,6 @@ public class Recorder implements MediaPlayer.OnCompletionListener,
     static final String SAMPLE_PATH_KEY = "sample_path";
     static final String SAMPLE_PREFIX = "Recording_";
     public static final int SDCARD_ACCESS_ERROR = 1;
-    private static String Storage_path = SoundRecorder.STORAGE_PATH_LOCAL_PHONE;
     private static int Storage_setting = 1;
     private String TAG = "Recorder";
     OnStateChangedListener mOnStateChangedListener = null;

@@ -35,12 +35,10 @@ import com.android.audiorecorder.engine.AudioService;
 import com.android.audiorecorder.engine.IRecordListener;
 import com.android.audiorecorder.engine.IStateListener;
 import com.android.audiorecorder.engine.UpdateManager;
-import com.android.audiorecorder.utils.FileUtils;
 import com.baidu.mobstat.StatService;
 
 public class SoundRecorder extends SherlockActivity implements View.OnClickListener {
     
-    public final static int MIX_STORAGE_CAPACITY = 500;//MB
     public final static int MSG_RECORDER_UPDATE_UI = 10;
 
     static final String ANY_ANY = "*/*";
@@ -55,30 +53,20 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     public static float PIXEL_DENSITY = 0.0F;
     public static final String PREFERENCE_TAG_FILE_TYPE = "filetype";
     public static final String PREFERENCE_TAG_STORAGE_LOCATION = "storagepath";
-    private static final int Phone_Storage = 1;
-    private static final int Position_Setting = 0;
-    static final String RECORDER_STATE_KEY = "recorder_state";
     static final String SAMPLE_INTERRUPTED_KEY = "sample_interrupted";
     static final int SETTING_TYPE_FILE_TYPE = 1;
     static final int SETTING_TYPE_STORAGE_LOCATION = 0;
     static final String STATE_FILE_NAME = "soundrecorder.state";
-    public static final int STORAGE_LOCATION_SD_CARD = 0;
-    public static final int STORAGE_LOCATION_LOCAL_PHONE = 1;
-    static final String STORAGE_PATH_LOCAL_PHONE = null;
-    static final String STORAGE_PATH_SD_CARD = null;
+    public static final int STORAGE_LOCATION_LOCAL_PHONE = 0;
+    public static final int STORAGE_LOCATION_SD_CARD = 1;
     static final String TAG = "SoundRecorder";
-    private static final int TF_Storage = 0;
     static final boolean isCMCC = false;
     public static boolean mIsLandScape;
-    private boolean DEBUG = true;
     ImageView imageLeft;
     ImageView imageRight;
-    private boolean isPauseSupport = false;
-    private boolean isStop = true;
     ImageView mAnimImg;
     AnimationDrawable mAnimation;
     String mErrorUiMessage = null;
-    private int mFileType = 1;
     ImageClock mImageClock;
     ImageButton mListButton;
     long mMaxFileSize = 65535L;
@@ -236,14 +224,14 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         LayoutInflater localLayoutInflater = (LayoutInflater)localContextThemeWrapper.getSystemService(LAYOUT_INFLATER_SERVICE);
         if(type == 0){
             SettingAdapter adpater = new SettingAdapter(this, R.layout.setting_list_item, localLayoutInflater);
-            adpater.add(R.string.storage_setting_Local_item);
+            adpater.add(R.string.storage_setting_local_item);
             adpater.add(R.string.storage_setting_sdcard_item);
             AlertDialog.Builder localBuilder1 = new AlertDialog.Builder(this).setTitle(R.string.storage_setting);
             localAlertDialog = localBuilder1.setSingleChoiceItems(adpater, mPreferences.getInt(PREFERENCE_TAG_STORAGE_LOCATION, STORAGE_LOCATION_SD_CARD), new OnClickListener() {
                 
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    mPreferences.edit().putInt(PREFERENCE_TAG_STORAGE_LOCATION, which==0 ? STORAGE_LOCATION_SD_CARD : STORAGE_LOCATION_LOCAL_PHONE).commit();
+                    mPreferences.edit().putInt(PREFERENCE_TAG_STORAGE_LOCATION, which==1 ? STORAGE_LOCATION_SD_CARD : STORAGE_LOCATION_LOCAL_PHONE).commit();
                     localAlertDialog.dismiss();
                 }
             }).create();
@@ -324,22 +312,29 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     public void onClick(View paramView) {
         switch(paramView.getId()){
             case R.id.recordButton:
-                int storage = mPreferences.getInt(PREFERENCE_TAG_STORAGE_LOCATION, STORAGE_LOCATION_SD_CARD);
-                if(storage == STORAGE_LOCATION_LOCAL_PHONE){
-                    int availSize = FileUtils.getAvailableSize(Environment.getDataDirectory().getPath());
-                    if(availSize<MIX_STORAGE_CAPACITY){
-                        popToast(getString(R.string.storage_is_full));
-                        return;
-                    }
-                } else if(storage == STORAGE_LOCATION_SD_CARD){
-                    if(!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
-                        popToast(getString(R.string.insert_sd_card));
-                        return;
-                    }
-                    int availSize = FileUtils.getAvailableSize(Environment.getExternalStorageDirectory().getPath());
-                    if(availSize<MIX_STORAGE_CAPACITY){
-                        popToast(getString(R.string.storage_is_full));
-                        return;
+                if(iRecorderService != null){
+                    int storage = mPreferences.getInt(PREFERENCE_TAG_STORAGE_LOCATION, STORAGE_LOCATION_SD_CARD);
+                    try {
+                        if(storage == STORAGE_LOCATION_SD_CARD){
+                            if(!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
+                                popToast(getString(R.string.insert_sd_card));
+                                return;
+                            }
+                        }
+                        long availSize = iRecorderService.checkDiskCapacity();
+                        if(DebugConfig.DEBUG){
+                            Log.i(TAG, "---> type = " + storage + " availSize = " + availSize + " MB.");
+                        }
+                        if(availSize<AudioService.MIX_STORAGE_CAPACITY){
+                            if(storage == STORAGE_LOCATION_LOCAL_PHONE){
+                                popToast(getString(R.string.internal_storage_is_full));
+                            } else if(storage == STORAGE_LOCATION_SD_CARD) {
+                                popToast(getString(R.string.external_storage_is_full));
+                            }
+                            return;
+                        }
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
                     }
                 }
                 recordOperation();
@@ -356,15 +351,17 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     
     private void recordOperation(){
         try {
-            if(iRecorderService.getMode() == AudioService.LUNCH_MODE_CALL){
+            if(iRecorderService != null && iRecorderService.getMode() == AudioService.LUNCH_MODE_CALL){
                 popToast(getString(R.string.recoring_inCall));
                 return;
             }
-            if(iRecorderService.isRecorderStart()){
-                iRecorderService.stopRecord();
-                popToast(getString(R.string.record_saved));
-            } else {
-                iRecorderService.startRecord();
+            if(iRecorderService != null){
+                if(iRecorderService.isRecorderStart()){
+                    iRecorderService.stopRecord();
+                    popToast(getString(R.string.record_saved));
+                } else {
+                    iRecorderService.startRecord();
+                }
             }
         } catch (RemoteException e) {
             e.printStackTrace();
