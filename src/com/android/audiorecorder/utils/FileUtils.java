@@ -1,6 +1,7 @@
 package com.android.audiorecorder.utils;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.DecimalFormat;
 
 import android.content.Context;
@@ -66,7 +67,14 @@ public class FileUtils {
                 Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState()) ||
                         !isExternalStorageRemovable() ? getExternalCacheDir(context).getPath() :
                                 context.getCacheDir().getPath();
-
+        File nomedia = new File(cachePath, ".nomedia");
+        if(!nomedia.exists()){
+            try {
+                nomedia.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         return new File(cachePath + File.separator + uniqueName);
     }
     

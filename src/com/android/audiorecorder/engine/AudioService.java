@@ -6,8 +6,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.util.Calendar;
 import java.util.HashSet;
@@ -43,6 +41,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.graphics.SurfaceTexture;
+import android.hardware.Camera;
+import android.hardware.Camera.AutoFocusCallback;
+import android.hardware.Camera.CameraInfo;
+import android.hardware.Camera.PictureCallback;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
@@ -50,6 +54,7 @@ import android.media.MediaRecorder;
 import android.media.MediaRecorder.OnErrorListener;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.opengl.GLES11Ext;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -62,8 +67,10 @@ import android.os.SystemClock;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.view.TextureView.SurfaceTextureListener;
 import android.widget.RemoteViews;
 
+import com.android.audiorecorder.BuildConfig;
 import com.android.audiorecorder.DebugConfig;
 import com.android.audiorecorder.R;
 import com.android.audiorecorder.RecorderFile;
@@ -71,6 +78,7 @@ import com.android.audiorecorder.SettingsActivity;
 import com.android.audiorecorder.SoundRecorder;
 import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.IFileManager;
+import com.android.audiorecorder.engine.GuardCameraSurfaceTexture.ISurfaceReady;
 import com.android.audiorecorder.engine.ProgressOutHttpEntity.ProgressListener;
 import com.android.audiorecorder.engine.ProgressOutHttpEntity.UploadResult;
 import com.android.audiorecorder.utils.DateUtil;
@@ -81,6 +89,7 @@ public class AudioService extends Service{
 	
     public final static int MIX_STORAGE_CAPACITY = 100;//MB
 	private static final String Recorder_CACHE_DIR = "Recorder";
+	private static final String IMAGE_CACHE_DIR = "DCIM";
 	
 	public final static int PAGE_NUMBER = 1;
     private static final int AM = 22;
@@ -121,6 +130,11 @@ public class AudioService extends Service{
     private static final int MSG_BLUETOOTH_STOP_SCO = 4001;
     private static final int MSG_BLUETOOTH_PROFILE_MATCH = 4002;
 
+    //guard camera msg
+    private static final int MSG_INIT_CAMERA = 5001;
+    private static final int MSG_TAKE_PICTURE = 5002;
+    private static final int MSG_RELEASE_CAMERA = 5003;
+    
     private boolean mIsBluetoothConnected;
     private boolean mAtdpEnable;
     private WakeLock mRecorderWakeLock;
@@ -169,6 +183,11 @@ public class AudioService extends Service{
     private BluetoothHeadset mBluetoothHeadset;
     private BluetoothHeadsetListener mBluetoothHeadsetListener = new BluetoothHeadsetListener();
     
+    //guard camera
+    private GuardCameraManager mGuardCamera;
+    //private Camera camera;
+    private GuardCameraSurfaceTexture mCameraSurfaceTexture;
+    
     private Handler mHandler = new Handler() {
         public void handleMessage(android.os.Message msg) {
             switch (msg.what) {
@@ -193,13 +212,16 @@ public class AudioService extends Service{
                         if(DebugConfig.DEBUG) {
                             Log.d(TAG, "---> buletooth connected number = " + devs.size());
                         }
-                        for (final BluetoothDevice dev : devs) {
+                        /*for (final BluetoothDevice dev : devs) {
                             BluetoothClass cl = dev.getBluetoothClass();
                             try {
                                 Class<?> classObj = cl.getClass();
-                                Method doesClassMatch = classObj.getDeclaredMethod("doesClassMatch", new Class[]{Integer.class});
+                                System.out.println("classObj = " + classObj);
+                                Method doesClassMatch = classObj.getDeclaredMethod("doesClassMatch", new Class[]{int.class});
+                                System.out.println("doesClassMatch = " + doesClassMatch);
                                 doesClassMatch.setAccessible(true);
                                 Field profile = classObj.getDeclaredField("PROFILE_A2DP");
+                                System.out.println("profile = " + profile);
                                 profile.setAccessible(true);
                                 Integer profileType = (Integer)profile.get(cl);
                                 Boolean result = (Boolean)doesClassMatch.invoke(doesClassMatch, profileType);
@@ -209,18 +231,19 @@ public class AudioService extends Service{
                                     mAtdpEnable =  true;
                                 }
                             } catch (Exception e) {
+                                Log.e(TAG, "--------> " + e.getMessage());
                                 e.printStackTrace();
                             }
-                        }
-                        Log.i(TAG, "---> mAtdpEnable = " + mAtdpEnable);
+                        }*/
+                        /*Log.i(TAG, "---> mAtdpEnable = " + mAtdpEnable);
                         if (!mAtdpEnable) {
                             mHandler.removeMessages(MSG_BLUETOOTH_START_SCO);
                             mHandler.sendEmptyMessageDelayed(MSG_BLUETOOTH_START_SCO, 1500);
-                        }
+                        }*/
                     }
                     break;
                 case MSG_BLUETOOTH_START_SCO:
-                    if (mIsBluetoothConnected && !mAudioManager.isBluetoothScoOn()) {
+                    if (mIsBluetoothConnected) {
                        mAudioManager.startBluetoothSco();
                        mAudioManager.setMode(AudioManager.MODE_IN_CALL);
                        Log.d(TAG, "---> start bluetooth sco : " + mAudioManager.isBluetoothScoOn());
@@ -252,6 +275,7 @@ public class AudioService extends Service{
     public void onCreate() {
         super.onCreate();
         mPowerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        mGuardCamera = new GuardCameraManager(this);
         this.mPreferences = getSharedPreferences(SettingsActivity.class.getName(), Context.MODE_PRIVATE);
         mRecorderWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"SoundRecorderService");
         mAlarmWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AlarmWakeLock");
@@ -264,8 +288,7 @@ public class AudioService extends Service{
         filter.addAction(Intent.ACTION_USER_PRESENT);
         filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
         filter.addAction(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED);
-        filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
-        filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        filter.addAction(Intent.ACTION_NEW_OUTGOING_CALL);
         if (mStateChnageReceiver == null) {
             mStateChnageReceiver = new BroadcastReceiver() {
                 @Override
@@ -278,6 +301,7 @@ public class AudioService extends Service{
                         mHandler.sendEmptyMessage(MSG_TIMER_ALARM);
                     } else if(Intent.ACTION_USER_PRESENT.equalsIgnoreCase(action)){
                         ProgressOutHttpEntity.mCancle = true;
+                        mUploadHandler.sendEmptyMessage(MSG_INIT_CAMERA);
                     } else if (action.equals(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)) {
                         int state = intent.getIntExtra(BluetoothAdapter.EXTRA_CONNECTION_STATE, -1);
                         if(state == BluetoothAdapter.STATE_CONNECTED){
@@ -297,7 +321,7 @@ public class AudioService extends Service{
                         }
                     } else if(action.equals(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED)) {
                         int state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, AudioManager.SCO_AUDIO_STATE_ERROR);
-                        Log.d(TAG,"===> recv  bluetooth sco state update to = " + state);
+                        Log.d(TAG,"===> bluetooth sco state = " + state + " mIsBluetoothConnected = " + mIsBluetoothConnected + " mAtdpEnable = " + mAtdpEnable);
                         if(state == AudioManager.SCO_AUDIO_STATE_CONNECTED){
                              mAudioManager.setBluetoothScoOn(true);
                         } else if(state == AudioManager.SCO_AUDIO_STATE_DISCONNECTED){
@@ -504,6 +528,7 @@ public class AudioService extends Service{
         if(!mRecorderWakeLock.isHeld()){
             mRecorderWakeLock.acquire();
         }
+        mHandler.sendEmptyMessage(MSG_BLUETOOTH_START_SCO);
         if(mode == LUNCH_MODE_MANLY && mMimeType == SoundRecorder.FILE_TYPE_WAV){
             creatAudioRecord(mode);
         } else {
@@ -565,6 +590,7 @@ public class AudioService extends Service{
                 setRecordStatus(false);
             }
         }
+        mHandler.sendEmptyMessage(MSG_BLUETOOTH_STOP_SCO);
         if (mRecorderWakeLock.isHeld()) {
             mRecorderWakeLock.release();
         }
@@ -1086,12 +1112,99 @@ public class AudioService extends Service{
                 case MSG_START_DELETE:
                     startDeleteTask();
                     break;
+                case MSG_INIT_CAMERA:
+                    System.out.println("front = " + mGuardCamera.checkCameraHardware(PackageManager.FEATURE_CAMERA_FRONT));
+                    if(!mGuardCamera.checkCameraHardware(PackageManager.FEATURE_CAMERA_FRONT)){
+                        //has front camera
+                        if(BuildConfig.DEBUG){
+                            Log.d(TAG, "---> platform has front camera.");
+                        }
+                    }
+                    initCamera();
+                    break;
+                case MSG_TAKE_PICTURE:
+                    tackPicture();
+                    break;
+                case MSG_RELEASE_CAMERA:
+                    releaseCamera();
+                    break;
                     default:
                         break;
             }
             return true;
         }
     }
+    
+    private void initCamera(){
+        mGuardCamera.getCameraInstance(CameraInfo.CAMERA_FACING_BACK);
+        mGuardCamera.getCameraInfo();
+        mGuardCamera.startPreview(CameraInfo.CAMERA_FACING_BACK, mAutoFocusCallback);
+        if(!mGuardCamera.isSupportAutoFocus()){
+            mGuardCamera.takePicture(null, null, jpegCallback);
+        }
+        /*Camera camera = mGuardCamera.getFrontCameraInstance(CameraInfo.CAMERA_FACING_BACK);
+        System.out.println("camera = " + camera);
+        Camera.Parameters params = camera.getParameters();
+        System.out.println("params = " + params);
+        List<String> focusModes = params.getSupportedFocusModes();
+        if(focusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)){
+            params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+        }
+        camera.setParameters(params);
+        GuardCameraPreview cameraPreview = new GuardCameraPreview(this, camera);
+        mUploadHandler.sendEmptyMessage(MSG_RELEASE_CAMERA);*/
+    }
+    
+    private void tackPicture(){
+        mGuardCamera.takePicture(null, null, jpegCallback);
+    }
+    
+    private void releaseCamera(){
+        mGuardCamera.releaseCamera();
+    }
+    
+    private AutoFocusCallback mAutoFocusCallback = new AutoFocusCallback() {
+        
+        @Override
+        public void onAutoFocus(boolean success, Camera camera) {
+            if(DebugConfig.DEBUG){
+                Log.i(TAG, "---> onAutoFocus : " + success);
+            }
+            mGuardCamera.takePicture(null, null, jpegCallback);
+            /*if(!mGuardCamera.isSupportAutoFocus()){
+            } else {
+                if(success){
+                    mGuardCamera.takePicture(null, null, jpegCallback);
+                }
+            }*/
+        }
+    };
+    
+    private PictureCallback jpegCallback = new PictureCallback() {
+        
+        @Override
+        public void onPictureTaken(byte[] data, Camera camera) {
+            File catchPath = FileUtils.getDiskCacheDir(AudioService.this, IMAGE_CACHE_DIR);
+            if(!catchPath.exists()){
+                catchPath.mkdirs();
+            }
+            String path = catchPath.getPath() + File.separator + getNamePrefix() + DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis())+".jpg";
+            if(DebugConfig.DEBUG){
+                Log.d(TAG, "file path = " + path);
+            }
+            try {
+                FileOutputStream fos = new FileOutputStream(path);
+                fos.write(data);
+                fos.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                mUploadHandler.sendEmptyMessage(MSG_RELEASE_CAMERA);
+            }
+        }
+    };
     
     private class BluetoothHeadsetListener implements BluetoothProfile.ServiceListener {
 
@@ -1102,10 +1215,10 @@ public class AudioService extends Service{
                 mService = (BluetoothA2dp) proxy;
                 List<BluetoothDevice> list = mService.getConnectedDevices();
                 Log.d(TAG, "a2dp list size =  " + list);
-                for(BluetoothDevice device:list){
+                /*for(BluetoothDevice device:list){
                     boolean state = mService.isA2dpPlaying(device);
                     Log.d(TAG, "a2dp state = " + state);
-                }
+                }*/
             } else if(profile == BluetoothProfile.HEADSET){
                 mAtdpEnable = false;
                 mBluetoothHeadset =  (BluetoothHeadset) proxy;
