@@ -1,14 +1,12 @@
 package com.android.audiorecorder.dao;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 import android.content.Context;
 
 import com.android.audiorecorder.RecorderFile;
 
-public class FileManagerImp implements IFileManager {
+public class FileManagerImp extends MediaFileManager {
 
     private DBHelper dbHelper;
     
@@ -17,48 +15,12 @@ public class FileManagerImp implements IFileManager {
     }
     
     @Override
-    public void createDiretory(String directory) {
-        File file = new File(directory);
-        if(!file.exists()){
-            file.mkdirs();
-        }
-    }
-    
-    @Override
-    public boolean isExists(String path) {
-        File file = new File(path);
-        return file.exists();
-    }
-    
-    @Override
-    public boolean createFile(String path) {
-        File file = new File(path);
-        if(!file.exists()){
-            try {
-                return file.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return false;
-    }
-    
-    @Override
-    public boolean removeFile(String path) {
-        File file = new File(path);
-        if(file.exists()){
-            return file.delete();
-        }
-        return true;
-    }
-    
-    @Override
-    public void delete(long id) {
+    public void delete(int mimeType, long id) {
         dbHelper.delete(id);
     }
     
     @Override
-    public int getFileCount(int type) {
+    public int getFileCount(int mimeType, int type) {
         return dbHelper.getCount(type);
     }
     
@@ -68,22 +30,22 @@ public class FileManagerImp implements IFileManager {
     }
     
     @Override
-    public List<RecorderFile> queryAllFileList(int page, int pageNumber) {
+    public List<RecorderFile> queryAllFileList(int mimeType, int page, int pageNumber) {
         return dbHelper.queryAllFileList(page, pageNumber);
     }
     
     @Override
-    public List<RecorderFile> queryPrivateFileList(int page, int pageNumber) {
+    public List<RecorderFile> queryPrivateFileList(int mimeType, int page, int pageNumber) {
         return dbHelper.queryPrivateFileList(page, pageNumber);
     }
     
     @Override
-    public List<RecorderFile> queryPublicFileList(int page, int pageNumber) {
+    public List<RecorderFile> queryPublicFileList(int mimeType, int page, int pageNumber) {
         return dbHelper.queryPublicFileList(page, pageNumber);
     }
     
     @Override
-    public void updateUpLoadProgress(long progress, long id) {
+    public void updateUpLoadProgress(int mimeType, long progress, long id) {
         dbHelper.updateUpLoadProgress(progress, id);
     }
 

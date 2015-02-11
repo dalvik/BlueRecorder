@@ -76,6 +76,10 @@
 			</intent-filter>
 	   </receiver>
 	   
+        <provider android:name="com.android.audiorecorder.engine.MediaProvider" 
+            android:authorities="com.android.audiorecorder.engine.MediaProvider"
+            android:multiprocess="false" />
+        
         <meta-data android:name="BaiduMobAd_STAT_ID" android:value="f07b389c5c" /> <!-- abcd1234 -->
 		<!-- 渠道商编号 -->
 		<meta-data android:name="BaiduMobAd_CHANNEL" android:value="baidu_market" />

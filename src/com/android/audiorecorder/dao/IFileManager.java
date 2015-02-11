@@ -4,19 +4,14 @@ import java.util.List;
 
 import com.android.audiorecorder.RecorderFile;
 
-public interface IFileManager {
+public interface IFileManager{
     
-    public void createDiretory(String directory);
-    public boolean createFile(String path);
-    public boolean isExists(String path);
-    public boolean removeFile(String path);
-
     public void insertRecorderFile(RecorderFile file);
-    public List<RecorderFile> queryAllFileList(int page, int pageNumber);
-    public List<RecorderFile> queryPublicFileList(int page, int pageNumber);
-    public List<RecorderFile> queryPrivateFileList(int page, int pageNumber);
-    public int getFileCount(int type);//-1 all
+    public List<RecorderFile> queryAllFileList(int mimeType, int page, int pageNumber);
+    public List<RecorderFile> queryPublicFileList(int mimeType, int page, int pageNumber);
+    public List<RecorderFile> queryPrivateFileList(int mimeType, int page, int pageNumber);
+    public int getFileCount(int mimeType, int type);//mimeType : image audio video  -1 all;  lucher type manly tel auto -a all 
     
-    public void delete(long id);
-    public void updateUpLoadProgress(long progress, long id);
+    public void delete(int mimeType, long id);
+    public void updateUpLoadProgress(int mimeType, long progress, long id);
 }

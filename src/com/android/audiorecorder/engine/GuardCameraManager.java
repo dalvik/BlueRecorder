@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.List;
 
 import android.content.Context;
+import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
@@ -11,6 +13,8 @@ import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.ShutterCallback;
 import android.hardware.Camera.Size;
+import android.view.Display;
+import android.view.WindowManager;
 
 public class GuardCameraManager {
 
@@ -66,6 +70,13 @@ public class GuardCameraManager {
         if(modes.contains(Camera.Parameters.FOCUS_MODE_AUTO)){
             params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
             mIsSupportAutoFocus = true;
+        }
+        Resources res = mContext.getResources();
+        System.out.println(res.getConfiguration().orientation+"---------->");
+        if(res.getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT){
+            params.set("rotation", 270);
+        }else{
+            params.set("rotation", -90);
         }
         if(isSupport(params, ImageFormat.JPEG)){
             params.setPictureFormat(ImageFormat.JPEG);
@@ -147,4 +158,5 @@ public class GuardCameraManager {
         }
         return false;
     }
+    
 }

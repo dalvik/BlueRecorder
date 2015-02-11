@@ -2,15 +2,24 @@ package com.android.audiorecorder;
 
 public class RecorderFile {
 
+    public final static int MEDIA_TYPE_IMAGE = 0;
+    public final static int MEDIA_TYPE_VIDEO = 1;
+    public final static int MEDIA_TYPE_AUDIO = 2;
+    
     private int id;
     private String path;
     private String name;
     private long size;
     private int duration;
     private String mimeType;
-    private int type;
+    private int launchType;
     private long time;
     private long progress;
+    
+    private int mediaType;//jpg video audio
+    private int width;//resolution w
+    private int height;//resolution h
+    private String summary;
     
     public RecorderFile() {
         super();
@@ -64,12 +73,12 @@ public class RecorderFile {
         this.mimeType = mimeType;
     }
 
-    public int getType() {
-        return type;
+    public int getLaunchType() {
+        return launchType;
     }
 
-    public void setType(int type) {
-        this.type = type;
+    public void setLaunchType(int launchType) {
+        this.launchType = launchType;
     }
 
     public long getTime() {
@@ -87,6 +96,47 @@ public class RecorderFile {
     public void setProgress(long progress) {
         this.progress = progress;
     }
-    
+
+    public int getMediaType() {
+        return mediaType;
+    }
+
+    public void setMediaType(int mediaType) {
+        this.mediaType = mediaType;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    public String getSummary() {
+        return summary;
+    }
+
+    public void setSummary(String summary) {
+        this.summary = summary;
+    }
+
+    @Override
+    public String toString() {
+        return "RecorderFile [id=" + id + ", path=" + path + ", name=" + name
+                + ", size=" + size + ", duration=" + duration + ", mimeType="
+                + mimeType + ", launchType=" + launchType + ", time=" + time
+                + ", progress=" + progress + ", mediaType=" + mediaType
+                + ", width=" + width + ", height=" + height + ", summary="
+                + summary + "]";
+    }
     
 }

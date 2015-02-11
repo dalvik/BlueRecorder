@@ -41,7 +41,7 @@ public class DBHelper implements BaseColumns{
         contentValues.put(DBHelper.FILE_COLUMN_LENGTH, file.getSize());
         contentValues.put(DBHelper.FILE_COLUMN_DURATION, file.getDuration());
         contentValues.put(DBHelper.FILE_COLUMN_MIME_TYPE, file.getMimeType());
-        contentValues.put(DBHelper.FILE_COLUMN_TYPE, file.getType());
+        contentValues.put(DBHelper.FILE_COLUMN_TYPE, file.getLaunchType());
         contentValues.put(DBHelper.FILE_COLUMN_TIME, file.getTime());
         contentValues.put(DBHelper.FILE_COLUMN_PROGRESS, 0);
         contentValues.put(DBHelper.FILE_COLUMN_BACKUP, 0);
@@ -79,7 +79,7 @@ public class DBHelper implements BaseColumns{
                 file.setSize(cursor.getInt(index++));
                 file.setDuration(cursor.getInt(index++));
                 file.setMimeType(cursor.getString(index++));
-                file.setType(cursor.getInt(index++));
+                file.setLaunchType(cursor.getInt(index++));
                 file.setTime(cursor.getLong(index++));
                 file.setProgress(cursor.getInt(index++));
                 File f = new File(path);
@@ -114,7 +114,7 @@ public class DBHelper implements BaseColumns{
                 file.setSize(cursor.getInt(index++));
                 file.setDuration(cursor.getInt(index++));
                 file.setMimeType(cursor.getString(index++));
-                file.setType(cursor.getInt(index++));
+                file.setLaunchType(cursor.getInt(index++));
                 file.setTime(cursor.getLong(index++));
                 file.setProgress(cursor.getInt(index++));
                 File f = new File(file.getPath());
@@ -149,7 +149,7 @@ public class DBHelper implements BaseColumns{
                 file.setSize(cursor.getInt(index++));
                 file.setDuration(cursor.getInt(index++));
                 file.setMimeType(cursor.getString(index++));
-                file.setType(cursor.getInt(index++));
+                file.setLaunchType(cursor.getInt(index++));
                 file.setTime(cursor.getLong(index++));
                 file.setProgress(cursor.getInt(index++));
                 File f = new File(file.getPath());

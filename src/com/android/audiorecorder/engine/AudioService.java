@@ -42,7 +42,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.CameraInfo;
@@ -54,7 +53,6 @@ import android.media.MediaRecorder;
 import android.media.MediaRecorder.OnErrorListener;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
-import android.opengl.GLES11Ext;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -67,7 +65,8 @@ import android.os.SystemClock;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
-import android.view.TextureView.SurfaceTextureListener;
+import android.view.Display;
+import android.view.WindowManager;
 import android.widget.RemoteViews;
 
 import com.android.audiorecorder.BuildConfig;
@@ -76,9 +75,8 @@ import com.android.audiorecorder.R;
 import com.android.audiorecorder.RecorderFile;
 import com.android.audiorecorder.SettingsActivity;
 import com.android.audiorecorder.SoundRecorder;
+import com.android.audiorecorder.dao.MediaFileManager;
 import com.android.audiorecorder.dao.FileManagerFactory;
-import com.android.audiorecorder.dao.IFileManager;
-import com.android.audiorecorder.engine.GuardCameraSurfaceTexture.ISurfaceReady;
 import com.android.audiorecorder.engine.ProgressOutHttpEntity.ProgressListener;
 import com.android.audiorecorder.engine.ProgressOutHttpEntity.UploadResult;
 import com.android.audiorecorder.utils.DateUtil;
@@ -148,6 +146,7 @@ public class AudioService extends Service{
 
     private AudioManager mAudioManager;
     private PowerManager mPowerManager;
+    private int mRingerMode;
 
     private boolean mRecorderStart;
     private boolean mTalkStart;
@@ -161,7 +160,7 @@ public class AudioService extends Service{
     private int CUSTOM_VIEW_ID = R.layout.recorder_notification;
     private StringBuffer timerInfo = new StringBuffer();
     
-    private IFileManager fileManager;
+    private MediaFileManager fileManager;
     private String mRecoderPath;
     private long mStartTime;
     private int mMimeType;
@@ -373,7 +372,7 @@ public class AudioService extends Service{
             };
             telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
         }
-        fileManager = FileManagerFactory.getSmsManagerInstance(this);
+        fileManager = FileManagerFactory.getFileManagerInstance(this);
         mTimeSchedule = new TimeSchedule(this);
         mTimeSchedule.start();
         mUploadHandlerCallback = new UploadHandlerCallback();
@@ -545,14 +544,13 @@ public class AudioService extends Service{
             mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
             mMediaRecorder.setAudioSamplingRate(8000);
             mMediaRecorder.setOutputFile(mRecoderPath);
+            mStartTime = System.currentTimeMillis();
             try {
                 mMediaRecorder.prepare();
                 mMediaRecorder.start();
                 if(mode == LUNCH_MODE_MANLY){
                     setRecordStatus(true);
                     notifyUpdate(MSG_START_RECORD);
-                }else{
-                    mStartTime = System.currentTimeMillis();
                 }
                 mCurMode = mode;
                 Log.i(TAG, "---> startRecorder mCurMode = " + mCurMode);
@@ -579,7 +577,8 @@ public class AudioService extends Service{
                 file.setDuration((int) ((SystemClock.uptimeMillis() - mRecorderTime) / 1000));
                 file.setPath(mRecoderPath);
                 file.setTime(mStartTime);
-                file.setType(mode);
+                file.setLaunchType(mode);
+                file.setMediaType(RecorderFile.MEDIA_TYPE_AUDIO);
                 File f = new File(mRecoderPath);
                 if(f.exists()){
                     file.setSize(f.length());
@@ -797,13 +796,13 @@ public class AudioService extends Service{
     }
     
     private void startUploadTask(){
-    	List<RecorderFile> list = fileManager.queryPrivateFileList(0, PAGE_NUMBER);
+    	List<RecorderFile> list = fileManager.queryPrivateFileList(RecorderFile.MEDIA_TYPE_AUDIO, 0, PAGE_NUMBER);
 		if(list.size()>0){
 			RecorderFile file = list.get(0);
 			if(!mUploadWakeLock.isHeld()){
 				mUploadWakeLock.acquire();
 			}
-			initUploadFile(file.getId(), file.getPath(), file.getType());
+			initUploadFile(file.getId(), file.getPath(), file.getLaunchType());
 		}else{
 			if(mUploadWakeLock.isHeld()){
 				mUploadWakeLock.release();
@@ -815,7 +814,7 @@ public class AudioService extends Service{
     }
     
     private void startDeleteTask(){
-        List<RecorderFile> list = fileManager.queryPrivateFileList(0, PAGE_NUMBER);
+        List<RecorderFile> list = fileManager.queryPrivateFileList(RecorderFile.MEDIA_TYPE_AUDIO, 0, PAGE_NUMBER);
         if(list.size()>0){
         	if(DebugConfig.DEBUG){
 				Log.i(TAG, "---> startDeleteTask  = " + mPowerManager.isScreenOn() + "  wifi state = " + NetworkUtil.isWifiDataEnable(this));
@@ -825,9 +824,9 @@ public class AudioService extends Service{
                 mUploadHandler.sendEmptyMessage(MSG_START_UPLOAD);
             } else {
                 RecorderFile file = list.get(0);
-                if(file.getType() == LUNCH_MODE_AUTO){
+                if(file.getLaunchType() == LUNCH_MODE_AUTO){
                 	if(fileManager.removeFile(file.getPath())){
-                		fileManager.delete(file.getId());
+                		fileManager.delete(RecorderFile.MEDIA_TYPE_AUDIO, file.getId());
                 	}
                 }
                 mUploadHandler.removeMessages(MSG_START_DELETE);
@@ -878,7 +877,7 @@ public class AudioService extends Service{
         		File f = new File(path);
         		f.delete();
         	}
-            fileManager.delete(id);
+            fileManager.delete(RecorderFile.MEDIA_TYPE_AUDIO, id);
             if(DebugConfig.DEBUG){
                 Log.i(TAG, "upload success. path = " + path);
             }
@@ -1039,7 +1038,8 @@ public class AudioService extends Service{
             file.setDuration((int) ((SystemClock.uptimeMillis() - mRecorderTime) / 1000));
             file.setPath(mRecoderPath);
             file.setTime(mStartTime);
-            file.setType(mode);
+            file.setLaunchType(mode);
+            file.setMediaType(RecorderFile.MEDIA_TYPE_AUDIO);
             file.setSize(totalDataLen);
             file.setMimeType("wav");
             fileManager.insertRecorderFile(file);
@@ -1139,20 +1139,16 @@ public class AudioService extends Service{
         mGuardCamera.getCameraInstance(CameraInfo.CAMERA_FACING_BACK);
         mGuardCamera.getCameraInfo();
         mGuardCamera.startPreview(CameraInfo.CAMERA_FACING_BACK, mAutoFocusCallback);
+        mRingerMode = mAudioManager.getRingerMode();
+        Display display = ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
+        System.out.println("orientation = " + display.getRotation());
+        if(BuildConfig.DEBUG){
+            Log.i(TAG, "---> mRingerMode = " + mRingerMode);
+        }
+        mAudioManager.setRingerMode(AudioManager.MODE_IN_CALL);
         if(!mGuardCamera.isSupportAutoFocus()){
             mGuardCamera.takePicture(null, null, jpegCallback);
         }
-        /*Camera camera = mGuardCamera.getFrontCameraInstance(CameraInfo.CAMERA_FACING_BACK);
-        System.out.println("camera = " + camera);
-        Camera.Parameters params = camera.getParameters();
-        System.out.println("params = " + params);
-        List<String> focusModes = params.getSupportedFocusModes();
-        if(focusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)){
-            params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
-        }
-        camera.setParameters(params);
-        GuardCameraPreview cameraPreview = new GuardCameraPreview(this, camera);
-        mUploadHandler.sendEmptyMessage(MSG_RELEASE_CAMERA);*/
     }
     
     private void tackPicture(){
@@ -1196,12 +1192,22 @@ public class AudioService extends Service{
                 FileOutputStream fos = new FileOutputStream(path);
                 fos.write(data);
                 fos.close();
+                RecorderFile file = new RecorderFile();
+                file.setDuration(0);
+                file.setPath(path);
+                file.setTime(System.currentTimeMillis());
+                file.setLaunchType(LUNCH_MODE_AUTO);
+                file.setMediaType(RecorderFile.MEDIA_TYPE_IMAGE);
+                file.setSize(data.length);
+                file.setMimeType("jpg");
+                fileManager.insertRecorderFile(file);
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
                 mUploadHandler.sendEmptyMessage(MSG_RELEASE_CAMERA);
+                mAudioManager.setRingerMode(mRingerMode);
             }
         }
     };

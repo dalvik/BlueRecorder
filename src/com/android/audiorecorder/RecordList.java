@@ -44,8 +44,8 @@ import com.android.audiorecorder.audio.IMediaPlaybackService;
 import com.android.audiorecorder.audio.MediaPlaybackService;
 import com.android.audiorecorder.audio.MusicUtils;
 import com.android.audiorecorder.audio.MusicUtils.ServiceToken;
+import com.android.audiorecorder.dao.MediaFileManager;
 import com.android.audiorecorder.dao.FileManagerFactory;
-import com.android.audiorecorder.dao.IFileManager;
 import com.android.audiorecorder.engine.AudioService;
 import com.android.audiorecorder.utils.FileUtils;
 import com.android.audiorecorder.utils.StringUtil;
@@ -112,7 +112,7 @@ public class RecordList extends SherlockListActivity implements
     
     //end audo play
     
-    private IFileManager mFileManager;
+    private MediaFileManager mFileManager;
     
     private Handler mHandler = new Handler(){
         public void handleMessage(android.os.Message msg) {
@@ -132,7 +132,7 @@ public class RecordList extends SherlockListActivity implements
                     break;
                 case MSG_LOAD_SMSLIST:
                 	int page = msg.arg1;
-                	List<RecorderFile> list = DebugConfig.DEBUG ? mFileManager.queryAllFileList(page, PAGE_NUMBER) : mFileManager.queryPublicFileList(page, PAGE_NUMBER);
+                	List<RecorderFile> list = DebugConfig.DEBUG ? mFileManager.queryAllFileList(RecorderFile.MEDIA_TYPE_AUDIO, page, PAGE_NUMBER) : mFileManager.queryPublicFileList(RecorderFile.MEDIA_TYPE_AUDIO, page, PAGE_NUMBER);
                 	int len = list.size();
                 	Log.i(TAG, "---> load " + page + " page. number = " + len);
                     if(len==PAGE_NUMBER) {
@@ -177,7 +177,7 @@ public class RecordList extends SherlockListActivity implements
             seeker.setOnSeekBarChangeListener(mSeekListener);
         }
         this.mProgress.setMax(1000);
-        mFileManager = FileManagerFactory.getSmsManagerInstance(this);
+        mFileManager = FileManagerFactory.getFileManagerInstance(this);
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             Drawable localDrawable = getResources().getDrawable(R.drawable.title_background);
@@ -249,7 +249,7 @@ public class RecordList extends SherlockListActivity implements
           this.mIndicator.setVisibility(View.GONE);
       } else {
           this.mIndicator.setVisibility(View.VISIBLE);
-          int count = mFileManager.getFileCount(DebugConfig.DEBUG ? -1 : AudioService.LUNCH_MODE_MANLY);
+          int count = mFileManager.getFileCount(RecorderFile.MEDIA_TYPE_AUDIO, DebugConfig.DEBUG ? -1 : AudioService.LUNCH_MODE_MANLY);
           this.mIndicator.setText(getResources().getQuantityString(R.plurals.NNNtrackscount, count, count));
       }
     }
@@ -371,7 +371,7 @@ public class RecordList extends SherlockListActivity implements
             }
             RecorderFile file = mFileList.get(position);
             mFileManager.removeFile(file.getPath());
-            mFileManager.delete(file.getId());
+            mFileManager.delete(RecorderFile.MEDIA_TYPE_AUDIO, file.getId());
             mFileList.remove(position);
             if(playPositoin == position){
                 mAdapter.setPlayId(-1, PAUSE);
