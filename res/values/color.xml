@@ -99,4 +99,6 @@
     <drawable name="list_backgroud_normal">@color/white</drawable>
     <drawable name="transparent">@color/transparent</drawable>
     
+    <color name="thumb_cover_info">#45000000</color>
+    <color name="bg_pull_to_refresh_header">#22000000</color>
 </resources>

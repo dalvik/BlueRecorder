@@ -9,7 +9,7 @@ public class FileManagerFactory {
     
     private static MediaFileManager mMediaFileManager;
     
-    public static IFileManager getSmsManagerInstance(Context context){
+    public static IFileManager getFileManagerInstance(Context context){
         if(mFileManager == null) {
             mFileManager = new FileManagerImp(context);
         }
@@ -17,7 +17,7 @@ public class FileManagerFactory {
     }
     
     
-    public static MediaFileManager getFileManagerInstance(Context context){
+    public static MediaFileManager getMediaFileManagerInstance(Context context){
         if(mMediaFileManager == null) {
             mMediaFileManager = new MediaFileManagerImp(context);
         }

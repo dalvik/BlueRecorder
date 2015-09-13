@@ -45,9 +45,9 @@ import android.widget.Toast;
 
 import com.android.audiorecorder.DebugConfig;
 import com.android.audiorecorder.R;
-import com.android.audiorecorder.SettingsActivity;
 import com.android.audiorecorder.dao.UpdateInfo;
 import com.android.audiorecorder.myview.DownLoadProgressBar;
+import com.android.audiorecorder.ui.SettingsActivity;
 import com.android.audiorecorder.utils.NetworkUtil;
 import com.android.audiorecorder.utils.StringUtil;
 import com.drovik.utils.FileUtil;

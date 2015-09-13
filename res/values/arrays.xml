@@ -6,6 +6,10 @@
     </string-array>
     <string-array name="format_setting_array">
         <item>AMR</item>
-        <item>3GPP</item>
+        <item>mp3</item>
+    </string-array>
+    <string-array name="head_titles">
+	    <item>录音列表</item>
+	    <item>远程</item>
     </string-array>
 </resources>

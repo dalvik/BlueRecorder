@@ -16,12 +16,17 @@ public class UIHelper {
 	public final static int LISTVIEW_DATATYPE_CONTACT = 0x01;
 	public final static int LISTVIEW_DATATYPE_RECENT = 0x02;
 	
-	public final static int LISTVIEW_DATATYPE_OTHER = 0x03;
-	public final static int LISTVIEW_DATATYPE_TWEET = 0x04;
-	public final static int LISTVIEW_DATATYPE_ACTIVE = 0x05;
-	public final static int LISTVIEW_DATATYPE_MESSAGE = 0x06;
-	public final static int LISTVIEW_DATATYPE_COMMENT = 0x07;
 	
 	public final static int REQUEST_CODE_FOR_RESULT = 0x01;
 	public final static int REQUEST_CODE_FOR_REPLY = 0x02;
+	
+    
+    public final static int LISTVIEW_DATATYPE_LOCAL_IMAGE = 0x00;
+    public final static int LISTVIEW_DATATYPE_LOCAL_VIDEO = 0x01;
+    public final static int LISTVIEW_DATATYPE_LOCAL_AUDIO = 0x02;
+    public final static int LISTVIEW_DATATYPE_LOCAL_OTHER = 0x03;
+    public final static int LISTVIEW_DATATYPE_REMOTE_IMAGE = 0x04;
+    public final static int LISTVIEW_DATATYPE_REMOTE_VIDEO = 0x05;
+    public final static int LISTVIEW_DATATYPE_REMOTE_AUDIO = 0x06;
+    public final static int LISTVIEW_DATATYPE_REMOTE_OTHER = 0x07;
 }

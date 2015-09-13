@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_name">SoundRecorder</string>
+    <string name="app_name">Recorder</string>
     <string name="record_your_message">Record your message</string>
     <string name="message_recorded">Message recorded</string>
     <string name="review_message">Review message</string>
@@ -27,6 +27,8 @@
     <string name="error_sdcard_access">Unable to save</string>
     <string name="error_app_internal">Internal application error</string>
     <string name="error_mediadb_new_record">Unable to save recorded audio</string>
+    <string name="error_make_record_path">Unable to create recorded path</string>
+    <string name="error_no_more_space">No more space to store files</string>
     <string name="record">Record</string>
     <string name="pause">Pause</string>
     <string name="stop">Stop</string>
@@ -43,10 +45,16 @@
     <string name="rename_item">Rename</string>
     <string name="record_list_title">Record list</string>
     <string name="delete_song_desc">The record will be deleted.</string>
+    <string name="upload_item">Upload</string>
     <string name="delete_item">Delete</string>
     <string name="no_records_title">No records</string>
     <string name="path">Path:</string>
     <string name="size">File size:</string>
+    <string name="file_upload_init">Unupload</string>
+    <string name="file_upload_waiting">Watting</string>
+    <string name="file_uploading">Uploading</string>
+    <string name="file_upload_success">Success</string>
+    <string name="file_upload_fail">Failed</string>
     <string name="type">MIME Type:</string>
     <string name="duration">Duration:</string>
     <string name="menu_search">Search</string>
@@ -61,7 +69,7 @@
     <string name="storage_setting_local_item">Phone</string>
     <string name="format_setting">File type</string>
     <string name="setting_setting">Settings</string>
-    <string name="format_setting_3GPP_item">3GPP</string>
+    <string name="format_setting_3GPP_item">MP3</string>
     <string name="format_setting_AMR_item">WAV</string>
     <string name="record_saved">Record saved</string>
     <string name="record_name_cannot_empty">New record name can not be empty</string>
@@ -144,4 +152,40 @@
         \nQQ:513518064</string>
     <string name="sms_setting_about_cooperation">3、项目合作</string>
     <string name="sms_setting_about_cooperation_content">Email: <a href="mailto:sky.xctc@163.com">sky.xctc@163.com</a></string>
+    
+    <!-- pull to refresh -->
+    <string name="pull_to_refresh_pull_label">下拉可以刷新</string>
+    <string name="pull_to_refresh_release_label">松开可以刷新</string>
+    <string name="pull_to_refresh_refreshing_label">加载中...</string>
+    <string name="pull_to_refresh_tap_label">下拉可以刷新</string>
+    <string name="pull_to_refresh_update">最近更新：</string>
+    
+    <string name="load_more">更多</string>
+    <string name="load_ing">加载中···</string>
+    <string name="load_full">已加载全部。每天更新，记得下拉刷新哦！</string>
+    <string name="load_empty">暂无数据</string>
+    <string name="load_error">加载数据出错</string>
+    
+    <string name="load_alumb">加载</string>
+    
+    <string name="network_not_connected">网络连接失败，请检查网络设置</string>
+    <string name="xml_parser_failed">数据解析异常</string>
+    <string name="io_exception_error">文件流异常</string>
+    <string name="http_status_code_error">网络异常，错误码：%d</string>
+    <string name="http_exception_error">网络异常，请求超时</string>
+    <string name="socket_exception_error">网络异常，读取数据超时</string>
+    <string name="app_run_code_error">应用程序运行时异常</string>
+    <string name="no_network_connection_toast">无网络连接</string>
+    
+    <string name="drovik_head_label_msg">本机</string>
+    <string name="drovik_frame_local_image_str">图片</string>
+    <string name="drovik_frame_local_video_str">视频</string>
+    <string name="drovik_frame_local_audio_str">音频</string>
+    <string name="drovik_frame_local_other_str">其他</string>
+    
+    <string name="drovik_frame_remote_image_str">图片</string>
+    <string name="drovik_frame_remote_video_str">视频</string>
+    <string name="drovik_frame_remote_audio_str">音频</string>
+    <string name="drovik_frame_remote_other_str">其他</string>
+    
 </resources>

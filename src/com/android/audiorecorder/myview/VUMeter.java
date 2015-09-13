@@ -27,7 +27,7 @@ import android.util.Log;
 import android.view.View;
 
 import com.android.audiorecorder.R;
-import com.android.audiorecorder.SoundRecorder.Recorder;
+import com.android.audiorecorder.ui.SoundRecorder.Recorder;
 
 public class VUMeter extends View {
     static final float PIVOT_RADIUS = 3.5f;
@@ -42,6 +42,7 @@ public class VUMeter extends View {
     
     private Bitmap deciel_top;
     Recorder mRecorder;
+    private boolean mIsInvalidate;
 
     public VUMeter(Context context) {
         super(context);
@@ -64,11 +65,16 @@ public class VUMeter extends View {
         mRecorder = null;
         
         mCurrentAngle = 0;
+        mIsInvalidate = false;
     }
 
     public void setRecorder(Recorder recorder) {
     	mRecorder = recorder;
     	invalidate();
+    }
+    
+    public boolean isInvalidate(){
+        return mIsInvalidate;
     }
     
     @Override
@@ -108,6 +114,9 @@ public class VUMeter extends View {
         canvas.drawBitmap(deciel_top, (w - deciel_top.getWidth())/2, (h - deciel_top.getHeight()-5), null);
         if (mRecorder != null && mRecorder.state()) {
             postInvalidateDelayed(ANIMATION_INTERVAL);
+            mIsInvalidate = true;
+        } else {
+            mIsInvalidate = false;
         }
     }
 }

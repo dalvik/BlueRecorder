@@ -1,5 +1,7 @@
 package com.android.audiorecorder;
 
+import com.android.audiorecorder.myview.VUMeter;
+
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;

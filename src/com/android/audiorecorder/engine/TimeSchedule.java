@@ -5,7 +5,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 
-import com.android.audiorecorder.SettingsActivity;
+import com.android.audiorecorder.ui.SettingsActivity;
 
 public class TimeSchedule {
     
@@ -33,6 +33,7 @@ public class TimeSchedule {
             mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
         }
         mAlarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + SettingsActivity.MAX_RECORDER_SET*1000, mTimerPendingIntent);
+        //mAlarmManager.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), 3*1000, mTimerPendingIntent);
     }
     
     private void cancleRtcTimerAlarm(){

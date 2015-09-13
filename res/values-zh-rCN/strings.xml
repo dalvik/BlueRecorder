@@ -27,6 +27,8 @@
     <string name="audio_db_playlist_name">My recordings</string>
     <string name="error_app_internal">内部应用程序错误</string>
     <string name="error_mediadb_new_record">无法保存音频至音频数据库</string>
+    <string name="error_make_record_path">找不到可存储的路径</string>
+    <string name="error_no_more_space">存储空间不足！</string>
     <string name="record">录音</string>
     <string name="pause">暂停</string>
     <string name="stop">停止</string>
@@ -43,11 +45,17 @@
     <string name="rename_item">重命名</string>
     <string name="record_list_title">录音列表</string>
     <string name="delete_song_desc">将删除此录音。</string>
+    <string name="upload_item">上传</string>
     <string name="delete_item">删除</string>
     <string name="no_records_title">无录音</string>
     <string name="zero_time">0:00</string>
     <string name="path">路径：</string>
     <string name="size">大小：</string>
+    <string name="file_upload_init">未上传</string>
+    <string name="file_upload_waiting">等待</string>
+    <string name="file_uploading">上传中</string>
+    <string name="file_upload_success">成功</string>
+    <string name="file_upload_fail">失败</string>
     <string name="type">类型：</string>
     <string name="duration">时长：</string>
     <string name="menu_search">搜索</string>
@@ -137,10 +145,10 @@
         <br/><br/><br/>]]></string>
     <string name="sms_setting_about">关于我们</string>
     <string name="sms_setting_about_us">1、关于我们</string>
-    <string name="sms_setting_about_us_content">项目团队是由多年从事JavaEE开发和Android移动物联网开发的资深技术专家组成。拥有丰富的基于Android平台开发经营，能高效、快速完成Android定制开发。</string>
+    <string name="sms_setting_about_us_content">项目团队是由多年从事Android移动物联网开发的资深技术专家组成。拥有丰富的基于Android平台开发经营，能高效、快速完成Android定制开发。</string>
     <string name="sms_setting_about_contact">2、联系我们</string>
     <string name="sms_setting_about_contact_content">地址：杭州市西湖区天目山路160号国际花园写字楼
-        \nHome:<a href="http://www.davmb.com">http://www.davmb.com</a>
+        \n\rHome:<a href="http://www.davmb.com">http://www.davmb.com</a>
         \nTel:<a href="tel:15068885227">15068885227</a>
         \nQQ:513518064</string>
     <string name="sms_setting_about_cooperation">3、项目合作</string>

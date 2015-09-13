@@ -1,8 +1,10 @@
 package com.android.audiorecorder.dao;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -12,8 +14,9 @@ import android.util.Log;
 
 import com.android.audiorecorder.DebugConfig;
 import com.android.audiorecorder.RecorderFile;
-import com.android.audiorecorder.engine.AudioService;
+import com.android.audiorecorder.engine.MultiMediaService;
 import com.android.audiorecorder.engine.MediaProvider;
+import com.android.audiorecorder.provider.FileDetail;
 
 public class MediaFileManagerImp extends MediaFileManager implements IFileManager {
 
@@ -23,6 +26,38 @@ public class MediaFileManagerImp extends MediaFileManager implements IFileManage
     
     public MediaFileManagerImp(Context context){
         this.mContext = context;
+    }
+    
+    public void createDiretory(String directory) {
+        File file = new File(directory);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
+    }
+
+    public boolean createFile(String path) {
+        File file = new File(path);
+        if (!file.exists()) {
+            try {
+                return file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return false;
+    }
+
+    public boolean isExists(String path) {
+        File file = new File(path);
+        return file.exists();
+    }
+
+    public boolean removeFile(String path) {
+        File file = new File(path);
+        if (file.exists()) {
+            return file.delete();
+        }
+        return true;
     }
     
     @Override
@@ -95,7 +130,7 @@ public class MediaFileManagerImp extends MediaFileManager implements IFileManage
         String[] columns = {MediaProvider.BASE_COLUMN_ID, MediaProvider.FILE_COLUMN_PATH, MediaProvider.FILE_COLUMN_LENGTH, MediaProvider.FILE_COLUMN_DURATION, 
                 MediaProvider.FILE_COLUMN_MIME_TYPE, MediaProvider.FILE_COLUMN_LAUNCH_TYPE, MediaProvider.FILE_COLUMN_TIME, 
                 MediaProvider.FILE_COLUMN_PROGRESS, MediaProvider.FILE_COLUMN_BACKUP, MediaProvider.FILE_COLUMN_MEDIA_TYPE, MediaProvider.FILE_COLUMN_WIDTH, MediaProvider.FILE_COLUMN_HEIGHT, MediaProvider.FILE_COLUMN_SUMMARY};
-        Cursor cursor = mContext.getContentResolver().query(uri, columns, MediaProvider.FILE_COLUMN_LAUNCH_TYPE + " != " + AudioService.LUNCH_MODE_AUTO, null, MediaProvider.FILE_COLUMN_TIME +" desc limit " + (page * pageNumber) + "," + pageNumber);
+        Cursor cursor = mContext.getContentResolver().query(uri, columns, MediaProvider.FILE_COLUMN_LAUNCH_TYPE + " != " + MultiMediaService.LUNCH_MODE_AUTO, null, MediaProvider.FILE_COLUMN_TIME +" desc limit " + (page * pageNumber) + "," + pageNumber);
         if(cursor != null) {
             cursor.moveToFirst();
             while(!cursor.isAfterLast()) {
@@ -136,7 +171,7 @@ public class MediaFileManagerImp extends MediaFileManager implements IFileManage
         String[] columns = {MediaProvider.BASE_COLUMN_ID, MediaProvider.FILE_COLUMN_PATH, MediaProvider.FILE_COLUMN_LENGTH, MediaProvider.FILE_COLUMN_DURATION, 
                 MediaProvider.FILE_COLUMN_MIME_TYPE, MediaProvider.FILE_COLUMN_LAUNCH_TYPE, MediaProvider.FILE_COLUMN_TIME, 
                 MediaProvider.FILE_COLUMN_PROGRESS, MediaProvider.FILE_COLUMN_BACKUP, MediaProvider.FILE_COLUMN_MEDIA_TYPE, MediaProvider.FILE_COLUMN_WIDTH, MediaProvider.FILE_COLUMN_HEIGHT, MediaProvider.FILE_COLUMN_SUMMARY};
-        Cursor cursor = mContext.getContentResolver().query(uri, columns, MediaProvider.FILE_COLUMN_LAUNCH_TYPE + " = " + AudioService.LUNCH_MODE_AUTO, null, MediaProvider.FILE_COLUMN_TIME +" desc limit " + (page * pageNumber) + "," + pageNumber);
+        Cursor cursor = mContext.getContentResolver().query(uri, columns, MediaProvider.FILE_COLUMN_LAUNCH_TYPE + " = " + MultiMediaService.LUNCH_MODE_AUTO, null, MediaProvider.FILE_COLUMN_TIME +" desc limit " + (page * pageNumber) + "," + pageNumber);
         if(cursor != null) {
             cursor.moveToFirst();
             while(!cursor.isAfterLast()) {
@@ -184,9 +219,9 @@ public class MediaFileManagerImp extends MediaFileManager implements IFileManage
     }
 
     @Override
-    public void delete(int mimeType, long id) {
+    public long delete(int mimeType, long id) {
         Uri uri = getMediaUri(mimeType);
-        mContext.getContentResolver().delete(uri, MediaProvider.BASE_COLUMN_ID + " = " + id, null);
+        return mContext.getContentResolver().delete(uri, MediaProvider.BASE_COLUMN_ID + " = " + id, null);
     }
 
     @Override
@@ -209,5 +244,36 @@ public class MediaFileManagerImp extends MediaFileManager implements IFileManage
             uri = Uri.parse(MediaProvider.ALL_Content_URI);
         }
         return uri;
+    }
+
+    @Override
+    public long addTask(long id, boolean download) {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+
+    @Override
+    public List<FileThumb> loadFileThumbList(boolean isLocal, int mediaType, int pageIndex, int pageNumber, Set<Integer> launchType) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+    
+    @Override
+    public List<FileDetail> loadFileList(boolean isLocal, int mediaType,
+            String thumbName, int pageIndex, int pageNumber, Set<Integer> launchType) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+    
+    @Override
+    public int getFileThumbCount(int fileType, int type, Set<Integer> launchType) {
+        // TODO Auto-generated method stub
+        return 0;
+    }
+    
+    @Override
+    public int getFileListCount(int fileType, String thumbName, Set<Integer> launchType) {
+        // TODO Auto-generated method stub
+        return 0;
     }
 }

@@ -15,6 +15,7 @@
     <item type="id" name="thumb">false</item>
     <item type="id" name="title">false</item>
     <item type="id" name="size">false</item>
+    <item type="id" name="state">false</item>
     <item type="id" name="duration">false</item>
     <item type="id" name="type">false</item>
     <item type="id" name="path">false</item>
