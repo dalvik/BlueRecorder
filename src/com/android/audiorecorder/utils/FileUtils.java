@@ -3,6 +3,8 @@ package com.android.audiorecorder.utils;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.HashSet;
+import java.util.Set;
 
 import android.content.Context;
 import android.os.Environment;
@@ -154,11 +156,14 @@ public class FileUtils {
         long now = System.currentTimeMillis();
         if(mode != MultiMediaService.LUNCH_MODE_AUTO){
             completeRecoderPath = storagePath + File.separator + FileProviderService.ROOT;
-            File rootPath = new File(completeRecoderPath, ".nomedia");
+            File rootPath = new File(completeRecoderPath);
             if(!rootPath.exists()){
                 rootPath.mkdirs();
+            }
+            File nomediaFile = new File(completeRecoderPath, ".nomedia");
+            if(!nomediaFile.exists()){
                 try {
-                    rootPath.createNewFile();
+                    nomediaFile.createNewFile();
                 } catch (IOException e) {
                     e.printStackTrace();
                     return null;
@@ -201,7 +206,7 @@ public class FileUtils {
      * @return
      */
     public static String getPathByModeAndType(Context context, int luancheMode, int fileType){
-        String root = getRootPath(context);
+        String root = getRootPath(context);//storage/sdcard0
         /**
          * if audo mode, no need to check exteranl storage state
          * 
@@ -220,11 +225,19 @@ public class FileUtils {
                 return null;
             }
             // storage/sdcard0/MediaFile/Record/AUDIO
-            final String completePath = root + File.separator + FileProviderService.ROOT + File.separator + FileProviderService.CATE_RECORD + File.separator 
+            final String PARENT_PATH = root + File.separator + FileProviderService.ROOT + File.separator;//storage/sdcard0/MediaFile
+            final String completePath = PARENT_PATH + FileProviderService.CATE_RECORD + File.separator 
                     + fileTypeFoldName + File.separator + DateUtil.getYearMonthWeek(System.currentTimeMillis());
             File completeFilePath = new File(completePath);
             if(!completeFilePath.exists()){
                 completeFilePath.mkdirs();
+            }
+            File nomediaFile = new File(PARENT_PATH, ".nomedia");
+            createNewFile(nomediaFile);
+            final String PARENT_PATH_OLD = root + File.separator + FileProviderService.ROOT_OLD + File.separator;//storage/sdcard0/BlueRecorder
+            if(new File(PARENT_PATH_OLD).exists()){
+                File nomediaFileOldPath = new File(PARENT_PATH_OLD, ".nomedia");
+                createNewFile(nomediaFileOldPath);
             }
             return completePath;
         }
@@ -238,7 +251,7 @@ public class FileUtils {
         }
     }
     
-    private static String getFileTypePath(int fileType){
+    public static String getFileTypePath(int fileType){
         String fileTypeFolder = null;
         if(fileType == FileProvider.FILE_TYPE_AUDIO){
             fileTypeFolder = FileProviderService.TYPE_AUDIO;
@@ -265,5 +278,25 @@ public class FileUtils {
                     break;
         }
         return mime;
+    }
+    
+    public static Set<Integer> getLaunchModeSet(){
+        Set<Integer> launchType = new HashSet<Integer>();
+        launchType.add(MultiMediaService.LUNCH_MODE_CALL);
+        launchType.add(MultiMediaService.LUNCH_MODE_MANLY);
+        if(DebugConfig.DEBUG){
+            launchType.add(MultiMediaService.LUNCH_MODE_AUTO);
+        }
+        return launchType;
+    }
+	
+	private static void createNewFile(File file){
+        if(file != null && !file.exists()){
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

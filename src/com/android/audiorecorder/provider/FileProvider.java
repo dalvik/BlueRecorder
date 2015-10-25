@@ -8,6 +8,7 @@ import android.content.ContentProvider;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.SQLException;
@@ -26,6 +27,7 @@ public class FileProvider extends ContentProvider {
     //record /storage/sdcard0/MediaFileManager/Record/AUDIO/YYYY/MONTH/WEEK/file_name.wav
     //record /storage/sdcard0/MediaFileManager/Record/VIDEO/YYYY/MONTH/WEEK/file_name.wmv
     
+    public final static String ACTION_PROVIDER_ONCREATE = "android.intent.action.PROVIDER_ONCREATE";
     public final static int FILE_TYPE_JEPG = 0;
     public final static int FILE_TYPE_AUDIO = 1;
     public final static int FILE_TYPE_VIDEO = 2;
@@ -45,6 +47,7 @@ public class FileProvider extends ContentProvider {
     private static final String TABLE_JPEG_FILES = "jpeg";
     private static final String TABLE_AUDIO_FILES = "audio";
     private static final String TABLE_VIDEO_FILES = "video";
+    public static final String TABLE_DELETE_FILES = "deleted";
 
     private static final int DOWNLOAD = 1;
     private static final int DOWNLOADS_ID = 2;
@@ -61,7 +64,8 @@ public class FileProvider extends ContentProvider {
     private static final int JPEG_FILES = 15;
     private static final int AUDIO_FILES = 16;
     private static final int VIDEO_FILES = 17;
-
+    private static final int DELETE_FILES = 18;
+    
     private final static String authority = "com.android.audiorecorder.provider.FileProvider";
     
     public static final Uri ALL_URI = Uri.parse("content://" + authority + "/all_file_info");
@@ -73,6 +77,8 @@ public class FileProvider extends ContentProvider {
     public static final Uri JPEGS_URI = Uri.parse("content://" + authority + "/jpeg");
     public static final Uri AUDIOS_URI = Uri.parse("content://" + authority + "/audio");
     public static final Uri VIDEOS_URI = Uri.parse("content://" + authority + "/video");
+    
+    public static final Uri DELETE_URI = Uri.parse("content://" + authority + "/deleted");
     
     private DatabaseHelper mDatabaseHelper;
 
@@ -93,11 +99,13 @@ public class FileProvider extends ContentProvider {
         sURIMatcher.addURI(authority, "jpeg", JPEG_FILES);
         sURIMatcher.addURI(authority, "audio", AUDIO_FILES);
         sURIMatcher.addURI(authority, "video", VIDEO_FILES);
+        sURIMatcher.addURI(authority, "deleted", DELETE_FILES);
     }
 
     @Override
     public boolean onCreate() {
         mDatabaseHelper = new DatabaseHelper(getContext());
+        Log.i(TAG, "===> FileProvider onCreate.");
         return true;
     }
     
@@ -128,7 +136,7 @@ public class FileProvider extends ContentProvider {
                 values.put(FileColumn.COLUMN_UP_OR_DOWN, (type==DOWNLOAD)?1:0);
                 rowid = db.insert(DB_TABLE_FILES, null, values);
                 if (rowid <= 0) {
-                    Log.d(TAG, "couldn't insert into downloads database");
+                    Log.d(TAG, "couldn't insert into downloads database. " + uri);
                     return null;
                 }
                 newUri = ContentUris.withAppendedId(uri, rowid);
@@ -137,7 +145,7 @@ public class FileProvider extends ContentProvider {
             case JPEG_FILES:
                 rowid = db.insert(DB_TABLE_FILES, null, values);
                 if (rowid <= 0) {
-                    Log.d(TAG, "couldn't insert into jpeg files database");
+                    Log.d(TAG, "couldn't insert into jpeg files database. " + uri);
                     return null;
                 }
                 newUri = ContentUris.withAppendedId(uri, rowid);
@@ -146,7 +154,7 @@ public class FileProvider extends ContentProvider {
             case VIDEO_FILES:
                 rowid = db.insert(DB_TABLE_FILES, null, values);
                 if (rowid <= 0) {
-                    Log.d(TAG, "couldn't insert into video files database");
+                    Log.d(TAG, "couldn't insert into video files database. " + uri);
                     return null;
                 }
                 newUri = ContentUris.withAppendedId(uri, rowid);
@@ -155,7 +163,7 @@ public class FileProvider extends ContentProvider {
             case AUDIO_FILES:
                 rowid = db.insert(DB_TABLE_FILES, null, values);
                 if (rowid <= 0) {
-                    Log.d(TAG, "couldn't insert into audio files database");
+                    Log.d(TAG, "couldn't insert into audio files database. " + uri);
                     return null;
                 }
                 newUri = ContentUris.withAppendedId(uri, rowid);
@@ -215,6 +223,9 @@ public class FileProvider extends ContentProvider {
             case VIDEO_FILES:
                 qb.setTables(TABLE_VIDEO_FILES);
                 break;
+            case DELETE_FILES:
+            	qb.setTables(TABLE_DELETE_FILES);
+            	break;
             default:
                 break;
         }
@@ -240,7 +251,7 @@ public class FileProvider extends ContentProvider {
             case DOWNLOAD:
                 count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
                 if (count <= 0) {
-                    Log.d(TAG, "couldn't update task in files database");
+                    Log.d(TAG, "couldn't update task in files database. " + uri);
                     return count;
                 }
                 notification = true;
@@ -251,7 +262,7 @@ public class FileProvider extends ContentProvider {
             case TASK:
                 count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
                 if (count <= 0) {
-                    Log.d(TAG, "couldn't update task state in files database");
+                    Log.d(TAG, "couldn't update task state in files database. " + uri);
                     return count;
                 }
                 notification = true;
@@ -259,7 +270,7 @@ public class FileProvider extends ContentProvider {
             case JPEG_FILES:
                 count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
                 if (count <= 0) {
-                    Log.d(TAG, "couldn't update jpeg in files database");
+                    Log.d(TAG, "couldn't update jpeg in files database. " + uri);
                     return count;
                 }
                 notification = true;
@@ -267,7 +278,7 @@ public class FileProvider extends ContentProvider {
             case VIDEO_FILES:
                 count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
                 if (count <= 0) {
-                    Log.d(TAG, "couldn't update video in  files database");
+                    Log.d(TAG, "couldn't update video in  files database. " + uri);
                     return count;
                 }
                 notification = true;
@@ -280,6 +291,14 @@ public class FileProvider extends ContentProvider {
                 }
                 notification = true;
                 break;
+            case DELETE_FILES:
+            	count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
+                if (count <= 0) {
+                    Log.d(TAG, "couldn't update audio in  files database");
+                    return count;
+                }
+                notification = true;
+            	break;
             default:
                 Log.d(TAG, "calling update on an unknown/invalid URI: " + uri);
                 throw new IllegalArgumentException("Unknown/Invalid URI " + uri);
@@ -338,6 +357,14 @@ public class FileProvider extends ContentProvider {
                 }
                 getContext().getContentResolver().notifyChange(uri, null);
                 break;
+            case DELETE_FILES:
+            	count = db.delete(DB_TABLE_FILES, selection, selectionArgs);
+                if (count <= 0) {
+                    Log.w(TAG, "couldn't delete audio files from database");
+                    return 0;
+                }
+                //getContext().getContentResolver().notifyChange(uri, null);
+            	break;
             default:
                 Log.w(TAG, "calling delete on an unknown/invalid URI: " + uri);
                 throw new IllegalArgumentException("Unknown/Invalid URI " + uri);
@@ -404,7 +431,7 @@ public class FileProvider extends ContentProvider {
                 
                 String createTasksView = "CREATE VIEW " + DB_TABLE_TASKS + " AS SELECT " 
                 + FileColumn.COLUMN_ID + ", " + FileColumn.COLUMN_LOCAL_PATH + ", " + FileColumn.COLUMN_REMOTE_PATH + ", "  + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS +", " 
-                + FileColumn.COLUMN_UP_OR_DOWN + ", " + FileColumn.COLUMN_SHOW_NOTIFICATION + ", " + FileColumn.COLUMN_UP_LOAD_BYTE + ", " + FileColumn.COLUMN_UP_LOAD_MESSAGE
+                + FileColumn.COLUMN_UP_OR_DOWN + ", " + FileColumn.COLUMN_LAUNCH_MODE + ", " + FileColumn.COLUMN_SHOW_NOTIFICATION + ", " + FileColumn.COLUMN_UP_LOAD_BYTE + ", " + FileColumn.COLUMN_UP_LOAD_MESSAGE
                 + " FROM " + DB_TABLE_FILES + " WHERE " + FileColumn.COLUMN_UP_OR_DOWN + " !=0 ";
                 db.execSQL(createTasksView);
                 
@@ -432,7 +459,13 @@ public class FileProvider extends ContentProvider {
                 + FileColumn.COLUMN_FILE_SIZE + ", " + FileColumn.COLUMN_FILE_DURATION + ", " + FileColumn.COLUMN_DOWN_LOAD_TIME + ", "  + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS +", "  + FileColumn.COLUMN_UP_LOAD_TIME +  " FROM " + DB_TABLE_FILES
                 + " WHERE " + FileColumn.COLUMN_FILE_TYPE + "=" + FILE_TYPE_VIDEO;
                 db.execSQL(createVideoView);
-                Log.i(TAG, "===> FileProvider Oncreate.");
+                
+                db.execSQL("DROP VIEW IF EXISTS " + TABLE_DELETE_FILES);
+                String createDeleteView = "CREATE VIEW " + TABLE_DELETE_FILES + " AS SELECT " 
+                + FileColumn.COLUMN_ID + ", " + FileColumn.COLUMN_LOCAL_PATH +", " + FileColumn.COLUMN_FILE_THUMBNAIL + ", " + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS + " FROM " + DB_TABLE_FILES
+                + " WHERE " + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS + "=-1";
+                db.execSQL(createDeleteView);
+                Log.i(TAG, "===> SQLiteOpenHelper Oncreate.");
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -441,9 +474,11 @@ public class FileProvider extends ContentProvider {
         @Override
         public void onCreate(SQLiteDatabase db) {
             updateDatabase(db, 0, DB_VERSION);
-            ContentValues values = new ContentValues();
-            values.put(FileColumn.COLUMN_FILE_INIT, 0);
-            db.insert(DB_TABLE_SETTINGS, null, values);
+            getContext().sendStickyBroadcast(new Intent(ACTION_PROVIDER_ONCREATE));
+            /*ContentValues values = new ContentValues();
+            values.put(FileColumn.COLUMN_FILE_INIT, 0);//db onreate, 0:frist 1:is create before
+            long id = db.insert(DB_TABLE_SETTINGS, null, values);
+            Log.i(TAG, "===> db init id : " + id);*/
         }
 
         @Override

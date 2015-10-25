@@ -12,7 +12,7 @@
         android:layout_gravity="center_vertical"
         android:paddingLeft="12.0dip"
         android:layout_alignParentLeft="true"
-        android:src="@mipmap/new_ic_launcher_soundrecorder" />
+        android:src="@drawable/new_ic_launcher_soundrecorder" />
 
     <TextView
         android:id="@id/textView1"

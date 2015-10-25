@@ -1,5 +1,8 @@
 package com.android.audiorecorder.utils;
 
+import java.io.File;
+import java.util.Calendar;
+
 import android.app.Activity;
 import android.content.Context;
 import android.text.Html;
@@ -103,5 +106,14 @@ public class StringUtil {
             case Surface.ROTATION_270: return 270;
         }
         return 0;
+    }
+    
+    public static String getYearMonthWeek(long time){
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(time);
+        int year = calendar.get(Calendar.YEAR);
+        int month = calendar.get(Calendar.MONDAY)+1;
+        int week = calendar.get(Calendar.WEEK_OF_MONTH);
+        return String.valueOf(year) + File.separator + String.valueOf(month) + File.separator + String.valueOf(week);
     }
 }

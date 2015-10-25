@@ -125,6 +125,7 @@ public interface FileColumn {
     * 2:success<br/>
     * 3:fail<br/>
     * 4:wait<br/>
+    * -1:delete<br/>
     */
     public static final String COLUMN_UP_DOWN_LOAD_STATUS = "up_down_status";
     

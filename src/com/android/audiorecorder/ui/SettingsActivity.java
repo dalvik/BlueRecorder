@@ -36,7 +36,6 @@ public class SettingsActivity extends Activity {
     public static final String DEFAULT_UPLOAD_URL = "http://alumb.sinaapp.com/file_recv.php";
     
     public static final String KEY_SUGGESTION_PHONE_NUMBER = "key_phone_number";
-    public static final int MAX_RECORDER_SET = 10 * 60;
     
     
     private String TAG = "SettingsActivity";

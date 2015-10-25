@@ -44,6 +44,7 @@ import com.android.audiorecorder.provider.FileDetail;
 import com.android.audiorecorder.provider.FileProvider;
 import com.android.audiorecorder.provider.FileProviderService;
 import com.android.audiorecorder.utils.DateUtil;
+import com.android.audiorecorder.utils.FileUtils;
 import com.android.audiorecorder.utils.UIHelper;
 import com.baidu.mobstat.StatService;
 import com.handmark.pulltorefresh.library.PullToRefreshBase;
@@ -1290,7 +1291,7 @@ public class MainThumbList extends Activity {
             public void run() {        
                 Message msg = new Message();
                 try {
-                    List<FileThumb> localAlumbListTmp = mFileManager.loadFileThumbList(catalog>AppContext.CATALOG_LOCAL_OTHER?false:true, catalog, pageIndex, PER_PAGE_NUMBER, getLaunchModeSet());
+                    List<FileThumb> localAlumbListTmp = mFileManager.loadFileThumbList(catalog>AppContext.CATALOG_LOCAL_OTHER?false:true, catalog, pageIndex, PER_PAGE_NUMBER, FileUtils.getLaunchModeSet());
                     msg.what = localAlumbListTmp.size();
                     msg.obj = localAlumbListTmp;
                 } catch (Exception e) {
@@ -1361,16 +1362,6 @@ public class MainThumbList extends Activity {
         }
     }
     
-    private Set<Integer> getLaunchModeSet(){
-        Set<Integer> launchType = new HashSet<Integer>();
-        launchType.add(MultiMediaService.LUNCH_MODE_CALL);
-        launchType.add(MultiMediaService.LUNCH_MODE_MANLY);
-        if(DebugConfig.DEBUG){
-            launchType.add(MultiMediaService.LUNCH_MODE_AUTO);
-        }
-        return launchType;
-    }
-    
     private void initObserver(){
         if(observer == null){
             observer = new FileListChangeObserver(mHandler);
@@ -1393,17 +1384,17 @@ public class MainThumbList extends Activity {
                 mHandler.removeMessages(0);
                 Message msg = mHandler.obtainMessage(0);
                 msg.arg1 = FileProvider.FILE_TYPE_JEPG;
-                mHandler.sendMessageDelayed(msg, 50);
+                mHandler.sendMessageDelayed(msg, 100);
             } else if("video".equalsIgnoreCase(name)){
                 mHandler.removeMessages(0);
                 Message msg = mHandler.obtainMessage(0);
                 msg.arg1 = FileProvider.FILE_TYPE_VIDEO;
-                mHandler.sendMessageDelayed(msg, 50);
+                mHandler.sendMessageDelayed(msg, 100);
             } else if("audio".equalsIgnoreCase(name)){
                 mHandler.removeMessages(0);
                 Message msg = mHandler.obtainMessage(0);
                 msg.arg1 = FileProvider.FILE_TYPE_AUDIO;
-                mHandler.sendMessageDelayed(msg, 50);
+                mHandler.sendMessageDelayed(msg, 100);
             }
             super.onChange(selfChange, uri);
         }

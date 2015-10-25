@@ -41,7 +41,7 @@
         android:name="com.android.audiorecorder.AppContext"
         android:allowBackup="true"
         android:persistent="true"
-        android:icon="@mipmap/ic_launcher_soundrecorder"
+        android:icon="@drawable/ic_launcher_soundrecorder"
         android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
         android:label="@string/app_name">
         <activity

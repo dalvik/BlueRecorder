@@ -1,8 +1,6 @@
 package com.android.audiorecorder.ui;
 
-import java.io.File;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -52,7 +50,6 @@ import com.android.audiorecorder.audio.MusicUtils;
 import com.android.audiorecorder.audio.MusicUtils.ServiceToken;
 import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.IFileManager;
-import com.android.audiorecorder.engine.MultiMediaService;
 import com.android.audiorecorder.provider.FileColumn;
 import com.android.audiorecorder.provider.FileDetail;
 import com.android.audiorecorder.provider.FileProvider;
@@ -171,11 +168,8 @@ public class AudioRecordList extends SherlockListActivity implements
         this.mTrackList.setOnScrollListener(this);
         mFileList = new ArrayList<FileDetail>();
         mAdapter = new AudioRecordListAdapter(this, mFileList);
-        launchType = new HashSet<Integer>();
-        launchType.add(MultiMediaService.LUNCH_MODE_MANLY);
-        launchType.add(MultiMediaService.LUNCH_MODE_AUTO);
+        launchType = FileUtils.getLaunchModeSet();
         setListAdapter(mAdapter);
-        setTitle("aaaaaaaaaaa");
         registerForContextMenu(this.mTrackList);
         this.mIndicator = (TextView) findViewById(R.id.indicator);
         this.mProgress = (ProgressBar) findViewById(R.id.progress);
@@ -410,9 +404,14 @@ public class AudioRecordList extends SherlockListActivity implements
                 mPlayPath = "";
             }
             FileDetail file = mFileList.get(position);
-            File deleteFile = new File(file.getFilePath());
-            deleteFile.delete();
-            mFileManager.delete(file.getFileType(), file.getId());
+            //mFileManager.delete(file.getFileType(), file.getId());//contentresolver delete
+
+            String where = FileColumn.COLUMN_ID + "=?";
+            ContentValues values = new ContentValues();
+            values.put( FileColumn.COLUMN_UP_DOWN_LOAD_STATUS, -1);
+            String[] selectArgs = {String.valueOf(mFileList.get(position).getId())};
+            getContentResolver().update(FileProvider.DELETE_URI, values, where, selectArgs);
+            
             mFileList.remove(position);
             if(playPositoin == position){
                 mAdapter.setPlayId(-1, PAUSE);
@@ -420,22 +419,6 @@ public class AudioRecordList extends SherlockListActivity implements
                 int newPositoin = checkNewPlayPosition();
                 mAdapter.setPlayId(newPositoin, mAdapter.getPlayState());
             }
-            String parentPath = deleteFile.getParent();
-            File parentFile = new File(parentPath);
-            //String[] childs = parentFile.list();
-            deleteEmptyFolder(parentFile);
-            /*for(String path:childs){
-                File temp = new File(path);
-                if(temp.isDirectory()){
-                    
-                }
-            }
-            if(parentFile.exists() && parentFile.isDirectory()) {
-                if(childs == null || childs.length == 0){//empty
-                    parentFile.delete();
-                    Log.i(TAG, "---> delete empty dirctory.");
-                }
-            }*/
             mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
             updateCounter();
             Toast.makeText(this, getResources().getQuantityString(R.plurals.NNNtracksdeleted, 1, 1), Toast.LENGTH_SHORT).show();
@@ -646,19 +629,4 @@ public class AudioRecordList extends SherlockListActivity implements
         return -1;
     }
     
-    private void deleteEmptyFolder(File file){
-        if(file.isDirectory()){
-            File[] files = file.listFiles();
-            if(files.length == 0){
-                file.delete();
-                if(file.getParent() != null){
-                    deleteEmptyFolder(file.getParentFile());
-                }
-            } else {
-                for(File f:files){
-                    deleteEmptyFolder(f);
-                }
-            }
-        }
-    }
 }

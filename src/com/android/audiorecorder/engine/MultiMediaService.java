@@ -99,8 +99,8 @@ public class MultiMediaService extends Service {
     public int mAudioRecordState = STATE_IDLE;
     public int mVideoRecordState = STATE_IDLE;
     
-    public final static int MIX_STORAGE_CAPACITY = 90;//MB
-    //public static final String Recorder_CACHE_DIR = "Recorder";
+    public final static int MIX_STORAGE_CAPACITY = 100;//MB
+    public static final int MAX_RECORDER_DURATION = 10 * 60;
 	private static final String IMAGE_CACHE_DIR = "DCIM";
 	
 	public final static int PAGE_NUMBER = 1;
@@ -137,9 +137,7 @@ public class MultiMediaService extends Service {
     public static final int MSG_STOP_AUDIO_RECORD = 0xE4;
 
     public final static int MSG_UPDATE_TIMER = 200;
-    public final static int MSG_RESET_TIMER = 201;
-    
-    public final static int MSG_TIMER_ALARM = 1000;
+    public final static int MSG_START_TIMER = 201;
     
     public final static int MSG_START_UPLOAD = 2000;
     
@@ -157,7 +155,6 @@ public class MultiMediaService extends Service {
     private boolean mIsBluetoothConnected;
     private boolean mAtdpEnable;
     private WakeLock mRecorderWakeLock;
-    private WakeLock mAlarmWakeLock;
     private WakeLock mUploadWakeLock;
     private MediaRecorder mMediaRecorder = null;
 
@@ -193,8 +190,6 @@ public class MultiMediaService extends Service {
     private int mPhoneState;
     private String mIncommingNumber;
     
-    private TimeSchedule mTimeSchedule;
-    
     private UploadHandlerCallback mUploadHandlerCallback;
     private HandlerThread mUpHandlerThread;
     private Handler mUploadHandler;
@@ -229,9 +224,6 @@ public class MultiMediaService extends Service {
                     notifyRecordState(MSG_UPDATE_TIMER);//only update recorder time on UI
                     updateNotifiaction();
                     break;
-                case MSG_TIMER_ALARM:
-                    processAutoTimerAlarm();
-                    break;
                 case MSG_BLUETOOTH_PROFILE_MATCH:
                     if (mService != null) {
                         List<BluetoothDevice> devs = getConnectedDevices();
@@ -255,9 +247,10 @@ public class MultiMediaService extends Service {
                       mAudioManager.setMode(AudioManager.MODE_NORMAL);
                   }
                   break;
-              case MSG_RESET_TIMER:
-                  mTimeSchedule.setRtcTimerAlarm();
-                  break;
+              case MSG_START_TIMER:
+            	  mHandler.sendEmptyMessageDelayed(MSG_START_TIMER, MAX_RECORDER_DURATION*1000);
+            	  processAutoTimerAlarm();
+            	  break;
                 default:
                     break;
             }
@@ -281,8 +274,7 @@ public class MultiMediaService extends Service {
         isScreenOn = mPowerManager.isScreenOn();
         mGuardCamera = new GuardCameraManager(this);
         this.mPreferences = getSharedPreferences(SettingsActivity.class.getName(), Context.MODE_PRIVATE);
-        mRecorderWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"SoundRecorderService");
-        mAlarmWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AlarmWakeLock");
+        mRecorderWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"MutilMediaService");
         mUploadWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "UploadWakeLock");
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
@@ -300,22 +292,17 @@ public class MultiMediaService extends Service {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     final String action = intent.getAction();
-                    if(DebugConfig.DEBUG){
-                        Log.i(TAG, "---> action = " + action);
-                    }
                     if(TimeSchedule.ACTION_TIMER_ALARM.equalsIgnoreCase(action)){
-                        mHandler.sendEmptyMessage(MSG_TIMER_ALARM);
+                        Log.i(TAG, "---> alarm.");
                     } else if(Intent.ACTION_USER_PRESENT.equalsIgnoreCase(action)){//user login, screen on
                         isScreenOn = true;
-                        ProgressOutHttpEntity.mCancle = true;
                         //mUploadHandler.sendEmptyMessage(MSG_INIT_CAMERA);
                         if(mCurMode == LUNCH_MODE_AUTO){//stop record
                             Message msgStop = mMediaAudioHandler.obtainMessage(MSG_STOP_RECORD);
                             msgStop.arg1 = mCurMode;
                             mMediaAudioHandler.sendMessage(msgStop);
                             
-                            mHandler.removeMessages(MSG_RESET_TIMER);
-                            mHandler.sendEmptyMessageDelayed(MSG_RESET_TIMER, 1000*60);
+                            mHandler.removeMessages(MSG_START_TIMER);
                             Log.i(TAG, "---> user present.");
                         }
                     }/* else if (action.equals(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)) {
@@ -356,9 +343,9 @@ public class MultiMediaService extends Service {
                         mBatteryLevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
                         Log.i(TAG, "--> mBatteryLevel = " + mBatteryLevel);
                     } else if(action.equals(Intent.ACTION_SCREEN_OFF)){
-                        //isScreenOn = false;
-                        //mHandler.removeMessages(MSG_RESET_TIMER);
-                        //mHandler.sendEmptyMessageDelayed(MSG_RESET_TIMER, 1000*30);
+                        isScreenOn = false;
+                        mHandler.removeMessages(MSG_START_TIMER);
+                        mHandler.sendEmptyMessageDelayed(MSG_START_TIMER, 30000);
                     }
                 }
             };
@@ -397,8 +384,6 @@ public class MultiMediaService extends Service {
             telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
         }
         fileManager = FileManagerFactory.getFileManagerInstance(this);
-        mTimeSchedule = new TimeSchedule(this);
-        mTimeSchedule.start();
         init();
         mCurMode = LUNCH_MODE_IDLE;
         Log.d(TAG, "===> onCreate. screen state : " + isScreenOn);
@@ -591,14 +576,6 @@ public class MultiMediaService extends Service {
         }
     };
     
-    private void setRecordStatus(boolean start) {
-        mRecorderStart = start;
-        if (start) {
-            mAudioRecorderDuration = SystemClock.elapsedRealtime();
-        }
-        notifyRecordState(mAudioRecordState);
-    }
-
     private void startRecorder(int mode) {
         mMimeType = mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_FILE_TYPE, SoundRecorder.FILE_TYPE_3GPP);
         //mRecoderPath = FileUtils.generalFilePath(this, mode, SoundRecorder.STORAGE_LOCATION_SD_CARD, mMimeType, mIncommingNumber, getNamePrefix());
@@ -648,8 +625,10 @@ public class MultiMediaService extends Service {
             } catch (IOException e) {
                 e.printStackTrace();
                 mAudioRecordState = STATE_IDLE;
+                mMediaRecorder = null;
             } catch(IllegalStateException e){
                 mAudioRecordState = STATE_IDLE;
+                mMediaRecorder = null;
                 Log.w(TAG, "---> IllegalStateException : " + e.getMessage());
             }
         }
@@ -741,6 +720,7 @@ public class MultiMediaService extends Service {
         if(DebugConfig.DEBUG){
             Log.i(TAG, "---> call in come , start recorder");
         }
+        mMediaAudioHandler.sendEmptyMessage(MSG_STOP_RECORD);
         Message msg = mMediaAudioHandler.obtainMessage(MSG_START_RECORD);
         msg.arg1 = mode;
         mMediaAudioHandler.sendMessage(msg);
@@ -757,7 +737,6 @@ public class MultiMediaService extends Service {
     
     private void processAutoTimerAlarm(){
         if(!isScreenOn){//srceen off
-            acquireWakeLock();
             if(DebugConfig.DEBUG){
                 Log.i(TAG, "--> isValidRecorderTime : " + isValidAudoRecorderTime() + " BatteryLevel : " + mBatteryLevel + " isValidDeleteTime : " + isValidDeleteTime());
             }
@@ -809,7 +788,6 @@ public class MultiMediaService extends Service {
                 }*/
             }
         }
-        mTimeSchedule.setRtcTimerAlarm();
     }
     
     private boolean isValidAudoRecorderTime(){
@@ -824,7 +802,7 @@ public class MultiMediaService extends Service {
         return dayOfHour>=DELETE_START && dayOfHour<=DELETE_END;
     }
     
-    private void startUploadTask(){
+    /*private void startUploadTask(){
     	List<RecorderFile> list = fileManager.queryPrivateFileList(RecorderFile.MEDIA_TYPE_AUDIO, 0, PAGE_NUMBER);
 		if(list.size()>0){
 			RecorderFile file = list.get(0);
@@ -840,9 +818,9 @@ public class MultiMediaService extends Service {
 		        Log.w(TAG, "---> No Files Upload.");
 		    }
 		}
-    }
+    }*/
     
-    private void startDeleteTask(){
+    /*private void startDeleteTask(){
         List<RecorderFile> list = fileManager.queryPrivateFileList(RecorderFile.MEDIA_TYPE_AUDIO, 0, PAGE_NUMBER);
         if(list.size()>0){
         	if(DebugConfig.DEBUG){
@@ -866,16 +844,9 @@ public class MultiMediaService extends Service {
                 Log.w(TAG, "---> No Files Delete.");
             }
         }
-    }
+    }*/
     
-    private void acquireWakeLock(){
-        if (mAlarmWakeLock.isHeld()) {
-            mAlarmWakeLock.release();
-        }
-        mAlarmWakeLock.acquire(2000);
-    }
-    
-    private void initUploadFile(long id, String path, int type){
+    /*private void initUploadFile(long id, String path, int type){
         if(DebugConfig.DEBUG){
             Log.i(TAG, "initUploadFile id = " + id + " path = " + path + " type = " + type);
         }
@@ -912,7 +883,7 @@ public class MultiMediaService extends Service {
             mUploadHandler.removeMessages(MSG_START_UPLOAD); //wait for next callback
             mUploadHandler.sendEmptyMessageDelayed(MSG_START_UPLOAD, 1000);
         }
-    }
+    }*/
     
     private int uploadFile(String url, ProgressOutHttpEntity entity) {
         int mResult;
@@ -928,11 +899,7 @@ public class MultiMediaService extends Service {
             }
             HttpResponse httpResponse = httpClient.execute(httpPost);
             if (httpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                if(!ProgressOutHttpEntity.mCancle){
-                    mResult = UploadResult.SUCCESS;
-                } else {
-                    mResult = UploadResult.FAIL;
-                }
+                mResult = UploadResult.SUCCESS;
             } else {
             	mResult = UploadResult.FAIL;
             }
@@ -1064,7 +1031,7 @@ public class MultiMediaService extends Service {
     
     private void saveRecordFile(int mode, int duration){
         File f = new File(mRecoderPath);
-        if(mode == LUNCH_MODE_AUTO &&  duration<SettingsActivity.MAX_RECORDER_SET/2) {
+        if(mode == LUNCH_MODE_AUTO &&  duration<MAX_RECORDER_DURATION/2) {
             if(f.exists()){
                 f.delete();
                 Log.w(TAG, "---> remove too short files.");
@@ -1094,10 +1061,10 @@ public class MultiMediaService extends Service {
         public boolean handleMessage(Message msg) {
             switch(msg.what){
                 case MSG_START_UPLOAD:
-                    startUploadTask();
+                    //startUploadTask();
                     break;
                 case MSG_START_DELETE:
-                    startDeleteTask();
+                    //startDeleteTask();
                     break;
                 case MSG_INIT_CAMERA:
                     System.out.println("front = " + mGuardCamera.checkCameraHardware(PackageManager.FEATURE_CAMERA_FRONT));
@@ -1379,6 +1346,14 @@ public class MultiMediaService extends Service {
             return false;
         }
         return true;
+    }
+    
+    private void setRecordStatus(boolean start) {
+        mRecorderStart = start;
+        if (start) {
+            mAudioRecorderDuration = SystemClock.elapsedRealtime();
+        }
+        notifyRecordState(mAudioRecordState);
     }
     
     private int getAudioRecordDuration(){

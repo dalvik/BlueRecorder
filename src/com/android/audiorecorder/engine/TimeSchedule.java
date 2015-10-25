@@ -4,6 +4,7 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.provider.AlarmClock;
 
 import com.android.audiorecorder.ui.SettingsActivity;
 
@@ -20,23 +21,24 @@ public class TimeSchedule {
         this.mContext = context;
     }
 
-    public void start(){
-        System.out.println("TimeSchedule init.");
-        setRtcTimerAlarm();
+    /**
+     * trigger at once
+     */
+    public void start(long millisDelayed){
+        setRtcTimerAlarm(millisDelayed);
     }
     
-    public void setRtcTimerAlarm() {
-        cancleRtcTimerAlarm();
+    private void setRtcTimerAlarm(long millisDelayed) {
+    	cancle();
         Intent intent = new Intent(ACTION_TIMER_ALARM);
         mTimerPendingIntent = PendingIntent.getBroadcast(mContext, 0, intent , PendingIntent.FLAG_ONE_SHOT);
         if (mAlarmManager == null) {
             mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
         }
-        mAlarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + SettingsActivity.MAX_RECORDER_SET*1000, mTimerPendingIntent);
-        //mAlarmManager.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), 3*1000, mTimerPendingIntent);
+        mAlarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis()+ millisDelayed,  AlarmManager.INTERVAL_FIFTEEN_MINUTES/3, mTimerPendingIntent);
     }
     
-    private void cancleRtcTimerAlarm(){
+    public void cancle(){
         if ((mAlarmManager != null) && (mTimerPendingIntent != null)) {
             mAlarmManager.cancel(mTimerPendingIntent);
         }
