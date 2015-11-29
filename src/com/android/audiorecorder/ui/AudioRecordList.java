@@ -1,6 +1,7 @@
 package com.android.audiorecorder.ui;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -13,6 +14,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -50,6 +52,7 @@ import com.android.audiorecorder.audio.MusicUtils;
 import com.android.audiorecorder.audio.MusicUtils.ServiceToken;
 import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.IFileManager;
+import com.android.audiorecorder.engine.MultiMediaService;
 import com.android.audiorecorder.provider.FileColumn;
 import com.android.audiorecorder.provider.FileDetail;
 import com.android.audiorecorder.provider.FileProvider;
@@ -347,13 +350,13 @@ public class AudioRecordList extends SherlockListActivity implements
                 String where = FileColumn.COLUMN_ID + " = ?";
                 if(mFileList.size()>index){
                     FileDetail file = mFileList.get(index);
-                    if(file != null){
-                        file.setUpDownLoadStatus(FileColumn.STATE_FILE_UP_DOWN_WAITING);
-                        int count = getContentResolver().update(FileProvider.UPLOAD_URI, values, where, new String[]{String.valueOf(file.getId())});
-                        Log.i(TAG, "---> update count = " + count);
-                        if(count>0){
-                            mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
-                        }
+                    values.put(FileColumn.COLUMN_ID, file.getId());
+                    file.setUpDownLoadStatus(FileColumn.STATE_FILE_UP_DOWN_WAITING);
+                    Uri uri = getContentResolver().insert(FileProvider.TASK_URI, values);
+                    //int count = getContentResolver().update(FileProvider.UPLOAD_URI, values, where, new String[]{String.valueOf(file.getId())});
+                    //Log.i(TAG, "---> update count = " + count);
+                    if(uri != null){
+                        mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
                     }
                 }
                 break;
@@ -404,14 +407,7 @@ public class AudioRecordList extends SherlockListActivity implements
                 mPlayPath = "";
             }
             FileDetail file = mFileList.get(position);
-            //mFileManager.delete(file.getFileType(), file.getId());//contentresolver delete
-
-            String where = FileColumn.COLUMN_ID + "=?";
-            ContentValues values = new ContentValues();
-            values.put( FileColumn.COLUMN_UP_DOWN_LOAD_STATUS, -1);
-            String[] selectArgs = {String.valueOf(mFileList.get(position).getId())};
-            getContentResolver().update(FileProvider.DELETE_URI, values, where, selectArgs);
-            
+            mFileManager.delete(file.getFileType(), file.getId());
             mFileList.remove(position);
             if(playPositoin == position){
                 mAdapter.setPlayId(-1, PAUSE);

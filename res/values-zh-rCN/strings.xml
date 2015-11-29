@@ -45,7 +45,9 @@
     <string name="rename_item">重命名</string>
     <string name="record_list_title">录音列表</string>
     <string name="delete_song_desc">将删除此录音。</string>
+    <!-- down or upload -->
     <string name="upload_item">上传</string>
+    <string name="reupload_item">重传</string>
     <string name="delete_item">删除</string>
     <string name="no_records_title">无录音</string>
     <string name="zero_time">0:00</string>
@@ -56,6 +58,13 @@
     <string name="file_uploading">上传中</string>
     <string name="file_upload_success">成功</string>
     <string name="file_upload_fail">失败</string>
+    <string name="notification_upload_title">上传</string>
+    <string name="notification_download_title">下载</string>
+    <string name="notification_upload_result_success">上传成功</string>
+    <string name="notification_upload_result_fail">上传失败</string>
+    <string name="notification_download_result_success">下载成功</string>
+    <string name="notification_download_result_fail">下载失败</string>
+    
     <string name="type">类型：</string>
     <string name="duration">时长：</string>
     <string name="menu_search">搜索</string>

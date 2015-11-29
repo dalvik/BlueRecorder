@@ -20,6 +20,7 @@ import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
 import android.app.ProgressDialog;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
@@ -27,6 +28,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.database.Cursor;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Environment;
@@ -47,9 +49,10 @@ import com.android.audiorecorder.DebugConfig;
 import com.android.audiorecorder.R;
 import com.android.audiorecorder.dao.UpdateInfo;
 import com.android.audiorecorder.myview.DownLoadProgressBar;
+import com.android.audiorecorder.provider.FileColumn;
+import com.android.audiorecorder.provider.FileProvider;
 import com.android.audiorecorder.ui.SettingsActivity;
 import com.android.audiorecorder.utils.NetworkUtil;
-import com.android.audiorecorder.utils.StringUtil;
 import com.drovik.utils.FileUtil;
 import com.drovik.utils.URLs;
 
@@ -167,6 +170,7 @@ public class UpdateManager {
 					            }
 					        }
 					    }
+                        updateSettings(updateInfo.getUploadUrl());
                         settings.edit().putInt(SettingsActivity.KEY_CUR_VERSION_CODE, curVersionCode)
                         .putString(SettingsActivity.KEY_CUR_VERSION_NAME, curVersionName)
                         .putInt(SettingsActivity.KEY_NEW_VERSION_CODE, updateInfo.getVersionCode())
@@ -226,6 +230,21 @@ public class UpdateManager {
 				}
 			}.start();
 		}
+	}
+	
+	private void updateSettings(String targetUrl){
+	    String[] pro = {FileColumn.COLUMN_ID};
+        Cursor cursor = context.getContentResolver().query(FileProvider.SETTINGS_URI, pro, null, null, null);
+        int id = 0;
+        if(cursor != null){
+            if(cursor.moveToNext()){
+                id = cursor.getInt(0);
+            }
+            cursor.close();
+        }
+        ContentValues values = new ContentValues();
+        values.put(FileColumn.COLUMN_SERVER_UPLOAD_URL, targetUrl);
+        context.getContentResolver().update(FileProvider.SETTINGS_URI, values, FileColumn.COLUMN_ID + " = " + id, null);
 	}
 	
 	public UpdateInfo checkVersion() throws IOException {

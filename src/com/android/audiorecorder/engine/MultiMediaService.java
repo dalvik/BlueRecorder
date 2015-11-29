@@ -6,25 +6,19 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.charset.Charset;
 import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.HttpVersion;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.mime.HttpMultipartMode;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.params.CoreConnectionPNames;
 import org.apache.http.params.CoreProtocolPNames;
-import org.apache.http.protocol.HTTP;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -37,6 +31,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -52,9 +47,11 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.media.MediaRecorder.OnErrorListener;
+import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -75,10 +72,8 @@ import android.widget.Toast;
 import com.android.audiorecorder.BuildConfig;
 import com.android.audiorecorder.DebugConfig;
 import com.android.audiorecorder.R;
-import com.android.audiorecorder.RecorderFile;
 import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.IFileManager;
-import com.android.audiorecorder.engine.ProgressOutHttpEntity.ProgressListener;
 import com.android.audiorecorder.engine.ProgressOutHttpEntity.UploadResult;
 import com.android.audiorecorder.provider.FileColumn;
 import com.android.audiorecorder.provider.FileDetail;
@@ -576,6 +571,14 @@ public class MultiMediaService extends Service {
         }
     };
     
+    private void setRecordStatus(boolean start) {
+        mRecorderStart = start;
+        if (start) {
+            mAudioRecorderDuration = SystemClock.elapsedRealtime();
+        }
+        notifyRecordState(mAudioRecordState);
+    }
+
     private void startRecorder(int mode) {
         mMimeType = mPreferences.getInt(SoundRecorder.PREFERENCE_TAG_FILE_TYPE, SoundRecorder.FILE_TYPE_3GPP);
         //mRecoderPath = FileUtils.generalFilePath(this, mode, SoundRecorder.STORAGE_LOCATION_SD_CARD, mMimeType, mIncommingNumber, getNamePrefix());
@@ -625,10 +628,8 @@ public class MultiMediaService extends Service {
             } catch (IOException e) {
                 e.printStackTrace();
                 mAudioRecordState = STATE_IDLE;
-                mMediaRecorder = null;
             } catch(IllegalStateException e){
                 mAudioRecordState = STATE_IDLE;
-                mMediaRecorder = null;
                 Log.w(TAG, "---> IllegalStateException : " + e.getMessage());
             }
         }
@@ -1050,8 +1051,16 @@ public class MultiMediaService extends Service {
             values.put(FileColumn.COLUMN_THUMB_NAME, DateUtil.getYearMonthWeek(mRecordStartTime));
             values.put(FileColumn.COLUMN_FILE_RESOLUTION_X, -1);
             values.put(FileColumn.COLUMN_FILE_RESOLUTION_Y, -1);
-            getContentResolver().insert(FileProvider.AUDIOS_URI, values);     
+            Uri uri = getContentResolver().insert(FileProvider.AUDIOS_URI, values);
             Log.w(TAG, "---> add new file.");
+            if(mode == LUNCH_MODE_AUTO){
+                long id = ContentUris.parseId(uri);
+                ContentValues valuesNew = new ContentValues();
+                valuesNew.put(FileColumn.COLUMN_UP_OR_DOWN, FileColumn.FILE_UP_LOAD);
+                valuesNew.put(FileColumn.COLUMN_UP_DOWN_LOAD_STATUS, FileColumn.STATE_FILE_UP_DOWN_WAITING);
+                valuesNew.put(FileColumn.COLUMN_ID, id);
+                getContentResolver().insert(FileProvider.TASK_URI, valuesNew);
+            }
         }
     }
    
@@ -1321,8 +1330,20 @@ public class MultiMediaService extends Service {
         }
         if(mac == null || mac.length() == 0){
             mac = telephonyManager.getDeviceId();
+            if(mac != null){
+                mPreferences.edit().putString(SettingsActivity.KEY_MAC_ADDRESS, mac +"_").commit();
+            }
         }
-        return mac+"_";
+        if(mac == null || mac.length() == 0){
+            mac = Build.SERIAL;
+            if(mac != null){
+                mPreferences.edit().putString(SettingsActivity.KEY_MAC_ADDRESS, mac +"_").commit();
+            }
+        }
+        if(mac == null || mac.length() == 0){
+            mac = "anonymous";
+        }
+        return mac + "_";
     }
     
     private boolean checkStatus(String parentPath, int mode){
@@ -1346,14 +1367,6 @@ public class MultiMediaService extends Service {
             return false;
         }
         return true;
-    }
-    
-    private void setRecordStatus(boolean start) {
-        mRecorderStart = start;
-        if (start) {
-            mAudioRecorderDuration = SystemClock.elapsedRealtime();
-        }
-        notifyRecordState(mAudioRecordState);
     }
     
     private int getAudioRecordDuration(){

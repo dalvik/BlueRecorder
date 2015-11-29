@@ -1,5 +1,6 @@
 package com.android.audiorecorder.utils;
 
+import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -176,4 +177,12 @@ public class StringUtils
 		}catch(Exception e){}
 		return false;
 	}
+	
+	public static String formatProgress(long progress, long totalSize){
+        DecimalFormat df = new DecimalFormat("00 %");
+        if(progress<=totalSize){
+            return df.format((double) progress / totalSize);
+        }
+        return null;
+    }
 }

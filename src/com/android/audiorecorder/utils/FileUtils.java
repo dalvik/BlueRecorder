@@ -299,4 +299,21 @@ public class FileUtils {
             }
         }
     }
+    
+    public static void deleteEmptyFolder(String parth){
+        File file = new File(parentPath);
+        if(file.isDirectory()){
+            File[] files = file.listFiles();
+            if(files.length == 0){
+                file.delete();
+                if(file.getParent() != null){
+                    deleteEmptyFolder(file.getParentFile().getAbsolutePath());
+                }
+            } else {
+                for(File f:files){
+                    deleteEmptyFolder(f.getAbsolutePath());
+                }
+            }
+        }
+    }
 }

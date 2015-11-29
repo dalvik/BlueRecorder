@@ -49,12 +49,6 @@ public class FileProvider extends ContentProvider {
     private static final String TABLE_VIDEO_FILES = "video";
     public static final String TABLE_DELETE_FILES = "deleted";
 
-    private static final int DOWNLOAD = 1;
-    private static final int DOWNLOADS_ID = 2;
-
-    private static final int UPLOAD = 3;
-    private static final int UPLOAD_ID = 4;
-
     private static final int TASK = 6;
     
     private static final int ALL_FILE_INFO = 7;
@@ -69,8 +63,6 @@ public class FileProvider extends ContentProvider {
     private final static String authority = "com.android.audiorecorder.provider.FileProvider";
     
     public static final Uri ALL_URI = Uri.parse("content://" + authority + "/all_file_info");
-    public static final Uri DOWNLOAD_URI = Uri.parse("content://" + authority + "/download");
-    public static final Uri UPLOAD_URI = Uri.parse("content://" + authority + "/upload");
     public static final Uri TASK_URI = Uri.parse("content://" + authority + "/tasks");
     public static final Uri SETTINGS_URI = Uri.parse("content://" + authority + "/settings");
     
@@ -88,10 +80,6 @@ public class FileProvider extends ContentProvider {
     private static final String TAG = "FileProvider";
 
     static {
-        sURIMatcher.addURI(authority, "download", DOWNLOAD);
-        sURIMatcher.addURI(authority, "download/#", DOWNLOADS_ID);
-        sURIMatcher.addURI(authority, "upload", UPLOAD);
-        sURIMatcher.addURI(authority, "upload/#", UPLOAD_ID);
         sURIMatcher.addURI(authority, "tasks", TASK);
         sURIMatcher.addURI(authority, "all_file_info", ALL_FILE_INFO);
         sURIMatcher.addURI(authority, "settings", SETTINGS);
@@ -112,14 +100,14 @@ public class FileProvider extends ContentProvider {
     @Override
     public String getType(Uri uri) {
         int match = sURIMatcher.match(uri);
-        switch (match) {
+        /*switch (match) {
             case DOWNLOADS_ID:
             case UPLOAD_ID:
                 return "vnd.android.cursor.item";
             case DOWNLOAD:
             case UPLOAD:
                 return "vnd.android.cursor.dir";
-        }
+        }*/
         return null;
     }
 
@@ -130,18 +118,6 @@ public class FileProvider extends ContentProvider {
         long rowid = 0;
         Uri newUri = null;
         switch(type){
-            case DOWNLOAD:
-            case UPLOAD:
-            case TASK:
-                values.put(FileColumn.COLUMN_UP_OR_DOWN, (type==DOWNLOAD)?1:0);
-                rowid = db.insert(DB_TABLE_FILES, null, values);
-                if (rowid <= 0) {
-                    Log.d(TAG, "couldn't insert into downloads database. " + uri);
-                    return null;
-                }
-                newUri = ContentUris.withAppendedId(uri, rowid);
-                getContext().getContentResolver().notifyChange(newUri, null);
-                break;
             case JPEG_FILES:
                 rowid = db.insert(DB_TABLE_FILES, null, values);
                 if (rowid <= 0) {
@@ -169,6 +145,20 @@ public class FileProvider extends ContentProvider {
                 newUri = ContentUris.withAppendedId(uri, rowid);
                 getContext().getContentResolver().notifyChange(newUri, null);
                 break;
+            case TASK:
+                int id = 0;
+                if(values.containsKey(FileColumn.COLUMN_ID)){
+                    id = values.getAsInteger(FileColumn.COLUMN_ID);
+                }
+                String where = FileColumn.COLUMN_ID + " = " + id;
+                rowid =  db.update(DB_TABLE_FILES, values, where, null);
+                if (rowid <= 0) {
+                    Log.d(TAG, "id = " + id + " couldn't insert into updownloads task database. " + uri);
+                    return null;
+                }
+                newUri = ContentUris.withAppendedId(uri, rowid);
+                getContext().getContentResolver().notifyChange(newUri, null);
+                break;
                 default:
                     Log.d(TAG, "calling insert on an unknown/invalid URI: " + uri);
                     throw new IllegalArgumentException("Unknown/Invalid URI " + uri);
@@ -188,24 +178,7 @@ public class FileProvider extends ContentProvider {
             qb.setDistinct(true);
         }
         switch (type) {
-            case DOWNLOAD:
-            case UPLOAD:
-            case DOWNLOADS_ID:
-            case UPLOAD_ID:
             case TASK:
-                if(type == DOWNLOAD){
-                    qb.appendWhere(FileColumn.COLUMN_UP_OR_DOWN + "=1");//download
-                } else if(type == UPLOAD){
-                    qb.appendWhere(FileColumn.COLUMN_UP_OR_DOWN + "=0");//upload
-                } else if(type == DOWNLOADS_ID){
-                    qb.appendWhere(FileColumn.COLUMN_UP_OR_DOWN + "=1");//download
-                    qb.appendWhere(FileColumn.COLUMN_ID + "=?");
-                    prependArgs.add(uri.getPathSegments().get(1));
-                } else if(type == UPLOAD_ID){
-                    qb.appendWhere(FileColumn.COLUMN_UP_OR_DOWN + "=0");//upload
-                    qb.appendWhere(FileColumn.COLUMN_ID + "=?");
-                    prependArgs.add(uri.getPathSegments().get(1));
-                }
                 qb.setTables(DB_TABLE_TASKS);
                 break;
             case ALL_FILE_INFO:
@@ -223,9 +196,6 @@ public class FileProvider extends ContentProvider {
             case VIDEO_FILES:
                 qb.setTables(TABLE_VIDEO_FILES);
                 break;
-            case DELETE_FILES:
-            	qb.setTables(TABLE_DELETE_FILES);
-            	break;
             default:
                 break;
         }
@@ -241,32 +211,8 @@ public class FileProvider extends ContentProvider {
         int count = 0;
         int match = sURIMatcher.match(uri);
         SQLiteDatabase db = mDatabaseHelper.getWritableDatabase();
-        String extraSelection = null;
-        String finalSelection = null;
         boolean notification = false;
         switch (match) {
-            case DOWNLOADS_ID:
-            case UPLOAD_ID:
-            case UPLOAD:
-            case DOWNLOAD:
-                count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
-                if (count <= 0) {
-                    Log.d(TAG, "couldn't update task in files database. " + uri);
-                    return count;
-                }
-                notification = true;
-                break;
-            case SETTINGS:
-                count = db.update(DB_TABLE_SETTINGS, values, selection, selectionArgs);
-                break;
-            case TASK:
-                count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
-                if (count <= 0) {
-                    Log.d(TAG, "couldn't update task state in files database. " + uri);
-                    return count;
-                }
-                notification = true;
-                break;
             case JPEG_FILES:
                 count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
                 if (count <= 0) {
@@ -290,6 +236,17 @@ public class FileProvider extends ContentProvider {
                     return count;
                 }
                 notification = true;
+                break;
+			case SETTINGS:
+                count = db.update(DB_TABLE_SETTINGS, values, selection, selectionArgs);
+                break;
+            case TASK:
+                count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
+                if (count <= 0) {
+                    Log.d(TAG, "couldn't update task state in files database. " + uri);
+                    return count;
+                }
+                notification = false;
                 break;
             case DELETE_FILES:
             	count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
@@ -315,25 +272,13 @@ public class FileProvider extends ContentProvider {
         int count = 0;
         int match = sURIMatcher.match(uri);
         SQLiteDatabase db = mDatabaseHelper.getWritableDatabase();
-        String extraSelection = null;
-        String finalSelection = null;
         switch (match) {
-            case UPLOAD_ID:
-            case DOWNLOADS_ID: {
-                extraSelection = FileColumn.COLUMN_ID + "=" + uri.getPathSegments().get(1);
-            }
-            case UPLOAD:
-            case DOWNLOAD: {
-                finalSelection = TextUtils.isEmpty(selection)
-                        ? extraSelection : extraSelection + " AND " + selection;
-
-                count = db.delete(DB_TABLE_FILES, finalSelection, selectionArgs);
-            }
-                break;
             case ALL_FILE_INFO:
+                sendToTargetService(uri, selection, selectionArgs);
                 count = db.delete(DB_TABLE_FILES, selection, selectionArgs);
                 break;
             case JPEG_FILES:
+                sendToTargetService(uri, selection, selectionArgs);
                 count = db.delete(DB_TABLE_FILES, selection, selectionArgs);
                 if (count <= 0) {
                     Log.w(TAG, "couldn't delete jpeg files from database");
@@ -342,6 +287,7 @@ public class FileProvider extends ContentProvider {
                 getContext().getContentResolver().notifyChange(uri, null);
                 break;
             case VIDEO_FILES:
+                sendToTargetService(uri, selection, selectionArgs);
                 count = db.delete(DB_TABLE_FILES, selection, selectionArgs);
                 if (count <= 0) {
                     Log.w(TAG, "couldn't delete video files from database");
@@ -350,6 +296,7 @@ public class FileProvider extends ContentProvider {
                 getContext().getContentResolver().notifyChange(uri, null);
                 break;
             case AUDIO_FILES:
+                sendToTargetService(uri, selection, selectionArgs);
                 count = db.delete(DB_TABLE_FILES, selection, selectionArgs);
                 if (count <= 0) {
                     Log.w(TAG, "couldn't delete audio files from database");
@@ -387,6 +334,35 @@ public class FileProvider extends ContentProvider {
             combined[presize + i] = userArgs[i];
         }
         return combined;
+    }
+    
+    private void sendToTargetService(Uri uri, String selection, String[] selectionArgs){
+        String[] list = queryFilePathList(uri, selection, selectionArgs, null);
+        if(list != null){
+            Intent intent = new Intent(this.getContext(), FileProviderService.class);
+            intent.putExtra("_list", list);
+            getContext().startService(intent);
+        } else {
+            Log.w(TAG, "---> none find will deleted files.");
+        }
+    }
+    
+    private String[] queryFilePathList(Uri uri, String selection, String[] selectionArgs, String sort){
+        String[] list = null;
+        String[] projection = { FileColumn.COLUMN_LOCAL_PATH };
+        Cursor cursor = query(uri, projection, selection, selectionArgs, sort);
+        if(cursor != null){
+            int count = cursor.getCount();
+            if(count>0){
+                list = new String[count];
+                int index = 0;
+                while(cursor.moveToNext()){
+                    list[index++] = cursor.getString(0);
+                }
+            }
+            cursor.close();
+        }
+        return list;
     }
 
     private final class DatabaseHelper extends SQLiteOpenHelper {
@@ -426,12 +402,14 @@ public class FileProvider extends ContentProvider {
                 db.execSQL("DROP TABLE IF EXISTS " + DB_TABLE_SETTINGS);
                 db.execSQL("CREATE TABLE " + DB_TABLE_SETTINGS +
                         "('" + FileColumn.COLUMN_ID+"' INTEGER PRIMARY KEY AUTOINCREMENT," +
-                        "'" + FileColumn.COLUMN_FILE_INIT+"' INTEGER NOT NULL DEFAULT 0 );" );
+                        "'" + FileColumn.COLUMN_FILE_INIT+"' INTEGER NOT NULL DEFAULT 0 , " +
+                        "'" + FileColumn.COLUMN_SERVER_UPLOAD_URL + "' TEXT );" );
                 db.execSQL("DROP VIEW IF EXISTS " + DB_TABLE_TASKS);
                 
+                //init upload and download task view
                 String createTasksView = "CREATE VIEW " + DB_TABLE_TASKS + " AS SELECT " 
-                + FileColumn.COLUMN_ID + ", " + FileColumn.COLUMN_LOCAL_PATH + ", " + FileColumn.COLUMN_REMOTE_PATH + ", "  + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS +", " 
-                + FileColumn.COLUMN_UP_OR_DOWN + ", " + FileColumn.COLUMN_LAUNCH_MODE + ", " + FileColumn.COLUMN_SHOW_NOTIFICATION + ", " + FileColumn.COLUMN_UP_LOAD_BYTE + ", " + FileColumn.COLUMN_UP_LOAD_MESSAGE
+                + FileColumn.COLUMN_ID + ", " + FileColumn.COLUMN_LOCAL_PATH + ", " + FileColumn.COLUMN_REMOTE_PATH + ", "  + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS +", " + FileColumn.COLUMN_LAUNCH_MODE +", "
+                + FileColumn.COLUMN_UP_OR_DOWN + ", " + FileColumn.COLUMN_SHOW_NOTIFICATION + ", " + FileColumn.COLUMN_UP_LOAD_BYTE + ", " + FileColumn.COLUMN_UP_LOAD_MESSAGE
                 + " FROM " + DB_TABLE_FILES + " WHERE " + FileColumn.COLUMN_UP_OR_DOWN + " !=0 ";
                 db.execSQL(createTasksView);
                 
@@ -475,10 +453,11 @@ public class FileProvider extends ContentProvider {
         public void onCreate(SQLiteDatabase db) {
             updateDatabase(db, 0, DB_VERSION);
             getContext().sendStickyBroadcast(new Intent(ACTION_PROVIDER_ONCREATE));
-            /*ContentValues values = new ContentValues();
+            ContentValues values = new ContentValues();
             values.put(FileColumn.COLUMN_FILE_INIT, 0);//db onreate, 0:frist 1:is create before
+            values.put(FileColumn.COLUMN_SERVER_UPLOAD_URL, "http://10.0.2.2:80/test/action/api/file_recv.php");
             long id = db.insert(DB_TABLE_SETTINGS, null, values);
-            Log.i(TAG, "===> db init id : " + id);*/
+            Log.i(TAG, "===> db init id : " + id);
         }
 
         @Override

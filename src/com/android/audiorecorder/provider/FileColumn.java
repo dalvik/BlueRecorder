@@ -162,5 +162,10 @@ public interface FileColumn {
      * database file rebuild
      */
     public static final String COLUMN_FILE_INIT = "file_init";
+    
+    /**
+     * remote server url
+     */
+    public static final String COLUMN_SERVER_UPLOAD_URL = "upload_url";
 
 }

@@ -45,6 +45,7 @@
     <string name="rename_item">Rename</string>
     <string name="record_list_title">Record list</string>
     <string name="delete_song_desc">The record will be deleted.</string>
+     <!-- down or upload -->
     <string name="upload_item">Upload</string>
     <string name="delete_item">Delete</string>
     <string name="no_records_title">No records</string>
@@ -55,6 +56,13 @@
     <string name="file_uploading">Uploading</string>
     <string name="file_upload_success">Success</string>
     <string name="file_upload_fail">Failed</string>
+    <string name="notification_upload_title">上传</string>
+    <string name="notification_download_title">下载</string>
+    <string name="notification_upload_result_success">上传成功</string>
+    <string name="notification_upload_result_fail">上传失败</string>
+    <string name="notification_download_result_success">下载成功</string>
+    <string name="notification_download_result_fail">下载失败</string>
+    
     <string name="type">MIME Type:</string>
     <string name="duration">Duration:</string>
     <string name="menu_search">Search</string>
