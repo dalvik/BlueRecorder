@@ -47,6 +47,7 @@
     <string name="delete_song_desc">The record will be deleted.</string>
      <!-- down or upload -->
     <string name="upload_item">Upload</string>
+    <string name="reupload_item">重传</string>
     <string name="delete_item">Delete</string>
     <string name="no_records_title">No records</string>
     <string name="path">Path:</string>

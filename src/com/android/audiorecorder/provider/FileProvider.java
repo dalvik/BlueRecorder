@@ -7,16 +7,12 @@ import java.util.List;
 import android.content.ContentProvider;
 import android.content.ContentUris;
 import android.content.ContentValues;
-import android.content.Context;
 import android.content.Intent;
 import android.content.UriMatcher;
 import android.database.Cursor;
-import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
-import android.text.TextUtils;
 import android.util.Log;
 
 public class FileProvider extends ContentProvider {
@@ -36,17 +32,13 @@ public class FileProvider extends ContentProvider {
     public final static int FILE_TYPE_ZIP = 5;
     public final static int FILE_TYPE_OTHER = 6;
     
-    private static final String DB_NAME = "files.db";
-
-    private static final int DB_VERSION = 1;
-
-    private static final String DB_TABLE_FILES = "files";
-    private static final String DB_TABLE_TASKS = "down_up_load_tasks";//up or download tasks
-    private static final String DB_TABLE_SETTINGS = "settings";
+    protected static final String DB_TABLE_FILES = "files";
+    protected static final String DB_TABLE_TASKS = "down_up_load_tasks";//up or download tasks
+    protected static final String DB_TABLE_SETTINGS = "settings";
     
-    private static final String TABLE_JPEG_FILES = "jpeg";
-    private static final String TABLE_AUDIO_FILES = "audio";
-    private static final String TABLE_VIDEO_FILES = "video";
+    protected static final String TABLE_JPEG_FILES = "jpeg";
+    protected static final String TABLE_AUDIO_FILES = "audio";
+    protected static final String TABLE_VIDEO_FILES = "video";
     public static final String TABLE_DELETE_FILES = "deleted";
 
     private static final int TASK = 6;
@@ -363,108 +355,6 @@ public class FileProvider extends ContentProvider {
             cursor.close();
         }
         return list;
-    }
-
-    private final class DatabaseHelper extends SQLiteOpenHelper {
-
-        public DatabaseHelper(final Context context) {
-            super(context, DB_NAME, null, DB_VERSION);
-        }
-
-        private void updateDatabase(SQLiteDatabase db, int fromVersion, int toVersion) {
-            try {
-                db.execSQL("DROP TABLE IF EXISTS " + DB_TABLE_FILES);
-                db.execSQL("CREATE TABLE " + DB_TABLE_FILES +
-                    "('" + FileColumn.COLUMN_ID+"' INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "'" + FileColumn.COLUMN_FILE_TYPE+"' INTEGER NOT NULL DEFAULT " + FILE_TYPE_OTHER + ", " +
-                    "'" + FileColumn.COLUMN_MIME_TYPE+"' TEXT, " +
-                    
-                    "'" + FileColumn.COLUMN_LOCAL_PATH + "' TEXT NOT NULL, " +
-                    "'" + FileColumn.COLUMN_REMOTE_PATH + "' TEXT, " +
-                    "'" + FileColumn.COLUMN_UP_OR_DOWN + "' INTEGER DEFAULT 0, " +
-                    "'" + FileColumn.COLUMN_THUMB_NAME + "' TEXT, " +
-                    
-                    "'" + FileColumn.COLUMN_FILE_SIZE + "' INTEGER DEFAULT 0, " +
-                    "'" + FileColumn.COLUMN_FILE_DURATION + "' INTEGER DEFAULT 0, " +
-                    "'" + FileColumn.COLUMN_LAUNCH_MODE + "' INTEGER, " +
-                    
-                    "'" + FileColumn.COLUMN_FILE_RESOLUTION_X + "' INTEGER, " +
-                    "'" + FileColumn.COLUMN_FILE_RESOLUTION_Y + "' INTEGER, " +
-                    "'" + FileColumn.COLUMN_FILE_THUMBNAIL + "' TEXT, " +
-                    
-                    "'" + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS + "' INTEGER NOT NULL DEFAULT 0, " +
-                    "'" + FileColumn.COLUMN_DOWN_LOAD_TIME + "' LONG, " +
-                    "'" + FileColumn.COLUMN_UP_LOAD_TIME + "' LONG DEFAULT 0, " +
-                    "'" + FileColumn.COLUMN_UP_LOAD_BYTE + "' LONG DEFAULT 0, " +
-                    "'" + FileColumn.COLUMN_SHOW_NOTIFICATION + "' INTEGER DEFAULT 0, " +
-                    "'" + FileColumn.COLUMN_UP_LOAD_MESSAGE + "' TEXT);");
-                
-                db.execSQL("DROP TABLE IF EXISTS " + DB_TABLE_SETTINGS);
-                db.execSQL("CREATE TABLE " + DB_TABLE_SETTINGS +
-                        "('" + FileColumn.COLUMN_ID+"' INTEGER PRIMARY KEY AUTOINCREMENT," +
-                        "'" + FileColumn.COLUMN_FILE_INIT+"' INTEGER NOT NULL DEFAULT 0 , " +
-                        "'" + FileColumn.COLUMN_SERVER_UPLOAD_URL + "' TEXT );" );
-                db.execSQL("DROP VIEW IF EXISTS " + DB_TABLE_TASKS);
-                
-                //init upload and download task view
-                String createTasksView = "CREATE VIEW " + DB_TABLE_TASKS + " AS SELECT " 
-                + FileColumn.COLUMN_ID + ", " + FileColumn.COLUMN_LOCAL_PATH + ", " + FileColumn.COLUMN_REMOTE_PATH + ", "  + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS +", " + FileColumn.COLUMN_LAUNCH_MODE +", "
-                + FileColumn.COLUMN_UP_OR_DOWN + ", " + FileColumn.COLUMN_SHOW_NOTIFICATION + ", " + FileColumn.COLUMN_UP_LOAD_BYTE + ", " + FileColumn.COLUMN_UP_LOAD_MESSAGE
-                + " FROM " + DB_TABLE_FILES + " WHERE " + FileColumn.COLUMN_UP_OR_DOWN + " !=0 ";
-                db.execSQL(createTasksView);
-                
-                //init jpeg audio video view
-                db.execSQL("DROP VIEW IF EXISTS " + TABLE_JPEG_FILES);
-                String createJpegView = "CREATE VIEW " + TABLE_JPEG_FILES + " AS SELECT " 
-                + FileColumn.COLUMN_ID + ", " + FileColumn.COLUMN_FILE_TYPE + ", " + FileColumn.COLUMN_MIME_TYPE + ", " + FileColumn.COLUMN_LOCAL_PATH + ", " + FileColumn.COLUMN_THUMB_NAME + ", " + FileColumn.COLUMN_LAUNCH_MODE + ", "
-                + FileColumn.COLUMN_FILE_THUMBNAIL + ", " + FileColumn.COLUMN_FILE_RESOLUTION_X + ", " + FileColumn.COLUMN_FILE_RESOLUTION_Y + ", " + FileColumn.COLUMN_UP_OR_DOWN + ", " + FileColumn.COLUMN_SHOW_NOTIFICATION + ", "
-                + FileColumn.COLUMN_FILE_SIZE + ", " + FileColumn.COLUMN_FILE_DURATION + ", " + FileColumn.COLUMN_DOWN_LOAD_TIME + ", "  + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS +", "  + FileColumn.COLUMN_UP_LOAD_TIME + " FROM " + DB_TABLE_FILES
-                + " WHERE " + FileColumn.COLUMN_FILE_TYPE + "=" + FILE_TYPE_JEPG;
-                db.execSQL(createJpegView);
-                
-                db.execSQL("DROP VIEW IF EXISTS " + TABLE_AUDIO_FILES);
-                String createAudioView = "CREATE VIEW " + TABLE_AUDIO_FILES + " AS SELECT " 
-                + FileColumn.COLUMN_ID + ", " + FileColumn.COLUMN_FILE_TYPE + ", " + FileColumn.COLUMN_MIME_TYPE + ", " + FileColumn.COLUMN_LOCAL_PATH +", " + FileColumn.COLUMN_THUMB_NAME + ", " + FileColumn.COLUMN_LAUNCH_MODE + ", "
-                + FileColumn.COLUMN_FILE_THUMBNAIL + ", " + FileColumn.COLUMN_FILE_RESOLUTION_X + ", " + FileColumn.COLUMN_FILE_RESOLUTION_Y + ", " + FileColumn.COLUMN_UP_OR_DOWN + ", " + FileColumn.COLUMN_SHOW_NOTIFICATION + ", "
-                        +FileColumn.COLUMN_FILE_SIZE + ", " + FileColumn.COLUMN_FILE_DURATION + ", " + FileColumn.COLUMN_DOWN_LOAD_TIME + ", "  + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS +", "  + FileColumn.COLUMN_UP_LOAD_TIME +  " FROM " + DB_TABLE_FILES
-                + " WHERE " + FileColumn.COLUMN_FILE_TYPE + "=" + FILE_TYPE_AUDIO;
-                db.execSQL(createAudioView);
-                
-                db.execSQL("DROP VIEW IF EXISTS " + TABLE_VIDEO_FILES);
-                String createVideoView = "CREATE VIEW " + TABLE_VIDEO_FILES + " AS SELECT " 
-                + FileColumn.COLUMN_ID + ", " + FileColumn.COLUMN_FILE_TYPE + ", " + FileColumn.COLUMN_MIME_TYPE + ", " + FileColumn.COLUMN_LOCAL_PATH +", " + FileColumn.COLUMN_THUMB_NAME + ", " + FileColumn.COLUMN_LAUNCH_MODE + ", "
-                + FileColumn.COLUMN_FILE_THUMBNAIL + ", " + FileColumn.COLUMN_FILE_RESOLUTION_X + ", " + FileColumn.COLUMN_FILE_RESOLUTION_Y + ", " + FileColumn.COLUMN_UP_OR_DOWN + ", " + FileColumn.COLUMN_SHOW_NOTIFICATION + ", "
-                + FileColumn.COLUMN_FILE_SIZE + ", " + FileColumn.COLUMN_FILE_DURATION + ", " + FileColumn.COLUMN_DOWN_LOAD_TIME + ", "  + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS +", "  + FileColumn.COLUMN_UP_LOAD_TIME +  " FROM " + DB_TABLE_FILES
-                + " WHERE " + FileColumn.COLUMN_FILE_TYPE + "=" + FILE_TYPE_VIDEO;
-                db.execSQL(createVideoView);
-                
-                db.execSQL("DROP VIEW IF EXISTS " + TABLE_DELETE_FILES);
-                String createDeleteView = "CREATE VIEW " + TABLE_DELETE_FILES + " AS SELECT " 
-                + FileColumn.COLUMN_ID + ", " + FileColumn.COLUMN_LOCAL_PATH +", " + FileColumn.COLUMN_FILE_THUMBNAIL + ", " + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS + " FROM " + DB_TABLE_FILES
-                + " WHERE " + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS + "=-1";
-                db.execSQL(createDeleteView);
-                Log.i(TAG, "===> SQLiteOpenHelper Oncreate.");
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        public void onCreate(SQLiteDatabase db) {
-            updateDatabase(db, 0, DB_VERSION);
-            getContext().sendStickyBroadcast(new Intent(ACTION_PROVIDER_ONCREATE));
-            ContentValues values = new ContentValues();
-            values.put(FileColumn.COLUMN_FILE_INIT, 0);//db onreate, 0:frist 1:is create before
-            values.put(FileColumn.COLUMN_SERVER_UPLOAD_URL, "http://10.0.2.2:80/test/action/api/file_recv.php");
-            long id = db.insert(DB_TABLE_SETTINGS, null, values);
-            Log.i(TAG, "===> db init id : " + id);
-        }
-
-        @Override
-        public void onUpgrade(SQLiteDatabase db, int arg1, int arg2) {
-            updateDatabase(db, arg1, arg2);
-        }
-
     }
 
 }

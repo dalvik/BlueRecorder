@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -17,6 +18,7 @@ import android.util.Log;
 
 import com.android.audiorecorder.R;
 import com.android.audiorecorder.provider.FileTransport.ITransportListener;
+import com.android.audiorecorder.ui.SettingsActivity;
 import com.android.audiorecorder.utils.StringUtils;
 
 public class FileProviderService extends Service {
@@ -55,10 +57,13 @@ public class FileProviderService extends Service {
     private NotificationManager mNotificationManager;
     private BroadcastReceiver exteranalStorageStateReceiver = null;
     private BroadcastReceiver commandRecv = null;
+    
+    private SharedPreferences mPreferences;
 
     @Override
     public void onCreate() {
         super.onCreate();
+        this.mPreferences = getSharedPreferences(SettingsActivity.class.getName(), Context.MODE_PRIVATE);
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         mUpDownloadThread = new HandlerThread("DOWN_UP_LOAD_THREAD");
         mUpDownloadHandlerCallback = new UpDownloadHandlerCallback();
@@ -78,6 +83,7 @@ public class FileProviderService extends Service {
         public boolean handleMessage(Message msg) {
             switch (msg.what) {
                 case MSG_LOAD_TASK:
+                	mFileTransport.setUUid(mPreferences.getString(SettingsActivity.KEY_MAC_ADDRESS, "default").replace("_", ""));
                     mFileTransport.loadTransportTask();
                     break;
                 case MSG_ANALIZE_FILE:
@@ -149,7 +155,7 @@ public class FileProviderService extends Service {
         
         @Override
         public void onResult(boolean isUpload, boolean success, String path) {
-            Log.d(TAG, "onProgress isupload = " + isUpload + " path = " + path);
+            Log.d(TAG, "onResult isupload = " + isUpload + " path = " + path);
             if(!isUpload && success) {
                 Message message = mUpDownloadHandler.obtainMessage(MSG_ANALIZE_FILE);
                 message.obj = path;
@@ -179,10 +185,9 @@ public class FileProviderService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Notification note = new Notification(0, null,
-                System.currentTimeMillis());
-        note.flags |= Notification.FLAG_NO_CLEAR;
-        startForeground(42, note);
+        //Notification note = new Notification(0, null, System.currentTimeMillis());
+        //note.flags |= Notification.FLAG_NO_CLEAR;
+        //startForeground(42, note);
         Log.i(TAG, "onStartCommand.");
         sendMessage(mUpDownloadHandler, MSG_LOAD_TASK, 2000);
         if(intent != null && intent.hasExtra("_list")){
@@ -213,11 +218,11 @@ public class FileProviderService extends Service {
               @Override
                 public void onReceive(Context arg0, Intent intent) {
                   Log.i(TAG, "===> Action : " + intent.getAction());
-                    if(Intent.ACTION_MEDIA_MOUNTED.equals(intent.getAction()) && Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
-                        sendMessage(mUpDownloadHandler, MSG_REBUILD_DATABASE, 3000);
-                    } else if ((Intent.ACTION_MEDIA_REMOVED.equals(intent.getAction()) || Intent.ACTION_MEDIA_EJECT.equals(intent.getAction())) && Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
-                        sendMessage(mUpDownloadHandler, MSG_CLEAR_DATABASE, 1000);
-                    }
+                  if(Intent.ACTION_MEDIA_MOUNTED.equals(intent.getAction()) && Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
+                      sendMessage(mUpDownloadHandler, MSG_REBUILD_DATABASE, 3000);
+                  } else if ((Intent.ACTION_MEDIA_REMOVED.equals(intent.getAction()) || Intent.ACTION_MEDIA_EJECT.equals(intent.getAction())) && Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
+                      sendMessage(mUpDownloadHandler, MSG_CLEAR_DATABASE, 1000);
+                  }
                 }  
             };
             IntentFilter filter = new IntentFilter(Intent.ACTION_MEDIA_EJECT);

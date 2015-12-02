@@ -38,6 +38,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.hardware.Camera;
 import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.CameraInfo;
@@ -150,6 +151,7 @@ public class MultiMediaService extends Service {
     private boolean mIsBluetoothConnected;
     private boolean mAtdpEnable;
     private WakeLock mRecorderWakeLock;
+    private WakeLock mAlarmWakeLock;
     private WakeLock mUploadWakeLock;
     private MediaRecorder mMediaRecorder = null;
 
@@ -184,6 +186,8 @@ public class MultiMediaService extends Service {
     private PhoneStateListener phoneStateListener;
     private int mPhoneState;
     private String mIncommingNumber;
+    
+    private TimeSchedule mTimeSchedule;
     
     private UploadHandlerCallback mUploadHandlerCallback;
     private HandlerThread mUpHandlerThread;
@@ -287,8 +291,11 @@ public class MultiMediaService extends Service {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     final String action = intent.getAction();
+                    if(DebugConfig.DEBUG){
+                        Log.i(TAG, "---> action = " + action);
+                    }
                     if(TimeSchedule.ACTION_TIMER_ALARM.equalsIgnoreCase(action)){
-                        Log.i(TAG, "---> alarm.");
+                    	 Log.i(TAG, "---> alarm.");
                     } else if(Intent.ACTION_USER_PRESENT.equalsIgnoreCase(action)){//user login, screen on
                         isScreenOn = true;
                         //mUploadHandler.sendEmptyMessage(MSG_INIT_CAMERA);
@@ -296,7 +303,6 @@ public class MultiMediaService extends Service {
                             Message msgStop = mMediaAudioHandler.obtainMessage(MSG_STOP_RECORD);
                             msgStop.arg1 = mCurMode;
                             mMediaAudioHandler.sendMessage(msgStop);
-                            
                             mHandler.removeMessages(MSG_START_TIMER);
                             Log.i(TAG, "---> user present.");
                         }
@@ -340,7 +346,7 @@ public class MultiMediaService extends Service {
                     } else if(action.equals(Intent.ACTION_SCREEN_OFF)){
                         isScreenOn = false;
                         mHandler.removeMessages(MSG_START_TIMER);
-                        mHandler.sendEmptyMessageDelayed(MSG_START_TIMER, 30000);
+                        mHandler.sendEmptyMessageDelayed(MSG_START_TIMER, 3000);
                     }
                 }
             };
@@ -936,6 +942,21 @@ public class MultiMediaService extends Service {
         return macAddress;
     }
    
+    private void updateUUid(String uuid){
+	    String[] pro = {FileColumn.COLUMN_ID};
+        Cursor cursor = getContentResolver().query(FileProvider.SETTINGS_URI, pro, null, null, null);
+        int id = 0;
+        if(cursor != null){
+            if(cursor.moveToNext()){
+                id = cursor.getInt(0);
+            }
+            cursor.close();
+        }
+        ContentValues values = new ContentValues();
+        values.put(FileColumn.COLUMN_UUID, uuid);
+        getContentResolver().update(FileProvider.SETTINGS_URI, values, FileColumn.COLUMN_ID + " = " + id, null);
+	}
+    
     private List<BluetoothDevice> getConnectedDevices() {
         return mService.getDevicesMatchingConnectionStates(new int[] {BluetoothProfile.STATE_CONNECTED});
     }
@@ -1289,9 +1310,9 @@ public class MultiMediaService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         //startForeground(CUSTOM_VIEW_ID, new Notification());
-        Notification note = new Notification(0, null, System.currentTimeMillis() );
-        note.flags |= Notification.FLAG_NO_CLEAR;
-        startForeground(42, note);
+        //Notification note = new Notification(0, null, System.currentTimeMillis() );
+        //note.flags |= Notification.FLAG_NO_CLEAR;
+        //startForeground(42, note);
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -1343,6 +1364,7 @@ public class MultiMediaService extends Service {
         if(mac == null || mac.length() == 0){
             mac = "anonymous";
         }
+        updateUUid(mac);
         return mac + "_";
     }
     

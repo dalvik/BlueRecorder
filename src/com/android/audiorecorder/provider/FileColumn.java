@@ -164,6 +164,11 @@ public interface FileColumn {
     public static final String COLUMN_FILE_INIT = "file_init";
     
     /**
+     * uuid
+     */
+    public static final String COLUMN_UUID = "uuid";
+    
+    /**
      * remote server url
      */
     public static final String COLUMN_SERVER_UPLOAD_URL = "upload_url";

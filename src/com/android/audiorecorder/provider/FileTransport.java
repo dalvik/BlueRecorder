@@ -15,6 +15,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.util.Log;
 
+import com.android.audiorecorder.DebugConfig;
 import com.android.audiorecorder.engine.MultiMediaService;
 import com.lidroid.xutils.HttpUtils;
 import com.lidroid.xutils.exception.HttpException;
@@ -33,11 +34,13 @@ public class FileTransport {
     
     private boolean isTaskTransporting;
     
-    private String TAG = "FileUpdownLoad";
+    private String TAG = "FileTransport";
     
     private ITransportListener mTransportListener;
 
     private HttpUtils mHttpUtils;
+
+	private String mUUid;
     
     public FileTransport(Context context, ITransportListener listener){
         this.mContext = context;
@@ -121,10 +124,12 @@ public class FileTransport {
                 if(isShowNotifiaction && mTransportListener != null){
                     mTransportListener.onProgress(isUploading, total, current);
                 }
-                if (isUploading) {
-                    Log.d(TAG, "upload: " + current + "/" + total);
-                } else {
-                    Log.d(TAG, "reply: " + current + "/" + total);
+                if(DebugConfig.DEBUG){
+                    if (isUploading) {
+                        Log.d(TAG, "onUploading: " + current + "/" + total);
+                    } else {
+                        Log.d(TAG, "onDownLoading: " + current + "/" + total);
+                    }
                 }
                 ContentValues values = new ContentValues();
                 values.put(FileColumn.COLUMN_UP_LOAD_BYTE, current);
@@ -133,7 +138,7 @@ public class FileTransport {
 
             @Override
             public void onSuccess(ResponseInfo<File> responseInfo) {
-                Log.d(TAG, "reply: " + responseInfo.result);
+                Log.d(TAG, "onSuccess reply: " + responseInfo.result);
                 if(isShowNotifiaction && mTransportListener != null){
                     mTransportListener.onResult(false, true, responseInfo.result.getPath());
                 }
@@ -142,7 +147,7 @@ public class FileTransport {
 
             @Override
             public void onFailure(HttpException arg0, String msg) {
-                Log.e(TAG, msg);
+                Log.w(TAG, "onFailure = " + msg);
                 ContentValues values = new ContentValues();
                 values.put(FileColumn.COLUMN_UP_DOWN_LOAD_STATUS, FileColumn.STATE_FILE_UP_DOWN_FAILED);
                 values.put(FileColumn.COLUMN_UP_LOAD_TIME, System.currentTimeMillis());
@@ -160,6 +165,7 @@ public class FileTransport {
     private void uploadRequest(final int id, String path, final boolean isShowNotifiaction){
         RequestParams params = new RequestParams();
         params.addBodyParameter("file", new File(path));
+        params.addBodyParameter("uuid", mUUid);
         mHttpUtils.send(HttpMethod.POST, getRemoteUrl(), params, new RequestCallBack<String>() {
             @Override
             public void onStart() {
@@ -177,9 +183,9 @@ public class FileTransport {
                     mTransportListener.onProgress(isUploading, total, current);
                 }
                 if (isUploading) {
-                    Log.d(TAG, "upload: " + current + "/" + total);
+                    Log.d(TAG, "onUploading: " + current + "/" + total);
                 } else {
-                    Log.d(TAG, "reply: " + current + "/" + total);
+                    Log.d(TAG, "onUploading: " + current + "/" + total);
                 }
                 ContentValues values = new ContentValues();
                 values.put(FileColumn.COLUMN_UP_LOAD_BYTE, current);
@@ -188,7 +194,7 @@ public class FileTransport {
 
             @Override
             public void onSuccess(ResponseInfo<String> responseInfo) {
-                Log.d(TAG, "reply: " + responseInfo.result);
+                Log.d(TAG, "onSuccess reply: " + responseInfo.result);
                 ContentValues values = new ContentValues();
                 values.put(FileColumn.COLUMN_UP_DOWN_LOAD_STATUS, 2);
                 values.put(FileColumn.COLUMN_UP_LOAD_TIME, System.currentTimeMillis());
@@ -247,6 +253,10 @@ public class FileTransport {
         }
     }
     
+    public void setUUid(String uuid){
+    	this.mUUid = uuid;
+    }
+    
     public int addTransportTask(int id){
         
         return 0;
@@ -262,15 +272,15 @@ public class FileTransport {
     
     private String getRemoteUrl(){
         String[] pro = {FileColumn.COLUMN_SERVER_UPLOAD_URL};
-        String url = null;
         Cursor cursor = mContext.getContentResolver().query(FileProvider.SETTINGS_URI, pro, null, null, null);
+        String remoteUrl = "";
         if(cursor != null){
             if(cursor.moveToNext()){
-                url = cursor.getString(0);
+            	remoteUrl = cursor.getString(0);
             }
             cursor.close();
         }
-        return url;
+        return remoteUrl;
     }
     
     private void clearTop(){
