@@ -132,7 +132,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             //init upload and download task view
             db.execSQL("DROP VIEW IF EXISTS " + DB_TABLE_TASKS);
             String createTasksView = "CREATE VIEW " + DB_TABLE_TASKS + " AS SELECT " 
-            + FileColumn.COLUMN_ID + ", " + FileColumn.COLUMN_LOCAL_PATH + ", " + FileColumn.COLUMN_REMOTE_PATH + ", "  + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS +", " + FileColumn.COLUMN_LAUNCH_MODE +", "
+            + FileColumn.COLUMN_ID + ", " + FileColumn.COLUMN_LOCAL_PATH + ", " + FileColumn.COLUMN_REMOTE_PATH + ", "  + FileColumn.COLUMN_UP_DOWN_LOAD_STATUS +", " + FileColumn.COLUMN_LAUNCH_MODE +", " + FileColumn.COLUMN_FILE_TYPE +", "
             + FileColumn.COLUMN_UP_OR_DOWN + ", " + FileColumn.COLUMN_SHOW_NOTIFICATION + ", " + FileColumn.COLUMN_UP_LOAD_BYTE + ", " + FileColumn.COLUMN_UP_LOAD_MESSAGE
             + " FROM " + DB_TABLE_FILES + " WHERE " + FileColumn.COLUMN_UP_OR_DOWN + " !=0 ";
             db.execSQL(createTasksView);

@@ -94,13 +94,13 @@ public class FileTransport {
             Log.i(TAG, "---> start transport.");
             TaskInfo info = taskList.get(0);
             System.out.println(info.mode + " mode.");
-            startTransport(info.id, info.isUpload, info.path, info.isShowNotification);
+            startTransport(info.id, info.isUpload, info.path, info.isShowNotification, info.mode, info.type);
         }
     }
     
-    private void startTransport(final int id, final boolean isUpload, String path, final boolean isShowNotifiaction) {
+    private void startTransport(final int id, final boolean isUpload, String path, final boolean isShowNotifiaction, int mode, int type) {
         if(isUpload){
-            uploadRequest(id, path, isShowNotifiaction);
+            uploadRequest(id, path, isShowNotifiaction, mode, type);
         } else {
             downloadRequest(id, path, isShowNotifiaction);   
         }
@@ -162,10 +162,12 @@ public class FileTransport {
         mHttpUtils.download(path, Environment.getExternalStorageDirectory().getPath() + "/" + FileProviderService.ROOT + "/" + FileProviderService.CATE_DOWNLOAD +"/"+fileName, requestCallBack);
     }
     
-    private void uploadRequest(final int id, String path, final boolean isShowNotifiaction){
+    private void uploadRequest(final int id, String path, final boolean isShowNotifiaction, int mode, int type){
         RequestParams params = new RequestParams();
         params.addBodyParameter("file", new File(path));
         params.addBodyParameter("uuid", mUUid);
+        params.addBodyParameter("mode", "1");
+        params.addBodyParameter("type", "2");
         mHttpUtils.send(HttpMethod.POST, getRemoteUrl(), params, new RequestCallBack<String>() {
             @Override
             public void onStart() {
@@ -224,7 +226,8 @@ public class FileTransport {
     }
     
     public void loadTransportTask(){
-        String[] pro = {FileColumn.COLUMN_ID, FileColumn.COLUMN_LOCAL_PATH, FileColumn.COLUMN_REMOTE_PATH, FileColumn.COLUMN_UP_OR_DOWN, FileColumn.COLUMN_SHOW_NOTIFICATION,FileColumn.COLUMN_LAUNCH_MODE};
+        String[] pro = {FileColumn.COLUMN_ID, FileColumn.COLUMN_LOCAL_PATH, FileColumn.COLUMN_REMOTE_PATH, FileColumn.COLUMN_UP_OR_DOWN, FileColumn.COLUMN_SHOW_NOTIFICATION,
+        		FileColumn.COLUMN_LAUNCH_MODE, FileColumn.COLUMN_FILE_TYPE};
         String selection = FileColumn.COLUMN_UP_DOWN_LOAD_STATUS + " == " + FileColumn.STATE_FILE_UP_DOWN_WAITING;
         String sortOrder = FileColumn.COLUMN_SHOW_NOTIFICATION + " desc ";
         Cursor cursor = mContext.getContentResolver().query(FileProvider.TASK_URI, pro, selection, null, sortOrder);
@@ -236,6 +239,7 @@ public class FileTransport {
                 String local = cursor.getString(cursor.getColumnIndex(FileColumn.COLUMN_LOCAL_PATH));
                 int notifiaction = cursor.getInt(cursor.getColumnIndex(FileColumn.COLUMN_SHOW_NOTIFICATION));
                 int mode = cursor.getInt(cursor.getColumnIndex(FileColumn.COLUMN_LAUNCH_MODE));
+                int type = cursor.getInt(cursor.getColumnIndex(FileColumn.COLUMN_FILE_TYPE));
                 if(!checkExistsTask(id)){// not exists transport list
                     TaskInfo info = new TaskInfo();
                     info.id = id;
@@ -243,6 +247,7 @@ public class FileTransport {
                     info.path = info.isUpload ? local: remote;
                     info.isShowNotification = (notifiaction == 1);
                     info.mode = mode;
+                    info.type = type;
                     taskList.add(info);
                 }
                 if(!isTaskTransporting){
@@ -304,6 +309,7 @@ public class FileTransport {
         boolean isUpload;
         boolean isShowNotification;
         int mode;
+        int type;
     }
     
     class FileComparator implements Comparator<TaskInfo> {

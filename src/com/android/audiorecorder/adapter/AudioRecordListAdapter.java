@@ -102,19 +102,19 @@ public class AudioRecordListAdapter extends BaseAdapter {
                         localMenu.add(1, AudioRecordList.ITEM_OPERATION_PLAY, 1, R.string.play);
                     }
                     localMenu.add(1, AudioRecordList.ITEM_OPERATION_DETAILS, 1, R.string.information);
-                    if(file.getUpDownLoadStatus() == FileColumn.STATE_FILE_UP_DOWN_INIT){
+                    /*if(file.getUpDownLoadStatus() == FileColumn.STATE_FILE_UP_DOWN_INIT){
                         MenuItem item = localMenu.add(1, AudioRecordList.ITEM_OPERATION_UPLOAD, 1, R.string.file_upload_init);
                         item.setEnabled(true);
                     } else if(file.getUpDownLoadStatus() == FileColumn.STATE_FILE_UP_DOWN_WAITING){
                         MenuItem item = localMenu.add(1, AudioRecordList.ITEM_OPERATION_UPLOAD, 1, R.string.file_uploading);
-                        item.setEnabled(false);
+                        //item.setEnabled(false);
                     } else if(file.getUpDownLoadStatus() == FileColumn.STATE_FILE_UP_DOWN_FAILED){
                         MenuItem item = localMenu.add(1, AudioRecordList.ITEM_OPERATION_UPLOAD, 1, R.string.reupload_item);
                         item.setEnabled(true);
                     } else if(file.getUpDownLoadStatus() == FileColumn.STATE_FILE_UP_DOWN_SUCCESS){
                         MenuItem item = localMenu.add(1, AudioRecordList.ITEM_OPERATION_UPLOAD, 1, R.string.file_upload_success);
-                        item.setEnabled(false);
-                    }
+                        //item.setEnabled(false);
+                    }*/
                     localMenu.add(1, AudioRecordList.ITEM_OPERATION_DELETE, 1, R.string.delete_item);
                     localPopupMenu.setOnMenuItemClickListener(new OnMenuItemClickListener() {
                         

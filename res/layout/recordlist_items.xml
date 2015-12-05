@@ -60,6 +60,7 @@
          android:layout_alignParentRight="true"
          android:paddingTop="4.0dip"
          android:paddingRight="8.0dip"
+         android:visibility="invisible"
          android:textColor="@android:color/secondary_text_dark"
          android:textSize="12.0sp" />
     
