@@ -401,21 +401,19 @@ public class AudioRecordList extends SherlockListActivity implements
             int playPositoin = checkNewPlayPosition();
             Log.d(TAG, "---> delete position = " + position + " playPositoin = " + playPositoin);
             if(playPositoin == position){
+                mAdapter.setPlayId(-1, PAUSE);
                 if(mService != null){
                     mService.stop();
                 }
                 mPlayPath = "";
+            } else {
+                int newPositoin = checkNewPlayPosition();
+                mAdapter.setPlayId(newPositoin, mAdapter.getPlayState());
             }
             FileDetail file = mFileList.get(position);
             mFileManager.delete(file.getFileType(), file.getId());
             mFileList.remove(position);
-            if(playPositoin == position){
-                mAdapter.setPlayId(-1, PAUSE);
-            }else{
-                int newPositoin = checkNewPlayPosition();
-                mAdapter.setPlayId(newPositoin, mAdapter.getPlayState());
-            }
-            mHandler.sendEmptyMessage(MSG_REFRESH_LIST);
+            mAdapter.notifyDataSetChanged();
             updateCounter();
             Toast.makeText(this, getResources().getQuantityString(R.plurals.NNNtracksdeleted, 1, 1), Toast.LENGTH_SHORT).show();
         } catch (RemoteException e) {

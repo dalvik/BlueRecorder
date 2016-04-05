@@ -43,8 +43,6 @@ import com.baidu.mobstat.StatService;
 
 public class SoundRecorder extends SherlockActivity implements View.OnClickListener {
     
-    public final static int MSG_RECORDER_UPDATE_UI = 10;
-
     static final String ANY_ANY = "*/*";
     static final String AUDIO_3GPP = "audio/aac";
     static final String AUDIO_AMR = "audio/amr";
@@ -74,7 +72,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     ImageClock mImageClock;
     ImageButton mListButton;
     long mMaxFileSize = 65535L;
-    private boolean mOneShot;
     private SharedPreferences mPreferences;
     ImageButton mRecordButton;
     ImageButton mStopButton;
@@ -185,7 +182,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                     mRecorder = new Recorder();
                     initResourceRefs();
                     mAudioRecordStart = (iRecorderService.getAudioRecordState() == MultiMediaService.STATE_BUSY);
-                    mHandler.sendEmptyMessage(MSG_RECORDER_UPDATE_UI);
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }
@@ -272,9 +268,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     private void updateUi() {
         updateTimerView();   
         updateButtonStatus();
-        if(mAudioRecordStart && !mVUMeter.isInvalidate()){
-            mVUMeter.invalidate();
-        }
     }
 
     private void updateButtonStatus() {

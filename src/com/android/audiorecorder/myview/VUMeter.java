@@ -103,17 +103,13 @@ public class VUMeter extends View {
         float cos = (float) Math.cos(mCurrentAngle);
         float x0 = pivotX - l*cos;
         float y0 = pivotY - l*sin;
-        if (mRecorder == null || !mRecorder.state()) {
-            x0 = 20.0f;
-            y0 = 100.0f;
-        }
         canvas.drawLine(x0 + SHADOW_OFFSET, y0 + SHADOW_OFFSET, pivotX + SHADOW_OFFSET, pivotY + SHADOW_OFFSET, mShadow);
         canvas.drawCircle(pivotX + SHADOW_OFFSET, pivotY + SHADOW_OFFSET, PIVOT_RADIUS, mShadow);
         canvas.drawLine(x0, y0, pivotX, pivotY, mPaint);
         canvas.drawCircle(pivotX, pivotY, PIVOT_RADIUS, mPaint);
         canvas.drawBitmap(deciel_top, (w - deciel_top.getWidth())/2, (h - deciel_top.getHeight()-5), null);
+        postInvalidateDelayed(ANIMATION_INTERVAL);
         if (mRecorder != null && mRecorder.state()) {
-            postInvalidateDelayed(ANIMATION_INTERVAL);
             mIsInvalidate = true;
         } else {
             mIsInvalidate = false;
