@@ -2,6 +2,8 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_name">Recorder</string>
+    <string name="app_name_image_card">ImageCard</string>
+    <string name="app_name_video_card">VideoCard</string>
     <string name="record_your_message">Record your message</string>
     <string name="message_recorded">Message recorded</string>
     <string name="review_message">Review message</string>
