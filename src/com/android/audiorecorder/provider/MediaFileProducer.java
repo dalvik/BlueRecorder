@@ -4,9 +4,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.android.audiorecorder.utils.FileUtils;
-import com.android.audiorecorder.utils.StringUtil;
-
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -14,6 +11,9 @@ import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+
+import com.android.audiorecorder.utils.FileUtils;
+import com.android.audiorecorder.utils.StringUtil;
 
 public class MediaFileProducer {
 

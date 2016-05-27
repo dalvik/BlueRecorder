@@ -13,8 +13,6 @@ import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.ShutterCallback;
 import android.hardware.Camera.Size;
-import android.view.Display;
-import android.view.WindowManager;
 
 public class GuardCameraManager {
 

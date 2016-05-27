@@ -17,41 +17,28 @@
  */
 package com.android.audiorecorder.ui;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import android.app.AlertDialog;
-import android.app.AlertDialog.Builder;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Configuration;
-import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
-import android.os.RemoteException;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.view.ViewPager;
 import android.support.v4.view.ViewPager.OnPageChangeListener;
-import android.text.Html.ImageGetter;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.OrientationEventListener;
-import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.Window;
 
 import com.android.audiorecorder.R;
 import com.android.audiorecorder.gallery.widget.FilePagerAdapter;
 import com.android.audiorecorder.gallery.widget.GalleryViewPager;
-import com.android.audiorecorder.myview.RotateLayout;
+import com.android.audiorecorder.ui.view.RotateLayout;
 import com.android.audiorecorder.utils.StringUtil;
 import com.lidroid.xutils.BitmapUtils;
 import com.lidroid.xutils.bitmap.BitmapDisplayConfig;

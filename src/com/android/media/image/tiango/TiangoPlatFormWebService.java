@@ -8,13 +8,17 @@
  */
 package com.android.media.image.tiango;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.android.library.net.base.IDataCallback;
 import com.android.library.net.utils.JSONType;
 import com.android.media.AbstractPlatForm;
-import com.android.media.data.BaseData;
+import com.android.media.data.TiangoImageBaseData;
+import com.android.media.data.TiangoThumbBaseData;
 
 /** 
  * @description: TODO
@@ -23,55 +27,66 @@ import com.android.media.data.BaseData;
  */
 public class TiangoPlatFormWebService extends AbstractPlatForm {
 
-    private final static String URL_IMAGE_THUMB = "";
+    private final static String URL_IMAGE_TYPE = "www.tngou.net/tnfs/api/classify";
+    private final static String URL_IMAGE_THUMB = "http://www.tngou.net/tnfs/api/list";
+    private final static String URL_IMAGE_LIST = "http://www.tngou.net/tnfs/api/show";
     
     public TiangoPlatFormWebService(IDataCallback callback) {
         super(callback);
     }
+    
 
-    /* (non Javadoc) 
-     * @title: getThumbList
-     * @description: TODO
-     * @param json
-     * @return 
-     * @see com.android.media.IPlatform#getThumbList(java.lang.String) 
-     */
     @Override
-    public String getThumbList(String json) {
+    public int getTypeList(){
+        JSONObject jsonObj = new JSONObject();
         try {
-            JSONObject param = new JSONObject(json);
-            TiangoImageThumbDataReq req = new TiangoImageThumbDataReq();
-            //req.w = param.optString("w");
-            //req.x = param.optString("x");
-            //req.y = param.optString("y");
-            doGetRequest(URL_IMAGE_THUMB, "", req, new JSONType<BaseData<TiangoImageThumbDataResp>>(){});
+            jsonObj.put("1", "");
+            jsonObj.put("1", "");
+            return doGetRequest(URL_IMAGE_THUMB, "", null, new JSONType<TiangoThumbBaseData<TiangoImageThumbListResp>>(){});
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        return null;
+        return -1;
+    }
+    
+    public List<TiangoImageType> getImageType(){
+        List<TiangoImageType> list = new ArrayList<TiangoImageType>();
+        TiangoImageType type = new TiangoImageType();
+        type.description = "这是描述";
+        type.id =  1;
+        type.keywords = "关键字";
+        type.name = "名称";
+        type.seq = 1;
+        type.title = "标题";
+        list.add(type);
+        return list;
     }
 
-    /* (non Javadoc) 
-     * @title: getFileList
-     * @description: TODO
-     * @param json
-     * @return 
-     * @see com.android.media.IPlatform#getFileList(java.lang.String) 
-     */
     @Override
-    public String getFileList(String json) {
-        /*try {
+    public int getThumbList(String json) {
+        try {
             JSONObject param = new JSONObject(json);
-            int type = param.optInt("http_type");
-            HzBicycleReq req = new HzBicycleReq();
-            req.w = param.optString("w");
-            req.x = param.optString("x");
-            req.y = param.optString("y");
-            doGetRequest(REQUEST_URL_LOCATION, "", req, new JSONType<AbstractData<HzBicycleDataResp>>(){});
+            TiangoImageThumbListReq req = new TiangoImageThumbListReq();
+            req.id = param.optInt("id");
+            req.page = param.optInt("page");
+            req.rows = param.optInt("rows");
+            return doGetRequest(URL_IMAGE_THUMB, "", req, new JSONType<TiangoThumbBaseData<TiangoImageThumbListResp>>(){});
         } catch (JSONException e) {
             e.printStackTrace();
-        }*/
-        return null;
+        }
+        return -1;
+    }
+
+    @Override
+    public int getImageList(String json) {
+        try {
+            JSONObject param = new JSONObject(json);
+            TiangoImageListReq req = new TiangoImageListReq();
+            return doGetRequest(URL_IMAGE_LIST, "", req, new JSONType<TiangoImageBaseData<TiangoImageListResp>>(){});
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return -1;
     }
 
 }

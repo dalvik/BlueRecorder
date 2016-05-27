@@ -56,11 +56,10 @@
             </intent-filter>
         </activity>
         
-        <activity
+        <!--<activity
             android:name="com.android.audiorecorder.ui.SoundRecorder"
             android:label="@string/app_name_image_card"
             android:icon="@drawable/ic_sound_list"
-            android:theme="@style/Theme.Sherlock.Light.DarkActionBar"
             android:launchMode="singleInstance" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -70,7 +69,7 @@
         </activity>
         
         <activity
-            android:name="com.android.audiorecorder.ui.MainThumbList"
+            android:name="com.android.audiorecorder.ui.SoundRecorder"
             android:label="@string/app_name_video_card"
             android:icon="@drawable/ic_sound_list"
             android:theme="@style/Theme.Sherlock.Light.DarkActionBar"
@@ -82,11 +81,12 @@
             </intent-filter>
         </activity>
         
-        <!-- main file list -->
+         main file list 
         <activity android:name="com.android.audiorecorder.ui.MainThumbList" android:theme="@style/Theme.Sherlock.NoActionBar"/>
+        -->
         
         <!-- thumbnail list -->
-        <activity android:name="com.android.audiorecorder.ui.ImageRecordList" android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>
+        <activity android:name="com.android.audiorecorder.ui.ImageList" android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>
         <activity android:name="com.android.audiorecorder.ui.VideoRecordList" android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>
         <activity android:name="com.android.audiorecorder.ui.AudioRecordList" android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>
         
@@ -98,6 +98,37 @@
         <activity android:name="com.android.audiorecorder.ui.HelpActivity" android:theme="@style/Theme.Sherlock.NoActionBar"/>
         <activity android:name="com.android.audiorecorder.ui.AboutActivity" android:theme="@style/Theme.Sherlock.NoActionBar"/>
         
+        <activity android:name="com.android.audiorecorder.ui.CenterSettingsActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation"
+            android:theme="@android:style/Theme.NoTitleBar"/>
+        
+        <activity android:name="com.android.audiorecorder.ui.CenterSuggestionActivity" 
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation"
+            android:theme="@android:style/Theme.NoTitleBar"/>
+        
+        <activity android:name="com.android.audiorecorder.ui.CenterHelpActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation"
+            android:theme="@android:style/Theme.NoTitleBar"/>
+        
+        <activity android:name="com.android.audiorecorder.ui.CenterAboutActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation"
+            android:theme="@android:style/Theme.NoTitleBar"/>
+        
+        <!-- pay donate -->
+        <activity android:name="com.android.library.thirdpay.PayActivity" 
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation"
+            android:theme="@android:style/Theme.NoTitleBar"/>
+        
+         <activity android:name="com.android.library.thirdpay.DonateActivity" 
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation"
+            android:theme="@android:style/Theme.NoTitleBar"/>
+         
         <service android:name="com.android.audiorecorder.engine.MultiMediaService" android:exported="false" >
             <intent-filter android:priority="2147483647">
                 <action android:name="com.audio.Action_AudioRecord" />

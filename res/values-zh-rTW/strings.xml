@@ -111,7 +111,7 @@
     <string name="sms_setting_newer">可更新至 <xliff:g id="number">%1$s</xliff:g></string>
     <string name="sms_setting_newest">當前已是最新版本</string>
     <string name="sms_setting_suggestion">投訴建議</string>
-    <string name="sms_setting_suggestion_notice">大家的建議為提高軟體品質已經起到作用，在此深表感謝。對於大家普遍關心的問題已經在給與解答，歡迎查閱。希望大家繼續提出寶貴的意見和建議！</string>
+    <string name="sms_setting_suggestion_notice">大家的建議為提高軟體品質已經起到作用，在此深表感謝。對於大家提出的問題給與解答，歡迎查閱。希望大家繼續提出寶貴的意見和建議！</string>
     <string name="sms_setting_suggestion_null">請輸入投訴或者建議內容</string>
     <string name="sms_setting_suggestion_long">輸入的投訴或者建議內容太長</string>
     <string name="sms_setting_suggestion_success">回饋成功，感謝參與！</string>

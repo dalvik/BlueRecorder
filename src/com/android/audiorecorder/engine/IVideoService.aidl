@@ -16,10 +16,6 @@ interface IVideoService{
 	
 	void unregStateListener(IVideoStateListener listener);
 	
-	int getRecorderTime();
-	
-	boolean isRecorderStart();
-	
 	void setMode(int mode);
 	
 	int getMode();

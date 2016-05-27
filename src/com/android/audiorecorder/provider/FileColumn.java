@@ -166,7 +166,7 @@ public interface FileColumn {
     /**
      * uuid
      */
-    public static final String COLUMN_UUID = "uuid";
+    public static final String COLUMN_UUID = "uuid";//对注册用户有效
     
     /**
      * remote server url

@@ -34,7 +34,6 @@ import com.lidroid.xutils.bitmap.BitmapCommonUtils;
 import com.lidroid.xutils.bitmap.BitmapDisplayConfig;
 import com.lidroid.xutils.bitmap.callback.BitmapLoadCallBack;
 import com.lidroid.xutils.bitmap.callback.BitmapLoadFrom;
-import com.lidroid.xutils.bitmap.factory.BitmapFactory;
 
 public class FileTouchImageView extends RelativeLayout{
     protected ProgressBar mProgressBar;

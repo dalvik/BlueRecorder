@@ -7,9 +7,9 @@ import java.io.Serializable;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
-import com.android.audiorecorder.utils.StringUtil;
-
 import android.util.Xml;
+
+import com.android.audiorecorder.utils.StringUtil;
 
 public class UpdateInfo implements Serializable {
 

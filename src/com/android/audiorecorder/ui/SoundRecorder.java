@@ -14,7 +14,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.util.Log;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -36,8 +35,9 @@ import com.android.audiorecorder.engine.IAudioService;
 import com.android.audiorecorder.engine.IAudioStateListener;
 import com.android.audiorecorder.engine.MultiMediaService;
 import com.android.audiorecorder.engine.UpdateManager;
-import com.android.audiorecorder.myview.ImageClock;
 import com.android.audiorecorder.provider.FileProviderService;
+import com.android.audiorecorder.ui.view.ImageClock;
+import com.android.audiorecorder.utils.LogUtil;
 import com.android.audiorecorder.utils.UIHelper;
 import com.baidu.mobstat.StatService;
 
@@ -86,7 +86,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     
     String mTimerFormat;
     TextView mTimerView;
-    com.android.audiorecorder.myview.VUMeter mVUMeter;
+    com.android.audiorecorder.ui.view.VUMeter mVUMeter;
     private AlertDialog localAlertDialog;
     private IAudioService iRecorderService;
     
@@ -116,7 +116,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                 this.mRequestedType = type;
             }
             String str3 = this.mRequestedType;
-            Log.i(TAG, "---> mRequestedType " + mRequestedType);
+            LogUtil.i(TAG, "==> mRequestedType " + mRequestedType);
             if (!"audio/*".equals(str3)) {
                 this.mRequestedType = "audio/aac";
             }
@@ -162,7 +162,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         this.mAnimImg = (ImageView) findViewById(R.id.image_d);
         this.mAnimImg.setBackgroundResource(R.anim.animation_d);
         this.mAnimation = (AnimationDrawable) this.mAnimImg.getBackground();
-        this.mVUMeter = (com.android.audiorecorder.myview.VUMeter) findViewById(R.id.uvMeter);
+        this.mVUMeter = (com.android.audiorecorder.ui.view.VUMeter) findViewById(R.id.uvMeter);
         this.mVUMeter.setRecorder(mRecorder);
         this.mRecordButton.setOnClickListener(this);
         this.mStopButton.setOnClickListener(this);
@@ -187,7 +187,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                 }
             }else {
                 if(DebugConfig.DEBUG) {
-                    Log.e(TAG, "===> onServiceConnected error iRecordListener = " + iRecorderService);
+                    LogUtil.e(TAG, "==> onServiceConnected error iRecordListener = " + iRecorderService);
                 }
             }
         }
@@ -196,7 +196,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         public void onServiceDisconnected(ComponentName name) {
             iRecorderService = null;
             if(DebugConfig.DEBUG) {
-                Log.d(TAG, "===> onServiceDisconnected");
+                LogUtil.d(TAG, "==> onServiceDisconnected");
             }
         }
         
@@ -260,7 +260,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     }
 
     private long updateTimerView() {
-        int time = mAudioRecordStart ? mRecorder.progress() : 0;
+        long time = mAudioRecordStart ? mRecorder.progress() : 0;
         mImageClock.setText(time);
         return 0;
     }
@@ -330,7 +330,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     
     public void onDestroy() {
         super.onDestroy();
-        Log.v("BlueSoundRecorder", "onDestroy");
+        LogUtil.v("BlueSoundRecorder", "==> onDestroy");
         if(iRecorderService != null) {
             try {
                 iRecorderService.unregStateListener(iAudioStateListener);
@@ -353,7 +353,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                 openOptionDialog(1);
                 break;
             case R.id.menu_item_setting:
-                Intent intent = new Intent(this, SettingsActivity.class);
+                Intent intent = new Intent(this, CenterSettingsActivity.class);
                 startActivity(intent);
                 break;
             case R.id.list:
@@ -437,22 +437,22 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
         
         public int getMaxAmplitude() {
             if (iRecorderService == null) {
-                Log.d(TAG, "===> audio record state stop");
+                LogUtil.d(TAG, "==> audio record state stop");
                 return 0;
             }
             try {
                 return iRecorderService.getMaxAmplitude();
             } catch (RemoteException e) {
-                Log.d(TAG, "===> getMaxAmplitude error " + e.getMessage());
+                LogUtil.d(TAG, "==> getMaxAmplitude error " + e.getMessage());
                 e.printStackTrace();
             }
             return 0;
         }
         
-        public int progress() {
+        public long progress() {
             if (iRecorderService != null) {
                 try {
-                    return iRecorderService.getRecorderTime();
+                    return iRecorderService.getRecorderDuration();
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }

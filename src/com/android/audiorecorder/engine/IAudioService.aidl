@@ -12,15 +12,11 @@ interface IAudioService{
 	
 	void unregStateListener(IAudioStateListener listener);
 	
-	int getRecorderTime();
-	
-	int getTalkTime();
+	long getRecorderDuration();
 	
 	int getMaxAmplitude();
 	
 	int getAudioRecordState();
-	
-	boolean isTalkStart();
 	
 	void setMode(int mode);
 	

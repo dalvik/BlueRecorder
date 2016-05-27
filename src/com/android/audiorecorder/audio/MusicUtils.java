@@ -21,8 +21,6 @@ import java.util.Formatter;
 import java.util.HashMap;
 import java.util.Locale;
 
-import com.android.audiorecorder.R;
-
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -31,6 +29,8 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.text.format.Time;
 import android.util.Log;
+
+import com.android.audiorecorder.R;
 
 public class MusicUtils {
 

@@ -84,7 +84,6 @@
     <string name="format_setting_AMR_item">WAV</string>
     <string name="record_saved">录音已保存</string>
     <string name="record_name_cannot_empty">新录音名不能为空</string>
-    <string name="FileRename_ERR_NAMEINV">"File name include invalid character "</string>
     <string name="durationformatshort" formatted="false">%2$d:%5$02d</string>
     <string name="durationformatlong" formatted="false">%1$d:%3$02d:%5$02d</string>
     <string name="FileRename_ERR_NAMEINV">"文件名称不能包含 "</string>
@@ -130,7 +129,7 @@
     <string name="sms_setting_newer">可更新至 <xliff:g id="number">%1$s</xliff:g></string>
     <string name="sms_setting_newest">当前已是最新版本</string>
     <string name="sms_setting_suggestion">投诉建议</string>
-    <string name="sms_setting_suggestion_notice">大家的建议为提高软件质量已经起到作用，在此深表感谢。对于大家普遍关心的问题已经在给与解答，欢迎查阅。希望大家继续提出宝贵的意见和建议！</string>
+    <string name="sms_setting_suggestion_notice">大家的建议为提高软件质量已经起到作用，在此深表感谢。对于大家提出的问题会给与解答，希望大家继续提出宝贵的意见和建议！</string>
     <string name="sms_setting_suggestion_null">请输入投诉或者建议内容</string>
     <string name="sms_setting_suggestion_long">输入的投诉或者建议内容太长</string>
     <string name="sms_setting_suggestion_success">反馈成功，感谢参与！</string>

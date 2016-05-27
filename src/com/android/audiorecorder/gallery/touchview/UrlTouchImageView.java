@@ -17,6 +17,11 @@
  */
 package com.android.audiorecorder.gallery.touchview;
 
+import java.io.BufferedInputStream;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
+
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -24,11 +29,6 @@ import android.os.AsyncTask;
 import android.util.AttributeSet;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
-
-import java.io.BufferedInputStream;
-import java.io.InputStream;
-import java.net.URL;
-import java.net.URLConnection;
 
 public class UrlTouchImageView extends RelativeLayout {
     protected ProgressBar mProgressBar;

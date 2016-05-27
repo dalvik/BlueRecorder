@@ -10,9 +10,6 @@ import android.view.View.OnClickListener;
 import android.widget.TextView;
 
 import com.android.audiorecorder.R;
-import com.android.audiorecorder.R.id;
-import com.android.audiorecorder.R.layout;
-import com.android.audiorecorder.R.string;
 import com.baidu.mobstat.StatService;
 
 public class SettingsActivity extends Activity {

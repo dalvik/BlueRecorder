@@ -9,13 +9,10 @@ import java.util.Set;
 import android.content.Context;
 import android.os.Environment;
 import android.os.StatFs;
-import android.util.Log;
 
 import com.android.audiorecorder.DebugConfig;
 import com.android.audiorecorder.R;
 import com.android.audiorecorder.engine.MultiMediaService;
-import com.android.audiorecorder.provider.FileColumn;
-import com.android.audiorecorder.provider.FileDetail;
 import com.android.audiorecorder.provider.FileProvider;
 import com.android.audiorecorder.provider.FileProviderService;
 import com.android.audiorecorder.ui.SoundRecorder;

@@ -1,20 +1,16 @@
 package com.android.audiorecorder.ui;
 
-import com.android.audiorecorder.R;
-import com.android.audiorecorder.R.id;
-import com.android.audiorecorder.R.layout;
-import com.android.audiorecorder.R.string;
-import com.baidu.mobstat.StatService;
-
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
 import android.telephony.SmsManager;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import com.android.audiorecorder.R;
+import com.baidu.mobstat.StatService;
 
 public class SuggestionActivity extends Activity {
     

@@ -1,9 +1,7 @@
 package com.android.audiorecorder.ui;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -31,21 +29,22 @@ import android.widget.RadioButton;
 import android.widget.TextView;
 
 import com.android.audiorecorder.AppContext;
-import com.android.audiorecorder.DebugConfig;
 import com.android.audiorecorder.R;
-import com.android.audiorecorder.adapter.ListViewFileThumbAdapter;
 import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.FileThumb;
 import com.android.audiorecorder.dao.IFileManager;
 import com.android.audiorecorder.engine.MultiMediaService;
-import com.android.audiorecorder.myview.ScrollLayout;
 import com.android.audiorecorder.provider.FileColumn;
-import com.android.audiorecorder.provider.FileDetail;
 import com.android.audiorecorder.provider.FileProvider;
 import com.android.audiorecorder.provider.FileProviderService;
-import com.android.audiorecorder.utils.DateUtil;
+import com.android.audiorecorder.ui.adapter.ListViewFileThumbAdapter;
+import com.android.audiorecorder.ui.view.ScrollLayout;
 import com.android.audiorecorder.utils.FileUtils;
 import com.android.audiorecorder.utils.UIHelper;
+import com.android.media.PlatFormManager;
+import com.android.media.PlatFormManager.IResultListener;
+import com.android.media.image.tiango.TiangoImageListResp;
+import com.android.media.image.tiango.TiangoImageThumbListResp;
 import com.baidu.mobstat.StatService;
 import com.handmark.pulltorefresh.library.PullToRefreshBase;
 import com.handmark.pulltorefresh.library.PullToRefreshBase.OnRefreshListener2;
@@ -195,6 +194,7 @@ public class MainThumbList extends Activity {
 	private int mCurFileType;
 	
 	private FileListChangeObserver observer;
+	private PlatFormManager mImagePlatFormManager;
 	
 	private Handler mHandler = new Handler(){
 	    public void handleMessage(Message msg) {
@@ -243,6 +243,7 @@ public class MainThumbList extends Activity {
 		initObserver();
 		startService(new Intent(this, MultiMediaService.class));
         startService(new Intent(this, FileProviderService.class));
+        mImagePlatFormManager = new PlatFormManager(mResultListener);
     	//UpdateManager.getUpdateManager().checkAppUpdate(this, true);
 	}
 
@@ -396,24 +397,32 @@ public class MainThumbList extends Activity {
 	                    localVideoListView.setVisibility(View.GONE);
 	                    localAudioListView.setVisibility(View.GONE);
 	                    localOtherListView.setVisibility(View.GONE);
+	                    mHeadTitle.setText(mHeadTitles[0]);
+	                    mHeadLogo.setImageResource(R.drawable.btn_list);
 	                    loadThumbByCatalog(catalog, 0, localImageListViewHandler, UIHelper.LISTVIEW_ACTION_CHANGE_CATALOG, UIHelper.LISTVIEW_DATATYPE_LOCAL_IMAGE);
 	                } else if(btn == frameLocalVideoButton) {
 	                    localVideoListView.setVisibility(View.VISIBLE);
 	                    localImageListView.setVisibility(View.GONE);
 	                    localAudioListView.setVisibility(View.GONE);
 	                    localOtherListView.setVisibility(View.GONE);
+	                    mHeadTitle.setText(mHeadTitles[1]);
+                        mHeadLogo.setImageResource(R.drawable.btn_list);
 	                    loadThumbByCatalog(catalog, 0, localVideoListViewHandler, UIHelper.LISTVIEW_ACTION_CHANGE_CATALOG, UIHelper.LISTVIEW_DATATYPE_LOCAL_VIDEO);
 	                } else if(btn == frameLocalAudioButton ){
 	                    localAudioListView.setVisibility(View.VISIBLE);
 	                    localImageListView.setVisibility(View.GONE);
 	                    localVideoListView.setVisibility(View.GONE);
 	                    localOtherListView.setVisibility(View.GONE);
+	                    mHeadTitle.setText(mHeadTitles[2]);
+                        mHeadLogo.setImageResource(R.drawable.btn_list);
 	                    loadThumbByCatalog(catalog, 0, localAudioListViewHandler, UIHelper.LISTVIEW_ACTION_CHANGE_CATALOG, UIHelper.LISTVIEW_DATATYPE_LOCAL_AUDIO);
 	                } else if(btn == frameLocalOtherButton ){
 	                    localOtherListView.setVisibility(View.VISIBLE);
 	                    localImageListView.setVisibility(View.GONE);
 	                    localVideoListView.setVisibility(View.GONE);
 	                    localAudioListView.setVisibility(View.GONE);
+	                    mHeadTitle.setText(mHeadTitles[3]);
+                        mHeadLogo.setImageResource(R.drawable.btn_list);
 	                    loadThumbByCatalog(catalog, 0, localOtherListViewHandler, UIHelper.LISTVIEW_ACTION_CHANGE_CATALOG,  UIHelper.LISTVIEW_DATATYPE_LOCAL_OTHER);
 	                }
 			    } else {
@@ -494,6 +503,7 @@ public class MainThumbList extends Activity {
             frameLocalVideoButton.setFocusable(true);
             frameLocalVideoButton.setEnabled(false);
             mHeadLogo.setImageResource(R.drawable.btn_list);
+            mHeadTitle.setText(mHeadTitles[1]);
         } else if(mCurFileType == UIHelper.LISTVIEW_DATATYPE_LOCAL_AUDIO){
             handler = localAudioListViewHandler;
             objType =  UIHelper.LISTVIEW_DATATYPE_LOCAL_AUDIO;
@@ -501,7 +511,7 @@ public class MainThumbList extends Activity {
             frameLocalAudioButton.setFocusable(true);
             frameLocalAudioButton.setEnabled(false);
             mHeadLogo.setImageResource(R.drawable.btn_list);
-            mHeadTitle.setText(mHeadTitles[0]);
+            mHeadTitle.setText(mHeadTitles[2]);
         } else if(mCurFileType == UIHelper.LISTVIEW_DATATYPE_LOCAL_OTHER){
             handler = localOtherListViewHandler;
             objType =  UIHelper.LISTVIEW_DATATYPE_LOCAL_OTHER;
@@ -509,6 +519,12 @@ public class MainThumbList extends Activity {
             frameLocalOtherButton.setFocusable(true);
             frameLocalOtherButton.setEnabled(false);
             mHeadLogo.setImageResource(R.drawable.btn_list);
+            mHeadTitle.setText(mHeadTitles[3]);
+        } else {
+            frameLocalImageButton.setFocusable(true);
+            frameLocalImageButton.setEnabled(false);
+            mHeadLogo.setImageResource(R.drawable.btn_list);
+            mHeadTitle.setText(mHeadTitles[0]);  
         }
         localImageListView.setVisibility(mCurFileType == UIHelper.LISTVIEW_DATATYPE_LOCAL_IMAGE?View.VISIBLE:View.GONE);
         localVideoListView.setVisibility(mCurFileType == UIHelper.LISTVIEW_DATATYPE_LOCAL_VIDEO?View.VISIBLE:View.GONE);
@@ -1312,7 +1328,7 @@ public class MainThumbList extends Activity {
     private void launchRecordListActivity(int mediaType, String thumbName){
         Intent intent = new Intent();
         if(mediaType == FileProvider.FILE_TYPE_JEPG){
-            intent.setClass(this, ImageRecordList.class);
+            intent.setClass(this, ImageList.class);
         } else if(mediaType == FileProvider.FILE_TYPE_VIDEO){
             intent.setClass(this, VideoRecordList.class);
         } else if(mediaType == FileProvider.FILE_TYPE_AUDIO){
@@ -1399,4 +1415,20 @@ public class MainThumbList extends Activity {
             super.onChange(selfChange, uri);
         }
     }
+    
+    private IResultListener mResultListener = new IResultListener(){
+
+        @Override
+        public void OnTypeList(String json) {
+        }
+
+        @Override
+        public void OnThumbList(List<TiangoImageThumbListResp> list) {
+        }
+
+        @Override
+        public void OnImageList(List<TiangoImageListResp> list) {
+        }
+        
+    };
 }

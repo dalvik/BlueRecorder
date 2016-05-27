@@ -8,17 +8,40 @@
  */
 package com.android.media;
 
+import java.util.List;
+
 import com.android.library.net.base.IDataCallback;
 import com.android.library.net.manager.JSONHttpDataManager;
 import com.android.library.net.req.DataReq;
 import com.android.library.net.resp.DataResp;
-import com.android.media.data.BaseData;
+import com.android.media.data.TiangoThumbBaseData;
+import com.android.media.image.tiango.TiangoImageType;
 
+public abstract class AbstractPlatForm extends
+        JSONHttpDataManager<TiangoThumbBaseData<DataResp>, DataReq> implements
+        IPlatForm {
 
-public abstract class AbstractPlatForm extends JSONHttpDataManager<BaseData<DataResp>, DataReq> implements IPlatform{
+    private Object mLock = new Object();
 
     public AbstractPlatForm(IDataCallback callback) {
         super(callback);
     }
 
+    public void sleep() {
+        synchronized (mLock) {
+            try {
+                mLock.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void wake() {
+        synchronized (mLock) {
+            mLock.notify();
+        }
+    }
+
+    public abstract List<TiangoImageType> getImageType();
 }

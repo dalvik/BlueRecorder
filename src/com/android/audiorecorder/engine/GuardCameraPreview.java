@@ -3,7 +3,6 @@ package com.android.audiorecorder.engine;
 import java.io.IOException;
 
 import android.content.Context;
-import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;

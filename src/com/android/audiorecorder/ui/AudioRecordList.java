@@ -1,7 +1,6 @@
 package com.android.audiorecorder.ui;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -44,18 +43,17 @@ import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem;
 import com.android.audiorecorder.DebugConfig;
 import com.android.audiorecorder.R;
-import com.android.audiorecorder.adapter.AudioRecordListAdapter;
-import com.android.audiorecorder.adapter.AudioRecordListAdapter.ITaskClickListener;
 import com.android.audiorecorder.audio.IMediaPlaybackService;
 import com.android.audiorecorder.audio.MediaPlaybackService;
 import com.android.audiorecorder.audio.MusicUtils;
 import com.android.audiorecorder.audio.MusicUtils.ServiceToken;
 import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.IFileManager;
-import com.android.audiorecorder.engine.MultiMediaService;
 import com.android.audiorecorder.provider.FileColumn;
 import com.android.audiorecorder.provider.FileDetail;
 import com.android.audiorecorder.provider.FileProvider;
+import com.android.audiorecorder.ui.adapter.AudioRecordListAdapter;
+import com.android.audiorecorder.ui.adapter.AudioRecordListAdapter.ITaskClickListener;
 import com.android.audiorecorder.utils.FileUtils;
 import com.android.audiorecorder.utils.StringUtil;
 import com.android.audiorecorder.utils.UIHelper;

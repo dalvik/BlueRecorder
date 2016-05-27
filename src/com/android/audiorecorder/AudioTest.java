@@ -1,7 +1,5 @@
 package com.android.audiorecorder;
 
-import com.android.audiorecorder.myview.VUMeter;
-
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -17,6 +15,8 @@ import android.view.View.OnClickListener;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import com.android.audiorecorder.ui.view.VUMeter;
 
 public class AudioTest extends Activity{
     private final String EXTRA_ACTION_MAIN_CATERERY = "extra_action_category_index";

@@ -2,36 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:orientation="vertical"
-    android:background="@drawable/white" >
-
-    <RelativeLayout
-        android:id="@+id/layout_sms_settings_top"
-        android:layout_width="fill_parent"
-        android:layout_height="45dip"
-        android:background="@drawable/title_background"
-        android:gravity="center_vertical" >
-
-        <Button
-            android:id="@+id/sms_settings_back"
-            android:layout_width="45dip"
-            android:layout_height="wrap_content"
-            android:layout_centerVertical="true"
-            android:background="@drawable/sms_detail_btn_back"
-            android:onClick="smsListBack"
-            android:textColor="#fff"
-            android:textSize="14sp" />
-
-        <TextView
-            android:id="@+id/sms_contact_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:textColor="#ffffff"
-            android:text="@string/sms_setting_about"
-            android:textSize="20sp" />
-
-    </RelativeLayout>
+    android:orientation="vertical" >
 
     <ScrollView
         android:layout_width="fill_parent"
@@ -54,7 +25,6 @@
 	            android:textSize="20sp" />
             
             <TextView
-	            android:id="@+id/sms_contact_name"
 	            android:layout_width="fill_parent"
 	            android:layout_height="wrap_content"
 	            android:layout_marginTop="10dip"
@@ -64,7 +34,6 @@
 	            android:text="@string/sms_setting_about_us_content" />
             
             <TextView
-	            android:id="@+id/sms_contact_name"
 	            android:layout_width="fill_parent"
 	            android:layout_height="wrap_content"
 	            android:layout_marginTop="10dip"
@@ -81,10 +50,9 @@
 	            android:layout_marginLeft="35dip"
 	            android:layout_marginRight="35dip"
 	            android:textColor="@color/black"
-	            android:autoLink="all" />
+	            android:autoLink="phone" />
             
             <TextView
-	            android:id="@+id/sms_contact_name"
 	            android:layout_width="fill_parent"
 	            android:layout_height="wrap_content"
 	            android:layout_marginTop="10dip"
@@ -101,7 +69,7 @@
 	            android:layout_marginLeft="35dip"
 	            android:layout_marginRight="35dip"
 	            android:textColor="@color/black"
-	            android:autoLink="all"/>
+	            android:autoLink="email"/>
         </LinearLayout>
     </ScrollView>
 

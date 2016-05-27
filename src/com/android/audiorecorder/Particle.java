@@ -3,7 +3,6 @@ package com.android.audiorecorder;
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
-import android.util.Log;
 
 public class Particle {
     static final int BASE_LITE_TIME = 5;

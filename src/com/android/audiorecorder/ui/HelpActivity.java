@@ -1,18 +1,14 @@
 package com.android.audiorecorder.ui;
 
-import com.android.audiorecorder.R;
-import com.android.audiorecorder.R.id;
-import com.android.audiorecorder.R.layout;
-import com.android.audiorecorder.R.string;
-import com.android.audiorecorder.utils.StringUtil;
-import com.baidu.mobstat.StatService;
-
 import android.app.Activity;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.TextView;
+
+import com.android.audiorecorder.R;
+import com.android.audiorecorder.utils.StringUtil;
+import com.baidu.mobstat.StatService;
 
 public class HelpActivity extends Activity {
     

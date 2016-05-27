@@ -166,8 +166,8 @@ public class FileTransport {
         RequestParams params = new RequestParams();
         params.addBodyParameter("file", new File(path));
         params.addBodyParameter("uuid", mUUid);
-        params.addBodyParameter("mode", "1");
-        params.addBodyParameter("type", "2");
+        params.addBodyParameter("mode", String.valueOf(mode));
+        params.addBodyParameter("type", String.valueOf(type));
         mHttpUtils.send(HttpMethod.POST, getRemoteUrl(), params, new RequestCallBack<String>() {
             @Override
             public void onStart() {
