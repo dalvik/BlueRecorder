@@ -3,7 +3,7 @@ package com.android.audiorecorder.ui;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -156,7 +156,8 @@ public class VideoRecordList extends SherlockListActivity implements
         };
     };
 
-    public void onCreate(Bundle paramBundle) {
+    @SuppressLint("WrongViewCast")
+	public void onCreate(Bundle paramBundle) {
         super.onCreate(paramBundle);
         setVolumeControlStream(3);
         setContentView(R.layout.recordlist_view);

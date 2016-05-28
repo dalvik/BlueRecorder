@@ -3,7 +3,7 @@ package com.android.audiorecorder.ui;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -59,6 +59,7 @@ import com.android.audiorecorder.utils.StringUtil;
 import com.android.audiorecorder.utils.UIHelper;
 import com.baidu.mobstat.StatService;
 
+@SuppressLint("WrongViewCast")
 public class AudioRecordList extends SherlockListActivity implements
         View.OnCreateContextMenuListener, OnItemClickListener, ITaskClickListener, OnScrollListener{
     

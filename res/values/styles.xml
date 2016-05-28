@@ -169,7 +169,7 @@
    		<item name="android:layout_height">fill_parent</item>
        	<item name="android:layout_weight">1</item>
        	<item name="android:background">@drawable/frame_button_bg</item>
-       	<item name="android:textColor">@color/frame_button_text_light</item>
+       	<item name="android:textColor">@color/commit_button_text_light</item>
     </style>
     
     <style name="style_loading_progress_small" parent="@android:style/Widget.ProgressBar.Small">
@@ -180,7 +180,6 @@
 	</style>
     
     <style name="AppTheme.FullScreen" parent="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
-    <style name="AppTheme" parent="android:Theme" />
     
     <style name="Theme.HalfTranslucent" parent="@android:style/Theme.Translucent">
         <item name="android:windowBackground">@color/half_transparent</item>

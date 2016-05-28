@@ -35,7 +35,7 @@
 
             <TextView
                 style="@style/UI.Center.ItemTV"
-                android:drawableLeft="@drawable/center_setting_grade"
+                android:drawableLeft="@drawable/center_setting_pay_donate"
                 android:text="@string/pay_donate_title" />
 
             <ImageView

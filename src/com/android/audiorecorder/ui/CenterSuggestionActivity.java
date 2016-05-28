@@ -1,16 +1,22 @@
 package com.android.audiorecorder.ui;
 
-import android.content.SharedPreferences;
-import android.os.Bundle;
-import android.telephony.SmsManager;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.EditText;
-import android.widget.Toast;
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.util.Locale;
 
 import com.android.audiorecorder.R;
 import com.android.library.ui.base.BaseSubActivity;
 import com.baidu.mobstat.StatService;
+
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.telephony.SmsManager;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.EditText;
+import android.widget.Toast;
 
 public class CenterSuggestionActivity extends BaseSubActivity {
     
@@ -26,7 +32,29 @@ public class CenterSuggestionActivity extends BaseSubActivity {
         setTitle(R.string.sms_setting_suggestion);
         mSettings = getSharedPreferences(SettingsActivity.class.getName(), MODE_PRIVATE);
         mSuggestionContent = (EditText) findViewById(R.id.suggestion_content);
+        mSuggestionContent.addTextChangedListener(new TextWatcher() {
+            
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+            
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count,
+                    int after) {
+            }
+            
+            @Override
+            public void afterTextChanged(Editable s) {
+                String cleanString = mSuggestionContent.getText().toString().trim();
+                if (cleanString.equals("") || cleanString.length()==0) {
+                	findViewById(R.id.suggestion_commit).setEnabled(false);
+                } else {
+                	findViewById(R.id.suggestion_commit).setEnabled(true);
+                }
+            }
+        });
         findViewById(R.id.suggestion_commit).setOnClickListener(onClickListener);
+        findViewById(R.id.suggestion_commit).setEnabled(false);
     }
    
 	@Override

@@ -13,6 +13,7 @@
 	    <Button
      	    android:id="@+id/frame_btn_local_image"
      	    style="@style/frame_button"
+     	    android:visibility="gone"
      	    android:text="@string/drovik_frame_local_image_str" />
 
      	<ImageView android:layout_width="wrap_content" 

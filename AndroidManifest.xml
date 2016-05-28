@@ -81,14 +81,21 @@
             </intent-filter>
         </activity>
         
-         main file list 
-        <activity android:name="com.android.audiorecorder.ui.MainThumbList" android:theme="@style/Theme.Sherlock.NoActionBar"/>
-        -->
+         main file list -->
+        <activity android:name="com.android.audiorecorder.ui.MainThumbList" 
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation"
+            android:theme="@android:style/Theme.NoTitleBar"/>
+        
         
         <!-- thumbnail list -->
         <activity android:name="com.android.audiorecorder.ui.ImageList" android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>
         <activity android:name="com.android.audiorecorder.ui.VideoRecordList" android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>
-        <activity android:name="com.android.audiorecorder.ui.AudioRecordList" android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>
+        
+        <activity android:name="com.android.audiorecorder.ui.AudioRecordList"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboardHidden|orientation"
+            android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>
         
         <!-- file list -->
         <activity android:name="com.android.audiorecorder.ui.ImageViewActvity" android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>

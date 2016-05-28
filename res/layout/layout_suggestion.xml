@@ -46,10 +46,10 @@
             		android:paddingLeft="20dp"
             		android:paddingRight="20dp"
             		android:paddingTop="5dp"
-                    android:background="@color/red"
                     android:gravity="center"
                     android:text="@string/sms_setting_suggestion_commit"
-                    android:textColor="@color/btn_selector"
+                    android:background="@drawable/commit_button_text_light"
+                    android:textColor="@color/white"
                     android:textSize="22sp"/>
 
                 <LinearLayout
