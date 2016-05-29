@@ -50,7 +50,7 @@
 	            android:layout_marginLeft="35dip"
 	            android:layout_marginRight="35dip"
 	            android:textColor="@color/black"
-	            android:autoLink="phone" />
+	            android:autoLink="web|phone" />
             
             <TextView
 	            android:layout_width="fill_parent"

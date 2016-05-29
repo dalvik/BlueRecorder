@@ -30,6 +30,7 @@ public class CenterSuggestionActivity extends BaseSubActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_suggestion);
         setTitle(R.string.sms_setting_suggestion);
+        setActionBarBackground(R.drawable.lib_drawable_common_actionbar_background);
         mSettings = getSharedPreferences(SettingsActivity.class.getName(), MODE_PRIVATE);
         mSuggestionContent = (EditText) findViewById(R.id.suggestion_content);
         mSuggestionContent.addTextChangedListener(new TextWatcher() {

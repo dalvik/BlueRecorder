@@ -69,4 +69,5 @@
     <dimen name="image_thumbnail_height">100.0dip</dimen>
     <dimen name="image_thumbnail_spacing">1dp</dimen>
     <dimen name="image_detail_pager_margin">80dp</dimen>
+    
 </resources>

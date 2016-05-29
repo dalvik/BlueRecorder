@@ -18,9 +18,8 @@
 	    <TextView 
 	        android:id="@+id/main_head_title"
 	        style="@style/main_head_title"
-			android:layout_toRightOf="@id/main_head_logo"
 			android:layout_centerVertical="true"
-			android:layout_marginLeft="4.0dip"/>
+			android:layout_centerInParent="true"/>
 		
 	   	<ProgressBar 
 			android:id="@+id/main_head_progress" 

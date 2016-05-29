@@ -17,6 +17,7 @@ public class CenterHelpActivity extends BaseSubActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_help);
         setTitle(R.string.sms_setting_help);
+        setActionBarBackground(R.drawable.lib_drawable_common_actionbar_background);
         TextView aboutTextView = (TextView) findViewById(R.id.setting_help_about_software);
         aboutTextView.setText(StringUtil.loadHtmlText(this, R.string.sms_setting_help_software_content));
         TextView functionContentTextView = (TextView) findViewById(R.id.setting_help_function_content);

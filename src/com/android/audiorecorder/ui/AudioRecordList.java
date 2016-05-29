@@ -201,10 +201,11 @@ public class AudioRecordList extends SherlockListActivity implements
         if (actionBar != null) {
             Drawable localDrawable = getResources().getDrawable(R.drawable.title_background);
             actionBar.setBackgroundDrawable(localDrawable);
-            actionBar.setIcon(R.drawable.btn_list);
+            actionBar.setIcon(R.drawable.lib_drawable_common_actionbar_back_selector);
             actionBar.setCustomView(R.layout.recordlist_customview);
             actionBar.setTitle(mThumbName);
             actionBar.setDisplayOptions(18);
+            actionBar.setHomeButtonEnabled(true);
         }
         if(mPlayCompleteReciBroadcastReceiver == null){
             mPlayCompleteReciBroadcastReceiver = new BroadcastReceiver(){
@@ -230,7 +231,7 @@ public class AudioRecordList extends SherlockListActivity implements
     }
 
     public boolean onCreateOptionsMenu(Menu paramMenu) {
-        //getSupportMenuInflater().inflate(R.menu.recordlist_menu, paramMenu);
+        getSupportMenuInflater().inflate(R.menu.recordlist_menu, paramMenu);
         return super.onCreateOptionsMenu(paramMenu);
     }
     
@@ -250,6 +251,9 @@ public class AudioRecordList extends SherlockListActivity implements
                     return true;
                 }
                 deleteItem(mCurPlayIndex);*/
+                break;
+            case android.R.id.home:
+                AudioRecordList.this.finish();
                 break;
                 default:
                     break;

@@ -13,7 +13,6 @@ import com.android.audiorecorder.R;
 import com.android.library.thirdpay.DonateActivity;
 import com.android.library.ui.base.BaseSubActivity;
 import com.android.library.ui.utils.ActivityUtils;
-import com.android.library.ui.view.CenterDrawableRadioButton;
 
 public class CenterSettingsActivity extends BaseSubActivity {
     
@@ -50,6 +49,7 @@ public class CenterSettingsActivity extends BaseSubActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_ui_setting);
         setTitle(R.string.sms_setting_title);
+        setActionBarBackground(R.drawable.lib_drawable_common_actionbar_background);
         mSettings = getSharedPreferences(CenterSettingsActivity.class.getName(), MODE_PRIVATE);
         findViewById(R.id.feedBackRL).setOnClickListener(onClickListener);
         findViewById(R.id.payDonateRL).setOnClickListener(onClickListener);

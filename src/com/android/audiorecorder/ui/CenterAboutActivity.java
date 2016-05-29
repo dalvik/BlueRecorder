@@ -17,6 +17,7 @@ public class CenterAboutActivity extends BaseSubActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_about);
         setTitle(R.string.sms_setting_about);
+        setActionBarBackground(R.drawable.lib_drawable_common_actionbar_background);
         TextView aboutTextView = (TextView) findViewById(R.id.sms_about_contact_content);
         aboutTextView.setText(StringUtil.loadHtmlText(this, R.string.sms_setting_about_contact_content));
         TextView cooperationTextView = (TextView) findViewById(R.id.setting_about_cooperation_id);
