@@ -122,6 +122,7 @@ public class AudioRecordList extends SherlockListActivity implements
     
     private IFileManager mFileManager;
     private String mThumbName;
+    private int mMode;
     private Set<Integer> launchType;
     
     private Handler mHandler = new Handler(){
@@ -170,7 +171,6 @@ public class AudioRecordList extends SherlockListActivity implements
         this.mTrackList.setOnScrollListener(this);
         mFileList = new ArrayList<FileDetail>();
         mAdapter = new AudioRecordListAdapter(this, mFileList);
-        launchType = FileUtils.getLaunchModeSet();
         setListAdapter(mAdapter);
         registerForContextMenu(this.mTrackList);
         this.mIndicator = (TextView) findViewById(R.id.indicator);
@@ -188,14 +188,16 @@ public class AudioRecordList extends SherlockListActivity implements
         Intent intent = getIntent();
         if(intent != null) {
             mThumbName = intent.getStringExtra(MainThumbList.EXTRA_THUMB_NAME);
+            mMode = intent.getIntExtra("mode", 2);
             if(mThumbName != null){
-                Log.i(TAG, "--> thumb name = " + mThumbName);
+                Log.i(TAG, "--> thumb name = " + mThumbName + " mode = " + mMode);
                 init();
             } else {
                 AudioRecordList.this.finish();
                 return;
             }
         }
+        launchType = FileUtils.getLaunchModeSet(mMode);
         mFileManager = FileManagerFactory.getFileManagerInstance(this);
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {

@@ -85,11 +85,11 @@ public class FileManagerImp extends MediaFileManager {
     }
 
     @Override
-    public List<FileThumb> loadFileThumbList(boolean isLocal, int mediaType, int pageIndex, int pageNumber, Set<Integer> launchType) {
+    public List<FileThumb> loadFileThumbList(boolean isLocal, int mediaType, int pageIndex, int offset, Set<Integer> launchType) {
         if(isLocal){
-            return getFileThumbList(getFileType(mediaType), pageIndex, pageNumber, launchType);
+            return getFileThumbList(getFileType(mediaType), pageIndex, offset, launchType);
         } else {
-            return loadFileThumbFromNetwork(getFileType(mediaType), pageIndex, pageNumber);
+            return loadFileThumbFromNetwork(getFileType(mediaType), pageIndex, offset);
         }
     }
     
@@ -197,11 +197,11 @@ public class FileManagerImp extends MediaFileManager {
         return mContext.getContentResolver().update(FileProvider.ALL_URI, values, FileColumn.COLUMN_ID + "=?", new String[]{ String.valueOf(id) });
     }
     
-    private List<FileThumb> getFileThumbList(int fileType, int pageIndex, int pageNumber, Set<Integer> launchType){
+    private List<FileThumb> getFileThumbList(int fileType, int pageIndex, int offset, Set<Integer> launchType){
         String[] columns = { "count(*) as a_count", FileColumn.COLUMN_ID,
                 FileColumn.COLUMN_THUMB_NAME, FileColumn.COLUMN_LOCAL_PATH,
                 FileColumn.COLUMN_DOWN_LOAD_TIME};
-        String order = FileColumn.COLUMN_DOWN_LOAD_TIME +" desc limit " + (pageIndex * pageNumber) + "," + pageNumber;
+        String order = FileColumn.COLUMN_DOWN_LOAD_TIME +" desc limit " + (pageIndex * PERPAGE_NUMBER + offset) + "," + PERPAGE_NUMBER;
         StringBuffer where = null;
         String[] args = null;
         if(launchType == null || launchType.size() == 0){
@@ -324,11 +324,11 @@ public class FileManagerImp extends MediaFileManager {
         return count;
     }
     
-    private List<FileThumb> loadFileThumbFromNetwork(int mediaType, int pageIndex, int pageNumber){
+    private List<FileThumb> loadFileThumbFromNetwork(int mediaType, int pageIndex, int offset){
         List<FileThumb> list = new ArrayList<FileThumb>();
         ResponseStream responseStream = null;
         try {
-            responseStream = mHttpUtils.sendSync(HttpMethod.GET, URLS.FILE_LIST+"?type="+mediaType+"&"+"page="+pageIndex+"&numbe="+pageNumber);
+            responseStream = mHttpUtils.sendSync(HttpMethod.GET, URLS.FILE_LIST+"?type="+mediaType+"&"+"page="+pageIndex+"&offset="+offset);
                 System.out.println("responseStream.readString() " +responseStream.getStatusCode());
             if(responseStream.getStatusCode() == HttpStatus.SC_OK) {
                 parseThumb(list, new ByteArrayInputStream(responseStream.readString().getBytes()));

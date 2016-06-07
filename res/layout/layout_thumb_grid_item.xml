@@ -19,8 +19,8 @@
         android:layout_alignParentBottom="true"
         android:background="@color/thumb_cover_info"
         android:layout_gravity="center"
-        android:layout_marginTop="4dip"
-        android:layout_marginBottom="4dip" 
+        android:layout_marginTop="2dip"
+        android:layout_marginBottom="2dip" 
         android:orientation="vertical" >
 
         <TextView
@@ -30,7 +30,8 @@
             android:layout_gravity="center"
             android:gravity="left|center"
             android:singleLine="true"
-            android:textColor="@color/white"
+            android:textSize="11sp"
+            android:textColor="@color/font_normal"
             android:layout_marginLeft="5dip"/>
 
         <TextView
@@ -39,7 +40,8 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:layout_marginLeft="5dip"
-            android:textColor="@color/white"
+            android:textSize="10sp"
+            android:textColor="@color/font_normal"
             android:gravity="left|center" />
 
     </LinearLayout>

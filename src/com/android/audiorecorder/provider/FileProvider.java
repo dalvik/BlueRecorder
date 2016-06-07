@@ -13,6 +13,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.text.TextUtils;
 import android.util.Log;
 
 public class FileProvider extends ContentProvider {
@@ -41,16 +42,23 @@ public class FileProvider extends ContentProvider {
     protected static final String TABLE_VIDEO_FILES = "video";
     public static final String TABLE_DELETE_FILES = "deleted";
 
+    private static final int TASK_ID = 5;
     private static final int TASK = 6;
     
     private static final int ALL_FILE_INFO = 7;
-    
+    private static final int ALL_FILE_INFO_ID = 8;
     private static final int SETTINGS = 10;
+    private static final int SETTINGS_ID = 11;
     
     private static final int JPEG_FILES = 15;
     private static final int AUDIO_FILES = 16;
     private static final int VIDEO_FILES = 17;
     private static final int DELETE_FILES = 18;
+    
+    private static final int JPEG_FILES_ID = 21;
+    private static final int AUDIO_FILES_ID = 22;
+    private static final int VIDEO_FILES_ID = 23;
+    private static final int DELETE_FILES_ID = 24;
     
     private final static String authority = "com.android.audiorecorder.provider.FileProvider";
     
@@ -73,13 +81,20 @@ public class FileProvider extends ContentProvider {
 
     static {
         sURIMatcher.addURI(authority, "tasks", TASK);
+        sURIMatcher.addURI(authority, "tasks/#", TASK_ID);
         sURIMatcher.addURI(authority, "all_file_info", ALL_FILE_INFO);
+        sURIMatcher.addURI(authority, "all_file_info/#", ALL_FILE_INFO_ID);
         sURIMatcher.addURI(authority, "settings", SETTINGS);
+        sURIMatcher.addURI(authority, "settings/#", SETTINGS_ID);
         
         sURIMatcher.addURI(authority, "jpeg", JPEG_FILES);
+        sURIMatcher.addURI(authority, "jpeg/#", JPEG_FILES_ID);
         sURIMatcher.addURI(authority, "audio", AUDIO_FILES);
+        sURIMatcher.addURI(authority, "audio/#", AUDIO_FILES_ID);
         sURIMatcher.addURI(authority, "video", VIDEO_FILES);
+        sURIMatcher.addURI(authority, "video/#", VIDEO_FILES_ID);
         sURIMatcher.addURI(authority, "deleted", DELETE_FILES);
+        sURIMatcher.addURI(authority, "deleted/#", DELETE_FILES_ID);
     }
 
     @Override
@@ -92,14 +107,24 @@ public class FileProvider extends ContentProvider {
     @Override
     public String getType(Uri uri) {
         int match = sURIMatcher.match(uri);
-        /*switch (match) {
-            case DOWNLOADS_ID:
-            case UPLOAD_ID:
+        switch (match) {
+            case TASK_ID:
+            case ALL_FILE_INFO_ID:
+            case SETTINGS_ID:
+            case JPEG_FILES_ID:
+            case AUDIO_FILES_ID:
+            case VIDEO_FILES_ID:
+            case DELETE_FILES_ID:
                 return "vnd.android.cursor.item";
-            case DOWNLOAD:
-            case UPLOAD:
+            case TASK:
+            case ALL_FILE_INFO:
+            case SETTINGS:
+            case JPEG_FILES:
+            case AUDIO_FILES:
+            case VIDEO_FILES:
+            case DELETE_FILES:
                 return "vnd.android.cursor.dir";
-        }*/
+        }
         return null;
     }
 
@@ -151,6 +176,15 @@ public class FileProvider extends ContentProvider {
                 newUri = ContentUris.withAppendedId(uri, rowid);
                 getContext().getContentResolver().notifyChange(newUri, null);
                 break;
+            case ALL_FILE_INFO:
+                rowid = db.insert(DB_TABLE_FILES, null, values);
+                if (rowid <= 0) {
+                    Log.d(TAG, "couldn't insert into files database. " + uri);
+                    return null;
+                }
+                newUri = ContentUris.withAppendedId(uri, rowid);
+                getContext().getContentResolver().notifyChange(newUri, null);
+                break;
                 default:
                     Log.d(TAG, "calling insert on an unknown/invalid URI: " + uri);
                     throw new IllegalArgumentException("Unknown/Invalid URI " + uri);
@@ -170,8 +204,18 @@ public class FileProvider extends ContentProvider {
             qb.setDistinct(true);
         }
         switch (type) {
+            case TASK_ID:
+                qb.appendWhere(FileColumn.COLUMN_ID + "=?");
+                prependArgs.add(uri.getPathSegments().get(1));
+                qb.setTables(DB_TABLE_TASKS);
+                break;
             case TASK:
                 qb.setTables(DB_TABLE_TASKS);
+                break;
+            case ALL_FILE_INFO_ID:
+                qb.appendWhere(FileColumn.COLUMN_ID + "=?");
+                prependArgs.add(uri.getPathSegments().get(1));
+                qb.setTables(DB_TABLE_FILES);
                 break;
             case ALL_FILE_INFO:
                 qb.setTables(DB_TABLE_FILES);
@@ -179,11 +223,26 @@ public class FileProvider extends ContentProvider {
             case SETTINGS:
                 qb.setTables(DB_TABLE_SETTINGS);
                 break;
+            case JPEG_FILES_ID:
+                qb.appendWhere(FileColumn.COLUMN_ID + "=?");
+                prependArgs.add(uri.getPathSegments().get(1));
+                qb.setTables(TABLE_JPEG_FILES);
+                break;
             case JPEG_FILES:
                 qb.setTables(TABLE_JPEG_FILES);
                 break;
+            case AUDIO_FILES_ID:
+                qb.appendWhere(FileColumn.COLUMN_ID + "=?");
+                prependArgs.add(uri.getPathSegments().get(1));
+                qb.setTables(TABLE_AUDIO_FILES);
+                break;
             case AUDIO_FILES:
                 qb.setTables(TABLE_AUDIO_FILES);
+                break;
+            case VIDEO_FILES_ID:
+                qb.appendWhere(FileColumn.COLUMN_ID + "=?");
+                prependArgs.add(uri.getPathSegments().get(1));
+                qb.setTables(TABLE_VIDEO_FILES);
                 break;
             case VIDEO_FILES:
                 qb.setTables(TABLE_VIDEO_FILES);
@@ -204,25 +263,22 @@ public class FileProvider extends ContentProvider {
         int match = sURIMatcher.match(uri);
         SQLiteDatabase db = mDatabaseHelper.getWritableDatabase();
         boolean notification = false;
+        String extraSelection = null;
+        String finalSelection = null;
         switch (match) {
+            case JPEG_FILES_ID:
+            case VIDEO_FILES_ID:
+            case AUDIO_FILES_ID:
+            case DELETE_FILES_ID:
+            case TASK_ID:
+                extraSelection = FileColumn.COLUMN_ID + "=" + uri.getPathSegments().get(1);        
             case JPEG_FILES:
-                count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
-                if (count <= 0) {
-                    Log.d(TAG, "couldn't update jpeg in files database. " + uri);
-                    return count;
-                }
-                notification = true;
-                break;
             case VIDEO_FILES:
-                count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
-                if (count <= 0) {
-                    Log.d(TAG, "couldn't update video in  files database. " + uri);
-                    return count;
-                }
-                notification = true;
-                break;
             case AUDIO_FILES:
-                count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
+            case DELETE_FILES:
+            case TASK:
+                finalSelection = getSelection(selection, extraSelection);
+                count = db.update(DB_TABLE_FILES, values, finalSelection, selectionArgs);
                 if (count <= 0) {
                     Log.d(TAG, "couldn't update audio in  files database");
                     return count;
@@ -232,22 +288,6 @@ public class FileProvider extends ContentProvider {
 			case SETTINGS:
                 count = db.update(DB_TABLE_SETTINGS, values, selection, selectionArgs);
                 break;
-            case TASK:
-                count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
-                if (count <= 0) {
-                    Log.d(TAG, "couldn't update task state in files database. " + uri);
-                    return count;
-                }
-                notification = false;
-                break;
-            case DELETE_FILES:
-            	count = db.update(DB_TABLE_FILES, values, selection, selectionArgs);
-                if (count <= 0) {
-                    Log.d(TAG, "couldn't update audio in  files database");
-                    return count;
-                }
-                notification = true;
-            	break;
             default:
                 Log.d(TAG, "calling update on an unknown/invalid URI: " + uri);
                 throw new IllegalArgumentException("Unknown/Invalid URI " + uri);
@@ -264,45 +304,28 @@ public class FileProvider extends ContentProvider {
         int count = 0;
         int match = sURIMatcher.match(uri);
         SQLiteDatabase db = mDatabaseHelper.getWritableDatabase();
+        String extraSelection = null;
+        String finalSelection = null;
         switch (match) {
+            case JPEG_FILES_ID:
+            case VIDEO_FILES_ID:
+            case AUDIO_FILES_ID:
+            case DELETE_FILES_ID:
+            case TASK_ID:
+                extraSelection = FileColumn.COLUMN_ID + "=" + uri.getPathSegments().get(1); 
             case ALL_FILE_INFO:
-                sendToTargetService(uri, selection, selectionArgs);
-                count = db.delete(DB_TABLE_FILES, selection, selectionArgs);
-                break;
             case JPEG_FILES:
-                sendToTargetService(uri, selection, selectionArgs);
-                count = db.delete(DB_TABLE_FILES, selection, selectionArgs);
-                if (count <= 0) {
-                    Log.w(TAG, "couldn't delete jpeg files from database");
-                    return 0;
-                }
-                getContext().getContentResolver().notifyChange(uri, null);
-                break;
             case VIDEO_FILES:
-                sendToTargetService(uri, selection, selectionArgs);
-                count = db.delete(DB_TABLE_FILES, selection, selectionArgs);
-                if (count <= 0) {
-                    Log.w(TAG, "couldn't delete video files from database");
-                    return 0;
-                }
-                getContext().getContentResolver().notifyChange(uri, null);
-                break;
             case AUDIO_FILES:
-                sendToTargetService(uri, selection, selectionArgs);
-                count = db.delete(DB_TABLE_FILES, selection, selectionArgs);
+            case DELETE_FILES:
+                finalSelection = getSelection(selection, extraSelection);
+                sendToTargetService(uri, finalSelection, selectionArgs);
+            	count = db.delete(DB_TABLE_FILES, finalSelection, selectionArgs);
                 if (count <= 0) {
-                    Log.w(TAG, "couldn't delete audio files from database");
-                    return 0;
+                    Log.w(TAG, "couldn't delete files from database " + uri);
+                    return count;
                 }
                 getContext().getContentResolver().notifyChange(uri, null);
-                break;
-            case DELETE_FILES:
-            	count = db.delete(DB_TABLE_FILES, selection, selectionArgs);
-                if (count <= 0) {
-                    Log.w(TAG, "couldn't delete audio files from database");
-                    return 0;
-                }
-                //getContext().getContentResolver().notifyChange(uri, null);
             	break;
             default:
                 Log.w(TAG, "calling delete on an unknown/invalid URI: " + uri);
@@ -357,4 +380,15 @@ public class FileProvider extends ContentProvider {
         return list;
     }
 
+    private String getSelection(String selection, String extraSelection  ) {
+        String finalSelection = null;
+        if (!TextUtils.isEmpty(selection) && !TextUtils.isEmpty(extraSelection)){
+            finalSelection = extraSelection + " AND " + selection;
+        }else  if (!TextUtils.isEmpty(selection)){
+            finalSelection = selection;
+        } else if (!TextUtils.isEmpty(extraSelection)){
+            finalSelection = extraSelection;
+        }
+        return finalSelection;
+    }
 }

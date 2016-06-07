@@ -138,13 +138,6 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
     
     public void onResume() {
         super.onResume();
-        if(iRecorderService != null) {
-            try {
-                iRecorderService.regStateListener(iAudioStateListener);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            } 
-        }
         StatService.onResume(this);
     }
     
@@ -358,7 +351,7 @@ public class SoundRecorder extends SherlockActivity implements View.OnClickListe
                 break;
             case R.id.list:
                 Intent localIntent = new Intent();
-                localIntent.setClass(this, MainThumbList.class);
+                localIntent.setClass(this, MainFrameActivity.class);
                 localIntent.putExtra(MainThumbList.EXTRA_FILE_TYPE, UIHelper.LISTVIEW_DATATYPE_LOCAL_AUDIO);
                 startActivity(localIntent);
                 break;

@@ -12,6 +12,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 
+import com.android.audiorecorder.engine.MultiMediaService;
 import com.android.audiorecorder.utils.FileUtils;
 import com.android.audiorecorder.utils.StringUtil;
 
@@ -42,15 +43,15 @@ public class MediaFileProducer {
     }
     
     public void putFilePathToList(List<String> filePaths, File file){
-        if(file.isDirectory()){
-            File[] files = file.listFiles();
-            for(File f:files){
+        File[] files = file.listFiles();
+        for(File f:files){
+            if(f.isFile()){
                 if(!f.getParent().contains(FileProviderService.THUMBNAIL) && !f.getName().contains(".nomedia")){
-                    putFilePathToList(filePaths, f);
+                    filePaths.add(f.getAbsolutePath());
                 }
+            } else {
+                putFilePathToList(filePaths, f);
             }
-        } else {
-            filePaths.add(file.getPath());
         }
     }
     
@@ -69,7 +70,6 @@ public class MediaFileProducer {
         ContentValues[] valueArray = new ContentValues[length];
         for (int i=0; i<length; i++) {
             ContentValues values = new ContentValues();
-            //putContentValues(filePaths.get(i), values);
             putContentValuesDefault(filePaths.get(i), values);
             valueArray[i] = values;
         }
@@ -93,7 +93,14 @@ public class MediaFileProducer {
         values.put(FileColumn.COLUMN_FILE_RESOLUTION_X, detail.getFileResolutionX());
         values.put(FileColumn.COLUMN_FILE_RESOLUTION_Y, detail.getFileResolutionY());
         values.put(FileColumn.COLUMN_FILE_THUMBNAIL, detail.getThumbnailPath());
-        values.put(FileColumn.COLUMN_LAUNCH_MODE, 2);
+        if(detail.getFileName().startsWith(MultiMediaService.OnRecordListener.PRE_MIC)){
+        	values.put(FileColumn.COLUMN_LAUNCH_MODE, MultiMediaService.LUNCH_MODE_MANLY);
+        } else if(detail.getFileName().startsWith(MultiMediaService.OnRecordListener.PRE_TEL)){
+        	values.put(FileColumn.COLUMN_LAUNCH_MODE, MultiMediaService.LUNCH_MODE_CALL);
+        } else if(detail.getFileName().startsWith(MultiMediaService.OnRecordListener.PRE_AUT)){
+        	values.put(FileColumn.COLUMN_LAUNCH_MODE, MultiMediaService.LUNCH_MODE_AUTO);
+        }
+        
     }
     
     public void updateFileDetail(int arg1, String path, int id){
@@ -171,7 +178,7 @@ public class MediaFileProducer {
                 if(file.delete()){
                     Log.i(TAG, "---> delete " + name);
                 }
-                FileUtils.deleteEmptyFolder(file.getParent());
+                FileUtils.deleteEmptyDirectory(file.getParent());
             }
         }
     }

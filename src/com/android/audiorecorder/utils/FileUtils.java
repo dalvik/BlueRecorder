@@ -286,6 +286,15 @@ public class FileUtils {
         }
         return launchType;
     }
+    
+    public static Set<Integer> getLaunchModeSet(int type){
+        Set<Integer> launchType = new HashSet<Integer>();
+        launchType.add(type);
+        if(DebugConfig.DEBUG){
+            launchType.add(MultiMediaService.LUNCH_MODE_AUTO);
+        }
+        return launchType;
+    }
 	
 	private static void createNewFile(File file){
         if(file != null && !file.exists()){
@@ -297,20 +306,31 @@ public class FileUtils {
         }
     }
     
-    public static void deleteEmptyFolder(String parth){
-        File file = new File(parentPath);
+    public static void deleteEmptyDirectory(String parth){
+        File file = new File(parth);
         if(file.isDirectory()){
             File[] files = file.listFiles();
             if(files.length == 0){
                 file.delete();
                 if(file.getParent() != null){
-                    deleteEmptyFolder(file.getParentFile().getAbsolutePath());
+                    deleteEmptyDirectory(file.getParentFile().getAbsolutePath());
                 }
             } else {
                 for(File f:files){
-                    deleteEmptyFolder(f.getAbsolutePath());
+                    deleteEmptyDirectory(f.getAbsolutePath());
                 }
             }
         }
+    }
+    
+    public static boolean deleteFolder(String folder){
+        File file = new File(parentPath);
+        if(file.isDirectory()){
+            File[] files = file.listFiles();
+            if(files != null && files.length == 0){
+                return file.delete();
+            }
+        }
+        return false;
     }
 }

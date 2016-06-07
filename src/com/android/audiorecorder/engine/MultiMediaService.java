@@ -205,7 +205,7 @@ public class MultiMediaService extends Service {
                         } catch (RemoteException e) {
                             e.printStackTrace();
                         }
-                    }/* else if (action.equals(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)) {
+                    } else if (action.equals(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)) {
                         int state = intent.getIntExtra(BluetoothAdapter.EXTRA_CONNECTION_STATE, -1);
                         if(state == BluetoothAdapter.STATE_CONNECTED){
                              mIsBluetoothConnected = true;
@@ -222,7 +222,7 @@ public class MultiMediaService extends Service {
                              mAudioManager.setMode(AudioManager.MODE_NORMAL);
                              Log.d(TAG,"==> recv bluetooth connected  state = " + state + " atdp enable = " + mAtdpEnable);
                         }
-                    }*/ else if(action.equals(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED)) {
+                    } else if(action.equals(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED)) {
                         int state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, AudioManager.SCO_AUDIO_STATE_ERROR);
                         Log.d(TAG,"===> bluetooth sco state = " + state + " mIsBluetoothConnected = " + mIsBluetoothConnected + " mAtdpEnable = " + mAtdpEnable);
                         if(state == AudioManager.SCO_AUDIO_STATE_CONNECTED){
@@ -395,6 +395,9 @@ public class MultiMediaService extends Service {
         public static final int MSG_START_RECORD = 0xE1;
         public static final int MSG_STOP_RECORD = 0xE2;
         
+        public static final String PRE_AUT = "A";
+        public static final String PRE_TEL = "T";
+        public static final String PRE_MIC = "M";
         public static final int LUNCH_MODE_IDLE = 0;
         public static final int LUNCH_MODE_CALL = 1;
         public static final int LUNCH_MODE_MANLY = 2;//no allowed time and tel to recorder

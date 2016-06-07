@@ -58,8 +58,6 @@ public class MainThumbList extends Activity {
 	public final static String EXTRA_FILE_TYPE = "file_type";
     private static final String IMAGE_CACHE_DIR = "thumbs";
     
-    public static final int PER_PAGE_NUMBER = 30;
-    
 	private boolean DEBUG = true;
 	
 	private ScrollLayout mScrollLayout;
@@ -1303,7 +1301,7 @@ public class MainThumbList extends Activity {
             public void run() {        
                 Message msg = new Message();
                 try {
-                    List<FileThumb> localAlumbListTmp = mFileManager.loadFileThumbList(catalog>AppContext.CATALOG_LOCAL_OTHER?false:true, catalog, pageIndex, PER_PAGE_NUMBER, FileUtils.getLaunchModeSet());
+                    List<FileThumb> localAlumbListTmp = mFileManager.loadFileThumbList(catalog>AppContext.CATALOG_LOCAL_OTHER?false:true, catalog, pageIndex, getOffset(), FileUtils.getLaunchModeSet());
                     msg.what = localAlumbListTmp.size();
                     msg.obj = localAlumbListTmp;
                 } catch (Exception e) {
@@ -1427,4 +1425,38 @@ public class MainThumbList extends Activity {
         }
         
     };
+    
+    private int getOffset(){
+        List<FileThumb> temp = null;
+        switch (mCurThumbCatalog) {
+            case AppContext.CATALOG_LOCAL_IMAGE:
+                temp = localImageListViewData;
+                break;
+            case AppContext.CATALOG_LOCAL_VIDEO:
+                temp = localVideoListViewData;
+                break;
+            case AppContext.CATALOG_LOCAL_AUDIO:
+                temp = localAudioListViewData;
+                break;
+            case AppContext.CATALOG_LOCAL_OTHER:
+                temp = localOtherListViewData;
+                break;
+            case AppContext.CATALOG_REMOTE_IMAGE:
+                temp = remoteImageListViewData;
+                break;
+            case AppContext.CATALOG_REMOTE_VIDEO:
+                temp = remoteVideoListViewData;
+                break;
+            case AppContext.CATALOG_REMOTE_AUDIO:
+                temp = remoteAudioListViewData;
+                break;
+            case AppContext.CATALOG_REMOTE_OTHER:
+                temp = remoteOtherListViewData;
+                break;
+            default:
+                temp = localImageListViewData;
+                break;
+        }
+        return temp.size()/IFileManager.PERPAGE_NUMBER;
+    }
 }

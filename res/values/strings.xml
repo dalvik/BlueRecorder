@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_name">Recorder</string>
+    <string name="app_name">BlueRecorder</string>
     <string name="app_name_image_card">ImageCard</string>
     <string name="app_name_video_card">VideoCard</string>
     <string name="record_your_message">Record your message</string>
@@ -47,6 +47,15 @@
     <string name="rename_item">Rename</string>
     <string name="record_list_title">Record list</string>
     <string name="delete_song_desc">The record will be deleted.</string>
+    <!-- frame main -->
+    <string name="main_tab_main">Record</string>
+    <string name="main_tab_msg">Message</string>
+    <string name="main_tab_find">Find</string>
+    <string name="main_tab_center">Center</string>
+    
+    <string name="main_tab_main_bluetooth">蓝牙录音</string>
+    <string name="main_tab_main_telephone">电话录音</string>
+    
      <!-- down or upload -->
     <string name="upload_item">Upload</string>
     <string name="reupload_item">重传</string>

@@ -8,6 +8,8 @@ import com.android.audiorecorder.provider.FileDetail;
 
 public interface IFileManager{
     
+    public final static int PERPAGE_NUMBER = 30;
+    
     public abstract void createDiretory(String directory);
     public abstract boolean createFile(String path);
     public abstract boolean isExists(String path);

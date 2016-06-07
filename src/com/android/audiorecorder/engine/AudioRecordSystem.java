@@ -1,11 +1,3 @@
-/**   
- * Copyright © 2016 浙江大华. All rights reserved.
- * 
- * @title: AudioRecordSystem.java
- * @description: TODO
- * @author: 23536   
- * @date: 2016年4月25日 下午5:19:14 
- */
 package com.android.audiorecorder.engine;
 
 import java.io.File;
@@ -13,8 +5,11 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.xutils.db.DbManagerImpl;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -216,6 +211,7 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
         if (start) {
             mAudioRecordStartTime = SystemClock.elapsedRealtime();
         }
+        notifyRecordState(mRecorderStart ? MultiMediaService.STATE_BUSY : MultiMediaService.STATE_IDLE);
     }
     
     private void stopRecord(int mode) {
@@ -242,6 +238,8 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
             } catch(Exception e){
                 LogUtil.w(TAG, "==> " + e.getMessage());
             } finally {
+            	mAudioManager.stopBluetoothSco();
+            	mAudioManager.setBluetoothScoOn(false);
                 mAudioRecordState = STATE_IDLE;
                 setRecordStatus(false);
                 mCurMode = LUNCH_MODE_IDLE;
@@ -251,22 +249,25 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
     
     private int getAudioRecordDuration(){
         if(mRecorderStart){
-            return (int)(SystemClock.elapsedRealtime() - mAudioRecordStartTime)/1000;
+        	return new BigDecimal((SystemClock.elapsedRealtime() - mAudioRecordStartTime)/1000).setScale(0, BigDecimal.ROUND_HALF_UP).intValue();
         }
         return 0;
     }
  
     private String getFileNameByType(int mode, int mimeType){
         String fileName = "";
+        String pre = PRE_MIC;
         if(mode == LUNCH_MODE_AUTO){
+        	pre = PRE_AUT;
             mimeType = SoundRecorder.FILE_TYPE_3GPP;// force to change type
             fileName += getNamePrefix();//android.provider.Settings.System.getString(getContentResolver(), Settings.Secure.ANDROID_ID)+"_";
         } else if(mode == LUNCH_MODE_CALL){
+        	pre = PRE_TEL;
             if(mIncommingNumber != null && mIncommingNumber.length()>0){
                 fileName += mIncommingNumber + "_";
             }
         }
-        return fileName + DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis()) + FileUtils.getMimeName(mimeType);
+        return pre + fileName + DateUtil.formatyyMMDDHHmmss(System.currentTimeMillis()) + FileUtils.getMimeName(mimeType);
     }
     
     private String getNamePrefix(){
@@ -366,8 +367,6 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
                         mCurMode = mode;
                         acquireWakeLock();
                         setRecordStatus(true);
-                        mUIHandler.removeCallbacks(mUpdateTimer);
-                        mUIHandler.post(mUpdateTimer);
                         File file = new File(mRecoderPath); 
                         if (file.exists()) { 
                             file.delete(); 
@@ -377,6 +376,11 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
                         bufferSizeInBytes = AudioRecord.getMinBufferSize(AUDIO_SAMPLE_RATE, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT); 
                         mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, AUDIO_SAMPLE_RATE,  AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, bufferSizeInBytes);
                         mAudioRecord.startRecording();
+                        mAudioManager.stopBluetoothSco();
+                        mAudioManager.startBluetoothSco();
+                        mAudioManager.setBluetoothScoOn(true);
+                        mUIHandler.removeCallbacks(mUpdateTimer);
+                        mUIHandler.post(mUpdateTimer);
                         mAudioRecordState = STATE_BUSY;
                         mRecordStartTime = System.currentTimeMillis();
                         writeDataToFile(fos);
@@ -412,6 +416,8 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
         mUIHandler.removeCallbacks(mUpdateTimer);
         releaseWakeLock();
         setRecordStatus(false);
+        mAudioManager.stopBluetoothSco();
+    	mAudioManager.setBluetoothScoOn(false);
         mAudioRecordState = STATE_IDLE;
         Log.i(TAG, "==> audio record stop. ");
         if(mAudioRecordThread != null){
@@ -563,14 +569,17 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
             mMediaRecorder.setAudioSamplingRate(8000);
             mMediaRecorder.setOutputFile(mRecoderPath);
             mRecordStartTime = System.currentTimeMillis();
-            mUIHandler.removeCallbacks(mUpdateTimer);
-            mUIHandler.post(mUpdateTimer);
             try {
                 mMediaRecorder.prepare();
                 mMediaRecorder.start();
+                mAudioManager.stopBluetoothSco();
+                mAudioManager.startBluetoothSco();
+                mAudioManager.setBluetoothScoOn(true);
                 mCurMode = mode;
                 mAudioRecordState = STATE_BUSY;
                 setRecordStatus(true);
+                mUIHandler.removeCallbacks(mUpdateTimer);
+                mUIHandler.post(mUpdateTimer);
                 Log.i(TAG, "---> startRecorder mCurMode = " + mCurMode);
             } catch (IOException e) {
                 sendRecordMessage(MSG_STOP_RECORD, LUNCH_MODE_MANLY, 0);
@@ -596,8 +605,12 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
                 //start recorder
                 mIncommingNumber = incomingNumber;
                 if(mCurMode != LUNCH_MODE_IDLE){
-                    sendRecordMessage(MSG_STOP_RECORD, LUNCH_MODE_MANLY, 0);
-                    //callStopRecord(mCurMode);
+                	if(mCurMode == LUNCH_MODE_MANLY){
+                		sendRecordMessage(MSG_STOP_RECORD, LUNCH_MODE_MANLY, 0);
+                		//callStopRecord(mCurMode);
+                	} else  {
+                		sendRecordMessage(MSG_STOP_RECORD, LUNCH_MODE_CALL, 0);
+                	}
                 }
                 if(DebugConfig.DEBUG){
                     Log.d(TAG, "---> start recorder mIncommingNumber = " + mIncommingNumber);

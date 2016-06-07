@@ -26,10 +26,11 @@
                 style="@style/UI.Find.ItemIV" />
         </RelativeLayout>
 
-        <include layout="@layout/lib_layout_ui_setting_splite_line" />
+        <include android:visibility="gone" layout="@layout/lib_layout_ui_setting_splite_line" />
 
         <!-- dashang -->
         <RelativeLayout
+            android:visibility="gone"
             android:id="@+id/payDonateRL"
             style="@style/UI.Center.ItemLayout">
 

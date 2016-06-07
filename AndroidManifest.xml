@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.android.audiorecorder"
-    android:versionCode="603"
-    android:versionName="V6.03" >
+    android:versionCode="611"
+    android:versionName="V6.11" >
 
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus"/>
@@ -80,22 +80,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+                 -->
         
-         main file list -->
-        <activity android:name="com.android.audiorecorder.ui.MainThumbList" 
-            android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|orientation"
-            android:theme="@android:style/Theme.NoTitleBar"/>
-        
+        <!-- main file list -->
+        <activity android:name="com.android.audiorecorder.ui.MainThumbList" android:theme="@style/Theme.Sherlock.NoActionBar"/>
+        <activity android:name="com.android.audiorecorder.ui.MainFrameActivity" android:theme="@style/Theme.Sherlock.NoActionBar"/>
         
         <!-- thumbnail list -->
         <activity android:name="com.android.audiorecorder.ui.ImageList" android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>
         <activity android:name="com.android.audiorecorder.ui.VideoRecordList" android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>
-        
-        <activity android:name="com.android.audiorecorder.ui.AudioRecordList"
-            android:screenOrientation="portrait"
-            android:configChanges="keyboardHidden|orientation"
-            android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>
+        <activity android:name="com.android.audiorecorder.ui.AudioRecordList" android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>
         
         <!-- file list -->
         <activity android:name="com.android.audiorecorder.ui.ImageViewActvity" android:theme="@style/Theme.Sherlock.Light.DarkActionBar"/>
