@@ -3,19 +3,21 @@ package com.android.audiorecorder.ui.pager;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ListView;
 
-import com.android.library.R;
+import com.android.audiorecorder.ui.adapter.MessageListAdapter;
+import com.android.audiorecorder.R;
 import com.android.library.ui.adapter.BannerAdapter;
-import com.android.library.ui.adapter.TreatListAdapter;
 import com.android.library.ui.pager.BaseInnerLoadListPager;
 import com.android.library.ui.view.BannerGallery;
 import com.baoyz.widget.PullRefreshLayout;
 
 public class MainMessagePager extends BaseInnerLoadListPager {
 
+    // 广告
     public BannerGallery adGallery; // 图片滚动控件
     //private TreatListManager treatListManager;
     private int whatList;
@@ -24,27 +26,30 @@ public class MainMessagePager extends BaseInnerLoadListPager {
     //private OfficialManager bannerManager;
     private int whatBanner;
 
-    private TreatListAdapter treatAdapter;
+    private MessageListAdapter messageAdapter;
     private ListView listView;
     private Long currentFrash;
     private Long lastFrash;
 
     private boolean isRefresh = true;
     private PullRefreshLayout layout;
+    // 是否刷新新数据
     private boolean isNew;
 
     @Override
     protected View createView(LayoutInflater inflater, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.treat_list, null);
+        View view = inflater.inflate(R.layout.layout_message_list, null);
         adGallery = new BannerGallery(activity);
+        // 设置广告的高度
         AbsListView.LayoutParams params = new AbsListView.LayoutParams(AbsListView.LayoutParams.MATCH_PARENT, AbsListView.LayoutParams.WRAP_CONTENT);
-//        AbsListView.LayoutParams params = new AbsListView.LayoutParams(AbsListView.LayoutParams.MATCH_PARENT, activity.getResources()
+//      AbsListView.LayoutParams params = new AbsListView.LayoutParams(AbsListView.LayoutParams.MATCH_PARENT, activity.getResources()
 //                .getDimensionPixelSize(R.dimen.ad_height));
         adGallery.setLayoutParams(params);
         adGallery.setVisibility(View.GONE);
         adAdapter = new BannerAdapter(activity);
         adGallery.setAdapter(adAdapter);
 
+        /** 滚动组件 */
         adGallery.setOnItemClickListener(new BannerGallery.OnItemClickListener() {
             @Override
             public void onItemClick(int position) {
@@ -55,8 +60,8 @@ public class MainMessagePager extends BaseInnerLoadListPager {
         });
         layout = (PullRefreshLayout) view.findViewById(R.id.swipeRefreshLayout);
         listView = (ListView) layout.findViewById(R.id.listView);
-        treatAdapter = new TreatListAdapter(activity);
-        setListView(listView, adGallery, treatAdapter);
+        messageAdapter = new MessageListAdapter(activity);
+        setListView(listView, adGallery, messageAdapter);
         // listen refresh event
         layout.setOnRefreshListener(new PullRefreshLayout.OnRefreshListener() {
             @Override
@@ -65,6 +70,7 @@ public class MainMessagePager extends BaseInnerLoadListPager {
                 isRefresh = true;
                 reSetPage();
                 getList();
+                //防止网络异常下次不能刷新
                 layout.postDelayed(new Runnable() {
                     @Override
                     public void run() {
@@ -77,6 +83,13 @@ public class MainMessagePager extends BaseInnerLoadListPager {
         // refresh complete
        // layout.setRefreshing(false);
         return view;
+    }
+    
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+            Bundle savedInstanceState) {
+    	super.onCreateView(inflater, container, savedInstanceState);
+        return null;
     }
 
     @Override
@@ -105,6 +118,11 @@ public class MainMessagePager extends BaseInnerLoadListPager {
         getList();
     }
 
+    /**
+     * 刷新列表数据
+     *
+     * @param resp
+     */
     /*private void setTreatList(TreatListResp resp) {
         ArrayList<TreatResp> list = new ArrayList<TreatResp>();
         BasePagesResp<TreatResp> page = resp.nList;

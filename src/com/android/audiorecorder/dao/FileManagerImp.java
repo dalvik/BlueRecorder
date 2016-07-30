@@ -200,7 +200,7 @@ public class FileManagerImp extends MediaFileManager {
     private List<FileThumb> getFileThumbList(int fileType, int pageIndex, int offset, Set<Integer> launchType){
         String[] columns = { "count(*) as a_count", FileColumn.COLUMN_ID,
                 FileColumn.COLUMN_THUMB_NAME, FileColumn.COLUMN_LOCAL_PATH,
-                FileColumn.COLUMN_DOWN_LOAD_TIME};
+                FileColumn.COLUMN_DOWN_LOAD_TIME, FileColumn.COLUMN_LAUNCH_MODE};
         String order = FileColumn.COLUMN_DOWN_LOAD_TIME +" desc limit " + (pageIndex * PERPAGE_NUMBER + offset) + "," + PERPAGE_NUMBER;
         StringBuffer where = null;
         String[] args = null;
@@ -228,7 +228,7 @@ public class FileManagerImp extends MediaFileManager {
         StringBuffer where = null;
         String[] args =  null;
         if(launchType == null || launchType.size() == 0){
-            where = new StringBuffer(FileColumn.COLUMN_THUMB_NAME + "=?");
+            where = new StringBuffer(FileColumn.COLUMN_THUMB_NAME + "='" + thumbName + "'");
             args =  new String[]{thumbName};
         } else {
             int index = 1;
@@ -236,10 +236,11 @@ public class FileManagerImp extends MediaFileManager {
             args = new String[length+1];
             where = new StringBuffer();
             args[0] = thumbName;
-            where = new StringBuffer(FileColumn.COLUMN_THUMB_NAME + "=? and (");
+            where = new StringBuffer(FileColumn.COLUMN_THUMB_NAME +"='"+thumbName+"' and ( ");
             for(Iterator<Integer> set = launchType.iterator(); set.hasNext();){
-                args[index++] = String.valueOf(set.next());
-                where.append(FileColumn.COLUMN_LAUNCH_MODE + " = ? ");
+            	String tmp = String.valueOf(set.next());
+                args[index++] = tmp;
+                where.append(FileColumn.COLUMN_LAUNCH_MODE +"='"+ tmp +"' ");
                 if(index<=length){
                     where.append(" or ");
                 }
@@ -247,21 +248,19 @@ public class FileManagerImp extends MediaFileManager {
             where.append(")");
         }
         Uri uri = getUri(fileType);
-        String[] columns = {
-                FileColumn.COLUMN_ID, FileColumn.COLUMN_LOCAL_PATH, FileColumn.COLUMN_FILE_SIZE, FileColumn.COLUMN_FILE_DURATION, 
+        String[] columns = {FileColumn.COLUMN_ID, FileColumn.COLUMN_LOCAL_PATH, FileColumn.COLUMN_FILE_SIZE, FileColumn.COLUMN_FILE_DURATION, 
                 FileColumn.COLUMN_MIME_TYPE, FileColumn.COLUMN_LAUNCH_MODE, FileColumn.COLUMN_FILE_RESOLUTION_X, FileColumn.COLUMN_FILE_RESOLUTION_Y, 
                 FileColumn.COLUMN_FILE_THUMBNAIL, FileColumn.COLUMN_SHOW_NOTIFICATION, FileColumn.COLUMN_UP_OR_DOWN, FileColumn.COLUMN_UP_DOWN_LOAD_STATUS,
                 FileColumn.COLUMN_DOWN_LOAD_TIME, FileColumn.COLUMN_UP_LOAD_TIME};
-        String order = FileColumn.COLUMN_DOWN_LOAD_TIME +" desc limit " + (page * pageNumber) + "," + pageNumber;
-        return queryFileListFromDb(fileType, uri, columns, where.toString(), args, order);
+        String order = FileColumn.COLUMN_ID +" desc limit " + (page * pageNumber) + ", " + pageNumber;
+        return queryFileListFromDb(fileType, uri, columns, where.toString(), null,  order);
     }
     
     private List<FileThumb> queryThumbnailListFromDb(int fileType, Uri uri, String[] columns, String where, String[] args, String order){
         List<FileThumb> list = new ArrayList<FileThumb>();
         Cursor cursor = mContext.getContentResolver().query(uri, columns, where, args, order);
         if(cursor != null) {
-            cursor.moveToFirst();
-            while(!cursor.isAfterLast()) {
+            while(cursor.moveToNext()) {
                 int index = 0;
                 FileThumb file = new FileThumb();
                 file.setFileNumber(cursor.getInt(index++));
@@ -272,7 +271,6 @@ public class FileManagerImp extends MediaFileManager {
                 file.setFileType(fileType);
                 file.setProvite(false);
                 list.add(file);
-                cursor.moveToNext();
             }
             cursor.close();
         }
@@ -283,8 +281,7 @@ public class FileManagerImp extends MediaFileManager {
         Cursor cursor = mContext.getContentResolver().query(uri, columns, where, args, order);
         List<FileDetail> list = new ArrayList<FileDetail>();
         if(cursor != null) {
-            cursor.moveToFirst();
-            while(!cursor.isAfterLast()) {
+            while(cursor.moveToNext()) {
                 int index = 0;
                 FileDetail fileDetail = new FileDetail();
                 fileDetail.setId(cursor.getInt(index++));
@@ -304,7 +301,6 @@ public class FileManagerImp extends MediaFileManager {
                 fileDetail.setDownLoadTime(cursor.getLong(index++));
                 fileDetail.setUploadTime(cursor.getInt(index++));
                 list.add(fileDetail);
-                cursor.moveToNext();
             }
             cursor.close();
         }

@@ -29,7 +29,7 @@ public class FileDetail {
     /**jpeg:0 video:1 audio:2 text:3 apk:4 zip:5 other:6**/
     private int fileType;
     
-    private int duration;
+    private long duration;
     
     private int launchMode;
     
@@ -49,6 +49,8 @@ public class FileDetail {
     
     private String thumbnailPath;
     
+    private String mFileName = "";
+    
     public FileDetail(){
     }
     
@@ -63,6 +65,8 @@ public class FileDetail {
                     getImageResolution(path);
                 } else if(fileType == FileProvider.FILE_TYPE_VIDEO){
                     getVideoResolution(path);
+                } else if(fileType == FileProvider.FILE_TYPE_AUDIO){
+                	
                 }
             }
         }
@@ -71,6 +75,7 @@ public class FileDetail {
     private void fillInfo(File file){
         lastModifyTime = file.lastModified();
         length = file.length();
+        mFileName = file.getName();
     }
     
     public int getId() {
@@ -133,7 +138,7 @@ public class FileDetail {
         this.fileType = fileType;
     }
 
-    public int getDuration() {
+    public long getDuration() {
         return duration;
     }
 
@@ -214,10 +219,7 @@ public class FileDetail {
     }
     
     public String getFileName(){
-        if(filePath != null){
-            return filePath.substring(filePath.lastIndexOf("/")+1, filePath.lastIndexOf("."));
-        }
-        return "";
+    	return mFileName;
     }
 
     @Override
@@ -312,5 +314,10 @@ public class FileDetail {
             targetPath = null;
         }
         return targetPath + name;
+    }
+    
+    private int getMediaDuration(){
+    	
+    	return 0;
     }
 }

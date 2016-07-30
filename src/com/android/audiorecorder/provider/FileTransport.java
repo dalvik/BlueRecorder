@@ -277,7 +277,8 @@ public class FileTransport {
     
     private String getRemoteUrl(){
         String[] pro = {FileColumn.COLUMN_SERVER_UPLOAD_URL};
-        Cursor cursor = mContext.getContentResolver().query(FileProvider.SETTINGS_URI, pro, null, null, null);
+	    String where = FileColumn.COLUMN_SETTING_KEY + " = '" +  FileColumn.COLUMN_SERVER_UPLOAD_URL + "'";
+        Cursor cursor = mContext.getContentResolver().query(FileProvider.SETTINGS_URI, pro, where, null, null);
         String remoteUrl = "";
         if(cursor != null){
             if(cursor.moveToNext()){

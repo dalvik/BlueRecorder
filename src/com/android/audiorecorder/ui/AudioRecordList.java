@@ -188,16 +188,15 @@ public class AudioRecordList extends SherlockListActivity implements
         Intent intent = getIntent();
         if(intent != null) {
             mThumbName = intent.getStringExtra(MainThumbList.EXTRA_THUMB_NAME);
-            mMode = intent.getIntExtra("mode", 2);
+            mMode = intent.getIntExtra("mode", -1);
             if(mThumbName != null){
-                Log.i(TAG, "--> thumb name = " + mThumbName + " mode = " + mMode);
+                Log.i(TAG, "--> thumbname = " + mThumbName + " mode = " + mMode);
                 init();
             } else {
                 AudioRecordList.this.finish();
                 return;
             }
         }
-        launchType = FileUtils.getLaunchModeSet(mMode);
         mFileManager = FileManagerFactory.getFileManagerInstance(this);
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
@@ -263,13 +262,10 @@ public class AudioRecordList extends SherlockListActivity implements
         return true;
     }
     public void init() {
+    	launchType = FileUtils.getLaunchModeSet(mMode);
         mAdapter.setPlayId(-1, mCurState);
         mAdapter.setTaskClickListener(this);
-        Message msg = mHandler.obtainMessage(MSG_LOAD_FILE_LIST);
-        msg.arg1 = 0;
-        mHandler.sendMessage(msg);
         paused = false;
-
         mToken = MusicUtils.bindToService(this, osc);
         if (mToken == null) {
             mHandler.sendEmptyMessage(QUIT);
@@ -429,6 +425,9 @@ public class AudioRecordList extends SherlockListActivity implements
     private ServiceConnection osc = new ServiceConnection() {
         public void onServiceConnected(ComponentName classname, IBinder obj) {
             mService = IMediaPlaybackService.Stub.asInterface(obj);
+            Message msg = mHandler.obtainMessage(MSG_LOAD_FILE_LIST);
+            msg.arg1 = 0;
+            mHandler.sendMessage(msg);
             Log.i(TAG, "---> AudioMediaService bind success.");
         }
         public void onServiceDisconnected(ComponentName classname) {

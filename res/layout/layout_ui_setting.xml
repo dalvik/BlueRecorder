@@ -30,7 +30,6 @@
 
         <!-- dashang -->
         <RelativeLayout
-            android:visibility="gone"
             android:id="@+id/payDonateRL"
             style="@style/UI.Center.ItemLayout">
 

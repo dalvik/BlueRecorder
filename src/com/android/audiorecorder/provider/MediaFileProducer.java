@@ -1,12 +1,15 @@
 package com.android.audiorecorder.provider;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -19,14 +22,16 @@ import com.android.audiorecorder.utils.StringUtil;
 public class MediaFileProducer {
 
     private Context mContext;
-    
+    private MediaPlayer mMediaPlayer;
     private String TAG = "MediaFileProducer";
     
     public MediaFileProducer(Context context){
         this.mContext = context;
+        mMediaPlayer = new MediaPlayer();
     }
     
     public void loadExistsMediaFiles(){
+    	putValue(FileColumn.COLUMN_FILE_INIT, 0);
         String PREFIX = Environment.getExternalStorageDirectory().getPath();
         String completeDirectory = PREFIX + File.separator + FileProviderService.ROOT + File.separator;
         File parentDirectory = new File(completeDirectory);
@@ -40,6 +45,7 @@ public class MediaFileProducer {
             putFilePathToList(filePaths, parentDirectory);
         }
         insertFileListDetail(filePaths);
+        putValue(FileColumn.COLUMN_FILE_INIT, 1);
     }
     
     public void putFilePathToList(List<String> filePaths, File file){
@@ -47,7 +53,9 @@ public class MediaFileProducer {
         for(File f:files){
             if(f.isFile()){
                 if(!f.getParent().contains(FileProviderService.THUMBNAIL) && !f.getName().contains(".nomedia")){
-                    filePaths.add(f.getAbsolutePath());
+                	if(!isRecordExists(f.getAbsolutePath())){
+                		filePaths.add(f.getAbsolutePath());
+                	}
                 }
             } else {
                 putFilePathToList(filePaths, f);
@@ -87,7 +95,7 @@ public class MediaFileProducer {
             values.put(FileColumn.COLUMN_UP_DOWN_LOAD_STATUS, 2);
         }
         values.put(FileColumn.COLUMN_THUMB_NAME, StringUtil.getYearMonthWeek(detail.getLastModifyTime()));
-        values.put(FileColumn.COLUMN_FILE_DURATION, detail.getDuration());
+        values.put(FileColumn.COLUMN_FILE_DURATION, setDataSource(path));
         values.put(FileColumn.COLUMN_DOWN_LOAD_TIME, detail.getLastModifyTime());
         values.put(FileColumn.COLUMN_UP_LOAD_TIME, detail.getLastModifyTime());
         values.put(FileColumn.COLUMN_FILE_RESOLUTION_X, detail.getFileResolutionX());
@@ -99,6 +107,12 @@ public class MediaFileProducer {
         	values.put(FileColumn.COLUMN_LAUNCH_MODE, MultiMediaService.LUNCH_MODE_CALL);
         } else if(detail.getFileName().startsWith(MultiMediaService.OnRecordListener.PRE_AUT)){
         	values.put(FileColumn.COLUMN_LAUNCH_MODE, MultiMediaService.LUNCH_MODE_AUTO);
+        } else {
+        	if(path.contains(FileProviderService.TYPE_AUDIO)){//audo recoder
+        		values.put(FileColumn.COLUMN_LAUNCH_MODE, MultiMediaService.LUNCH_MODE_MANLY);
+        	} else if(path.contains(mContext.getPackageName())){//package name
+        		values.put(FileColumn.COLUMN_LAUNCH_MODE, MultiMediaService.LUNCH_MODE_AUTO);
+        	}
         }
         
     }
@@ -186,6 +200,76 @@ public class MediaFileProducer {
     
     public void cleanMediaFile(){
         mContext.getContentResolver().delete(FileProvider.JPEGS_URI, null, null);
+    }
+    
+    private int setDataSource(String path) {
+    	int duration = 0;
+    	try {
+            mMediaPlayer.reset();
+            mMediaPlayer.setOnPreparedListener(null);
+            if (path.startsWith("content://")) {
+            	mMediaPlayer.setDataSource(mContext, Uri.parse(path));
+            } else {
+            	mMediaPlayer.setDataSource(path);
+            }
+            mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            mMediaPlayer.prepare();
+            duration = mMediaPlayer.getDuration();
+        } catch (IOException ex) {
+            Log.d(TAG, "==> IOException " + ex.toString());
+            // TODO: notify the user why the file couldn't be opened
+        } catch (IllegalArgumentException ex) {
+            Log.d(TAG, "==> IllegalArgumentException " + ex.toString());
+            // TODO: notify the user why the file couldn't be opened
+        }
+    	return duration;
+    }
+    
+    private boolean isRecordExists(String path){
+    	String[] pro = {FileColumn.COLUMN_ID};
+    	String where = FileColumn.COLUMN_LOCAL_PATH + "='" + path +"'";
+    	Cursor cursor = mContext.getContentResolver().query(FileProvider.ALL_URI, pro, where, null, null);
+    	if(cursor != null && cursor.getCount()>0){
+    		cursor.close();
+    		return true;
+    	}
+    	return false;
+    }
+    
+    public String getValue(String key){
+    	String[] pro = {FileColumn.COLUMN_SETTING_VALUE};
+    	String where = FileColumn.COLUMN_SETTING_KEY + "='" + key + "'";
+    	Cursor cursor = mContext.getContentResolver().query(FileProvider.SETTINGS_URI, pro, where, null, null);
+    	String value = null;
+    	if(cursor != null){
+    		if(cursor.moveToNext()){
+    			value = cursor.getString(0);
+    		}
+    		cursor.close();
+    	}
+    	return value;
+    }
+    
+    public void putValue(String key, Object value){
+    	String[] pro = {FileColumn.COLUMN_ID};
+    	String where = FileColumn.COLUMN_SETTING_KEY + "='" + key + "'";
+    	Cursor cursor = mContext.getContentResolver().query(FileProvider.SETTINGS_URI, pro, where, null, null);
+    	int _id = 0;
+    	if(cursor != null){
+    		if(cursor.moveToNext()){
+    			_id = cursor.getInt(0);
+    		}
+    		cursor.close();
+    	}
+    	ContentValues values = new ContentValues();
+    	values.put(FileColumn.COLUMN_SETTING_VALUE, String.valueOf(value));
+    	if(_id>0){
+    		String selection = FileColumn.COLUMN_ID + " = '" + _id + "'";
+    		mContext.getContentResolver().update(FileProvider.SETTINGS_URI, values, selection, null);
+    	} else {
+    		values.put(FileColumn.COLUMN_SETTING_KEY, key);
+    		mContext.getContentResolver().insert(FileProvider.SETTINGS_URI, values);
+    	}
     }
 }
 

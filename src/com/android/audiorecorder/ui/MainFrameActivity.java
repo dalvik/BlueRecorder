@@ -1,5 +1,6 @@
 package com.android.audiorecorder.ui;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -7,6 +8,8 @@ import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 
 import com.android.audiorecorder.R;
+import com.android.audiorecorder.engine.MultiMediaService;
+import com.android.audiorecorder.provider.FileProviderService;
 import com.android.audiorecorder.ui.pager.MainCenterPager;
 import com.android.audiorecorder.ui.pager.MainFindPager;
 import com.android.audiorecorder.ui.pager.MainMessagePager;
@@ -34,6 +37,8 @@ public class MainFrameActivity extends BaseCommonActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        startService(new Intent(this, MultiMediaService.class));
+        startService(new Intent(this, FileProviderService.class));
         setContentView(R.layout.layout_main_viewpager);
         viewPager = (ViewPager) findViewById(R.id.lib_id_viewpager_viewpager);
         indicator = (TabPageIndicator) findViewById(R.id.indicator);
@@ -78,10 +83,10 @@ public class MainFrameActivity extends BaseCommonActivity {
     private static class MainAdapter extends FragmentPagerAdapter implements SelectableViewAdapter, IconPagerAdapter {
 
         private int[] ICONS = new int[]{
-                R.drawable.lib_drawable_viewpagerindicator_tab_main_selector,
-                R.drawable.lib_drawable_viewpagerindicator_tab_msg_selector,
-                R.drawable.lib_drawable_viewpagerindicator_tab_find_selector,
-                R.drawable.lib_drawable_viewpagerindicator_tab_center_selector
+                R.drawable.tab_main_selector,
+                R.drawable.tab_msg_selector,
+                R.drawable.tab_find_selector,
+                R.drawable.tab_center_selector
                 };
 
         public MainAdapter(FragmentManager fm) {

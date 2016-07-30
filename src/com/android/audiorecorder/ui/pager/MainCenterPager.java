@@ -29,11 +29,6 @@ public class MainCenterPager extends BasePager implements View.OnClickListener {
     private ImageView fridendIv;
 
     @Override
-    public void reload() {
-
-    }
-
-    @Override
     public View createView(LayoutInflater inflater, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.lib_layout_ui_center, null);
         return view;
@@ -160,4 +155,10 @@ public class MainCenterPager extends BasePager implements View.OnClickListener {
                 break;
         }
     }*/
+    
+
+    @Override
+    public void reload() {
+
+    }
 }

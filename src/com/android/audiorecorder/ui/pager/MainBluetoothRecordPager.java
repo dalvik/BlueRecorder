@@ -5,6 +5,7 @@ import java.util.List;
 
 import android.annotation.TargetApi;
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -23,12 +24,15 @@ import com.android.audiorecorder.R;
 import com.android.audiorecorder.dao.FileManagerFactory;
 import com.android.audiorecorder.dao.FileThumb;
 import com.android.audiorecorder.dao.IFileManager;
+import com.android.audiorecorder.engine.MultiMediaService;
+import com.android.audiorecorder.provider.FileColumn;
 import com.android.audiorecorder.provider.FileProvider;
 import com.android.audiorecorder.ui.AudioRecordList;
 import com.android.audiorecorder.ui.ImageList;
 import com.android.audiorecorder.ui.VideoRecordList;
 import com.android.audiorecorder.ui.adapter.ListViewFileThumbAdapter;
 import com.android.audiorecorder.utils.FileUtils;
+import com.android.audiorecorder.utils.LogUtil;
 import com.android.audiorecorder.utils.UIHelper;
 import com.android.library.ui.pager.BasePager;
 import com.handmark.pulltorefresh.library.PullToRefreshBase;
@@ -48,7 +52,7 @@ public class MainBluetoothRecordPager extends BasePager {
     private List<FileThumb> mLocalAudioListViewData;
     private IFileManager mFileManager;
     private int mOffset;
-    private int mMode = 2;
+    private int mMode = MultiMediaService.LUNCH_MODE_MANLY;
     
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -56,8 +60,9 @@ public class MainBluetoothRecordPager extends BasePager {
         View view = inflater.inflate(R.layout.layout_main_record_list, null);
         Bundle bundle = getArguments();
         if(bundle != null){
-        	mMode = bundle.getInt("mode", 2);
+        	mMode = bundle.getInt("mode", mMode);
         }
+        LogUtil.d(TAG, "==> mode = " + mMode);
         mImageThumbSize = getResources().getDimensionPixelSize(R.dimen.image_thumbnail_width);
         mImageThumbHeight = getResources().getDimensionPixelSize(R.dimen.image_thumbnail_height);
         mImageThumbSpacing = getResources().getDimensionPixelSize(R.dimen.image_thumbnail_spacing);
@@ -109,7 +114,9 @@ public class MainBluetoothRecordPager extends BasePager {
             @Override
             public void onPullDownToRefresh(PullToRefreshBase<GridView> refreshView) {
             	mOffset = 0;
-                loadThumbByCatalog(AppContext.CATALOG_LOCAL_AUDIO, 0, mHandler, UIHelper.LISTVIEW_ACTION_REFRESH, UIHelper.LISTVIEW_DATATYPE_LOCAL_AUDIO);
+            	if(checkInit()){
+            		loadThumbByCatalog(AppContext.CATALOG_LOCAL_AUDIO, 0, mHandler, UIHelper.LISTVIEW_ACTION_REFRESH, UIHelper.LISTVIEW_DATATYPE_LOCAL_AUDIO);
+            	}
             }
 
             @Override
@@ -123,7 +130,9 @@ public class MainBluetoothRecordPager extends BasePager {
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        loadThumbByCatalog(AppContext.CATALOG_LOCAL_AUDIO, 0, mHandler, UIHelper.LISTVIEW_ACTION_INIT, UIHelper.LISTVIEW_DATATYPE_LOCAL_AUDIO);
+        if(checkInit()){
+        	loadThumbByCatalog(AppContext.CATALOG_LOCAL_AUDIO, 0, mHandler, UIHelper.LISTVIEW_ACTION_INIT, UIHelper.LISTVIEW_DATATYPE_LOCAL_AUDIO);
+        }
     }
 
     @Override
@@ -179,10 +188,11 @@ public class MainBluetoothRecordPager extends BasePager {
         } else if(mediaType == FileProvider.FILE_TYPE_AUDIO){
             intent.setClass(getActivity(), AudioRecordList.class);
         } else if(mediaType == FileProvider.FILE_TYPE_OTHER){
-            intent.setClass(getActivity(), AudioRecordList.class);
+            intent.setClass(getActivity(), ImageList.class);
         }
         intent.putExtra(EXTRA_THUMB_NAME, thumbName);
         intent.putExtra("mode", mMode);
+        LogUtil.d(TAG, "==> mode = " + mMode + " thumbName = " + thumbName);
         startActivity(intent);
     }
     
@@ -239,4 +249,17 @@ public class MainBluetoothRecordPager extends BasePager {
         }
     }
     
+    private boolean checkInit(){
+    	String[] pro = {FileColumn.COLUMN_SETTING_VALUE};
+    	String where = FileColumn.COLUMN_SETTING_KEY + "='" + FileColumn.COLUMN_FILE_INIT + "'";
+    	Cursor cursor = getActivity().getContentResolver().query(FileProvider.SETTINGS_URI, pro, where, null, null);
+    	int value = 0;
+    	if(cursor != null){
+    		if(cursor.moveToNext()){
+    			value = cursor.getInt(0);
+    		}
+    		cursor.close();
+    	}
+    	return value == 1;
+    }
 }

@@ -107,6 +107,7 @@ public class FileProvider extends ContentProvider {
     @Override
     public String getType(Uri uri) {
         int match = sURIMatcher.match(uri);
+        Log.i(TAG, "===> getType = " + match);
         switch (match) {
             case TASK_ID:
             case ALL_FILE_INFO_ID:
@@ -185,6 +186,15 @@ public class FileProvider extends ContentProvider {
                 newUri = ContentUris.withAppendedId(uri, rowid);
                 getContext().getContentResolver().notifyChange(newUri, null);
                 break;
+            case SETTINGS:
+                    rowid = db.insert(DB_TABLE_SETTINGS, null, values);
+                    if (rowid <= 0) {
+                        Log.d(TAG, "couldn't insert into settings database. " + uri);
+                        return null;
+                    }
+                    newUri = ContentUris.withAppendedId(uri, rowid);
+                    getContext().getContentResolver().notifyChange(newUri, null);
+                    break;
                 default:
                     Log.d(TAG, "calling insert on an unknown/invalid URI: " + uri);
                     throw new IllegalArgumentException("Unknown/Invalid URI " + uri);
@@ -237,7 +247,7 @@ public class FileProvider extends ContentProvider {
                 qb.setTables(TABLE_AUDIO_FILES);
                 break;
             case AUDIO_FILES:
-                qb.setTables(TABLE_AUDIO_FILES);
+                qb.setTables(DB_TABLE_FILES);
                 break;
             case VIDEO_FILES_ID:
                 qb.appendWhere(FileColumn.COLUMN_ID + "=?");
@@ -285,6 +295,8 @@ public class FileProvider extends ContentProvider {
                 }
                 notification = true;
                 break;
+            case SETTINGS_ID:
+                extraSelection = FileColumn.COLUMN_ID + "=" + uri.getPathSegments().get(1);
 			case SETTINGS:
                 count = db.update(DB_TABLE_SETTINGS, values, selection, selectionArgs);
                 break;
@@ -327,6 +339,18 @@ public class FileProvider extends ContentProvider {
                 }
                 getContext().getContentResolver().notifyChange(uri, null);
             	break;
+            case SETTINGS_ID:
+            	extraSelection = FileColumn.COLUMN_ID + "=" + uri.getPathSegments().get(1); 
+            case SETTINGS:
+            	finalSelection = getSelection(selection, extraSelection);
+                sendToTargetService(uri, finalSelection, selectionArgs);
+            	count = db.delete(DB_TABLE_SETTINGS, finalSelection, selectionArgs);
+                if (count <= 0) {
+                    Log.w(TAG, "couldn't delete settigns from database " + uri);
+                    return count;
+                }
+                getContext().getContentResolver().notifyChange(uri, null);
+                break;
             default:
                 Log.w(TAG, "calling delete on an unknown/invalid URI: " + uri);
                 throw new IllegalArgumentException("Unknown/Invalid URI " + uri);

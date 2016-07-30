@@ -25,17 +25,17 @@ public class AboutActivity extends Activity {
         cooperationTextView.setText(StringUtil.loadHtmlText(this, R.string.sms_setting_about_cooperation_content));
     }
    
-	@Override
-	protected void onResume() {
-		super.onResume();
-		StatService.onResume(this);
-	}
-	
-	@Override
-	protected void onPause() {
-		super.onPause();
-		StatService.onPause(this);
-	}
+    @Override
+    protected void onResume() {
+        super.onResume();
+        StatService.onResume(this);
+    }
+    
+    @Override
+    protected void onPause() {
+        super.onPause();
+        StatService.onPause(this);
+    }
     
     @Override
     protected void onDestroy() {

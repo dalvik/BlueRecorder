@@ -145,7 +145,7 @@ public class AudioRecordListAdapter extends BaseAdapter {
             viewHolder.play.setBackgroundResource(R.drawable.play_button_selector);
         }
         viewHolder.title.setText(file.getFileName());
-        viewHolder.duration.setText(MusicUtils.makeTimeString(mContext, file.getDuration()));
+        viewHolder.duration.setText(MusicUtils.makeTimeString(mContext, file.getDuration()/1000));
         viewHolder.size.setText(FileUtils.formetFileSize(file.getLength()));
         viewHolder.state.setText(getUploadStr(file.getUpDownLoadStatus()));
         return convertView;

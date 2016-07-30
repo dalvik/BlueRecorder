@@ -21,6 +21,7 @@ import android.widget.RadioGroup.OnCheckedChangeListener;
 import android.widget.RelativeLayout;
 
 import com.android.audiorecorder.R;
+import com.android.audiorecorder.engine.MultiMediaService;
 import com.android.library.ui.pager.BasePager;
 import com.android.library.viewpager.scrolltab.SyncHorizontalScrollView;
 
@@ -40,6 +41,7 @@ public class MainRecordPager extends BasePager {
     private LayoutInflater mInflater;
     private TabFragmentPagerAdapter mAdapter;
     private int currentIndicatorLeft = 0;
+    private int mSelectIndex;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -55,6 +57,12 @@ public class MainRecordPager extends BasePager {
         initView();
         setListener();
         return view;
+    }
+    @Override
+    public void onResume() {
+    	super.onResume();
+    	RadioButton br = (RadioButton)mRadioContent.getChildAt(0);
+    	br.setChecked(true);
     }
 
     private void findViewById(View view) {
@@ -85,6 +93,7 @@ public class MainRecordPager extends BasePager {
                                 && mRadioContent.getChildCount() > position) {
                             ((RadioButton) mRadioContent.getChildAt(position))
                                     .performClick();
+                            mSelectIndex = position;
                         }
                     }
 
@@ -139,7 +148,6 @@ public class MainRecordPager extends BasePager {
         mAdapter = new TabFragmentPagerAdapter(getActivity(),
                 getChildFragmentManager());
         mScrollTabViewContent.setAdapter(mAdapter);
-
         RadioButton defaultRadio = (RadioButton)mRadioContent.getChildAt(0);
         defaultRadio.setChecked(true);
     }
@@ -147,8 +155,7 @@ public class MainRecordPager extends BasePager {
     private void initNavigationHSV() {
         mRadioContent.removeAllViews();
         for (int i = 0; i < mTabTitle.length; i++) {
-            RadioButton rb = (RadioButton) mInflater.inflate(
-                    R.layout.lib_layout_viewpager_radiogroup_item, null);
+            RadioButton rb = (RadioButton) mInflater.inflate(R.layout.lib_layout_viewpager_radiogroup_item, null);
             rb.setId(i);
             rb.setText(getString(mTabTitle[i]));
             rb.setLayoutParams(new LayoutParams(indicatorWidth, LayoutParams.MATCH_PARENT));
@@ -159,14 +166,14 @@ public class MainRecordPager extends BasePager {
     private void initFragment(){
         mPagers = new FragmentInfo[mTabTitle.length];
         Bundle bundle1 = new Bundle();
-        bundle1.putInt("mode", 2);
+        bundle1.putInt("mode", MultiMediaService.LUNCH_MODE_MANLY);
         FragmentInfo info1 = new FragmentInfo(MainBluetoothRecordPager.class, bundle1);
         Bundle bundle2 = new Bundle();
-        bundle2.putInt("mode", 1);
+        bundle2.putInt("mode", MultiMediaService.LUNCH_MODE_CALL);
         FragmentInfo info2 = new FragmentInfo(MainBluetoothRecordPager.class, bundle2);
         mPagers[0] = info1;
         mPagers[1] = info2;
-        //mPagers[2] = info2;
+        mSelectIndex = 0;
     }
 
     public static class TabFragmentPagerAdapter extends FragmentPagerAdapter {

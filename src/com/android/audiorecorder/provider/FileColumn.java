@@ -159,6 +159,13 @@ public interface FileColumn {
     public static final String COLUMN_UP_LOAD_MESSAGE = "up_down_load_msg";
     
     /**
+     * file setting table struct : key : value 
+     */
+    public static final String COLUMN_SETTING_KEY = "_key";
+    
+    public static final String COLUMN_SETTING_VALUE = "_value";
+    
+    /**
      * database file rebuild
      */
     public static final String COLUMN_FILE_INIT = "file_init";

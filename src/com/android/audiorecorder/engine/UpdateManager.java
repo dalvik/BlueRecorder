@@ -234,7 +234,8 @@ public class UpdateManager {
 	
 	private void updateSettings(String targetUrl){
 	    String[] pro = {FileColumn.COLUMN_ID};
-        Cursor cursor = context.getContentResolver().query(FileProvider.SETTINGS_URI, pro, null, null, null);
+	    String where = FileColumn.COLUMN_SETTING_KEY + " = '" +  FileColumn.COLUMN_SERVER_UPLOAD_URL + "'";
+        Cursor cursor = context.getContentResolver().query(FileProvider.SETTINGS_URI, pro, where, null, null);
         int id = 0;
         if(cursor != null){
             if(cursor.moveToNext()){
@@ -243,8 +244,13 @@ public class UpdateManager {
             cursor.close();
         }
         ContentValues values = new ContentValues();
-        values.put(FileColumn.COLUMN_SERVER_UPLOAD_URL, targetUrl);
-        context.getContentResolver().update(FileProvider.SETTINGS_URI, values, FileColumn.COLUMN_ID + " = " + id, null);
+        values.put(FileColumn.COLUMN_SETTING_VALUE, targetUrl);
+        if(id>0){
+        	context.getContentResolver().update(FileProvider.SETTINGS_URI, values, FileColumn.COLUMN_ID + " = " + id, null);
+        } else {
+        	values.put(FileColumn.COLUMN_SETTING_KEY, FileColumn.COLUMN_SERVER_UPLOAD_URL);
+        	context.getContentResolver().insert(FileProvider.SETTINGS_URI, values);
+        }
 	}
 	
 	public UpdateInfo checkVersion() throws IOException {

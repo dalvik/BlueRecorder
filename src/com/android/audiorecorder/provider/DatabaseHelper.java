@@ -15,7 +15,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "files.db";
 
     private static final int DB_VERSION_FIRST = 1;
-    private static final int DB_VERSION_SECONT = 2;
+    private static final int DB_VERSION_SECONT = 3;
     private static final int DB_VERSION = DB_VERSION_SECONT;
 
     private static final String DB_TABLE_FILES = FileProvider.DB_TABLE_FILES;
@@ -163,17 +163,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             db.execSQL(createVideoView);
             
             db.execSQL("DROP TABLE IF EXISTS " + DB_TABLE_SETTINGS);
-            db.execSQL("CREATE TABLE " + DB_TABLE_SETTINGS +
-                    "('" + FileColumn.COLUMN_ID+"' INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "'" + FileColumn.COLUMN_FILE_INIT+"' INTEGER NOT NULL DEFAULT 0 , " +
-                    "'" + FileColumn.COLUMN_UUID +"' TEXT , " +
-                    "'" + FileColumn.COLUMN_SERVER_UPLOAD_URL + "' TEXT );" );
-            
-            ContentValues values = new ContentValues();
-            values.put(FileColumn.COLUMN_FILE_INIT, 0);//db onreate, 0:frist 1:is create before
-            values.put(FileColumn.COLUMN_SERVER_UPLOAD_URL, "http://10.0.2.2:80/test/action/api/file_recv.php");
-            long id = db.insert(DB_TABLE_SETTINGS, null, values);
-            Log.i(TAG, "===> db int db version " + DB_VERSION + "  success,  init id : " + id);
+            String CREATE_SETTINGS = "CREATE TABLE " + DB_TABLE_SETTINGS +
+                    " ('" + FileColumn.COLUMN_ID+"' INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "'" + FileColumn.COLUMN_SETTING_KEY +"' TEXT , " +
+                    "'" + FileColumn.COLUMN_SETTING_VALUE + "' TEXT );";
+            db.execSQL(CREATE_SETTINGS);
+            Log.i(TAG, "==> " + CREATE_SETTINGS);
+            //ContentValues values = new ContentValues();
+            //values.put(FileColumn.COLUMN_SETTING_KEY, FileColumn.COLUMN_FILE_INIT);//db onreate, 0:frist 1:is create before
+            //values.put(FileColumn.COLUMN_SETTING_VALUE, 0);//"http://10.0.2.2:80/test/action/api/file_recv.php"
+            //long id = db.insert(DB_TABLE_SETTINGS, null, values);
+            Log.i(TAG, "===> db int db version " + DB_VERSION + "  success.");
         } catch (SQLException e) {
             e.printStackTrace();
         }

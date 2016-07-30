@@ -9,7 +9,19 @@ import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.xutils.db.DbManagerImpl;
+import com.android.audiorecorder.DebugConfig;
+import com.android.audiorecorder.R;
+import com.android.audiorecorder.dao.FileManagerFactory;
+import com.android.audiorecorder.dao.IFileManager;
+import com.android.audiorecorder.engine.MultiMediaService.OnRecordListener;
+import com.android.audiorecorder.provider.FileColumn;
+import com.android.audiorecorder.provider.FileProvider;
+import com.android.audiorecorder.ui.SettingsActivity;
+import com.android.audiorecorder.ui.SoundRecorder;
+import com.android.audiorecorder.utils.DateUtil;
+import com.android.audiorecorder.utils.FileUtils;
+import com.android.audiorecorder.utils.LogUtil;
+import com.android.audiorecorder.utils.StringUtil;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -33,28 +45,14 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.os.PowerManager;
+import android.os.PowerManager.WakeLock;
 import android.os.RemoteException;
 import android.os.SystemClock;
-import android.os.PowerManager.WakeLock;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.RemoteViews;
 import android.widget.Toast;
-
-import com.android.audiorecorder.DebugConfig;
-import com.android.audiorecorder.R;
-import com.android.audiorecorder.dao.FileManagerFactory;
-import com.android.audiorecorder.dao.IFileManager;
-import com.android.audiorecorder.engine.MultiMediaService.OnRecordListener;
-import com.android.audiorecorder.provider.FileColumn;
-import com.android.audiorecorder.provider.FileProvider;
-import com.android.audiorecorder.ui.SettingsActivity;
-import com.android.audiorecorder.ui.SoundRecorder;
-import com.android.audiorecorder.utils.DateUtil;
-import com.android.audiorecorder.utils.FileUtils;
-import com.android.audiorecorder.utils.LogUtil;
-import com.android.audiorecorder.utils.StringUtil;
 
 public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRecordListener{
 
@@ -70,6 +68,7 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
     private Set<IAudioStateListener> mStateSet = new HashSet<IAudioStateListener>();
 
     private int CUSTOM_VIEW_ID = R.layout.recorder_notification;
+    
     private StringBuffer mTimerText = new StringBuffer();
     
     private int mMimeType;
@@ -146,7 +145,7 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
 
     @Override
     public long getRecorderDuration() {
-        return getAudioRecordDuration();
+        return getAudioRecordDuration()/1000;
     }
 
     @Override
@@ -232,7 +231,7 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
                     mMediaRecorder.stop();
                     mMediaRecorder.release();
                     mMediaRecorder = null;
-                    int duration = getAudioRecordDuration();
+                    long duration = getAudioRecordDuration();
                     saveRecordFile(mode, duration);
                 }
             } catch(Exception e){
@@ -247,9 +246,10 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
         }
     }
     
-    private int getAudioRecordDuration(){
+    private long getAudioRecordDuration(){
         if(mRecorderStart){
-        	return new BigDecimal((SystemClock.elapsedRealtime() - mAudioRecordStartTime)/1000).setScale(0, BigDecimal.ROUND_HALF_UP).intValue();
+        	//return new BigDecimal((SystemClock.elapsedRealtime() - mAudioRecordStartTime)/1000).setScale(0, BigDecimal.ROUND_HALF_UP).intValue();
+        	return (SystemClock.elapsedRealtime() - mAudioRecordStartTime);
         }
         return 0;
     }
@@ -260,7 +260,7 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
         if(mode == LUNCH_MODE_AUTO){
         	pre = PRE_AUT;
             mimeType = SoundRecorder.FILE_TYPE_3GPP;// force to change type
-            fileName += getNamePrefix();//android.provider.Settings.System.getString(getContentResolver(), Settings.Secure.ANDROID_ID)+"_";
+            fileName += getNamePrefix();
         } else if(mode == LUNCH_MODE_CALL){
         	pre = PRE_TEL;
             if(mIncommingNumber != null && mIncommingNumber.length()>0){
@@ -442,11 +442,11 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
         randomAccess.write(header, 0, header.length);
         randomAccess.close();
         in.close();
-        int duration = getAudioRecordDuration();
+        long duration = getAudioRecordDuration();
         saveRecordFile(mode, duration);
     }
     
-    private void saveRecordFile(int mode, int duration){
+    private void saveRecordFile(int mode, long duration){
         File f = new File(mRecoderPath);
         if(mode == LUNCH_MODE_AUTO &&  duration<MAX_RECORDER_DURATION/2) {
             if(f.exists()){
@@ -655,7 +655,8 @@ public class AudioRecordSystem extends AbstractAudioRecordSystem implements OnRe
         notification.flags |= Notification.FLAG_NO_CLEAR;
         notification.contentIntent = PendingIntent.getActivity(mContext, 0, new Intent(mContext, SoundRecorder.class), 0);
         contentView.setTextViewText(R.id.title, mContext.getString(R.string.recording));
-        contentView.setTextViewText(R.id.text, getTimerString(getAudioRecordDuration()));
+        int time = new BigDecimal(getRecorderDuration()).setScale(0, BigDecimal.ROUND_HALF_UP).intValue();
+        contentView.setTextViewText(R.id.text, getTimerString(time));
         mNotificationManager.notify(CUSTOM_VIEW_ID, notification);
     }
     
